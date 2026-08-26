@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Instrument Sans", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent, #b8402c); text-decoration: none; }
+  a:hover { color: var(--ink, #171a16); }
+  ::selection { background: var(--accentSoft, #f4e0da); }
+  input, button, select, textarea { font: inherit; color: inherit; }
+</style>
+</helmet>
+<div style="{{ themeVars }}" data-screen-label="App">
+<div style="min-height: 100vh; background: var(--bg, #f2f3ee); color: var(--ink, #171a16); display: flex; justify-content: center; padding: 0;">
+<div style="{{ shellStyle }}">
+
+  <!-- ============ SIDEBAR (desktop) ============ -->
+  <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+  <aside style="width: 232px; flex: 0 0 232px; border-right: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); display: flex; flex-direction: column; padding: 22px 0;">
+    <div style="padding: 0 20px 22px; display: flex; align-items: center; gap: 10px;">
+      <div style="width: 26px; height: 26px; border-radius: 7px; background: var(--accent,#b8402c);"></div>
+      <div style="font-weight: 600; letter-spacing: -0.02em; font-size: 16px;">Throughline</div>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 2px; padding: 0 12px;">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+        <button onClick="{{ n.go }}" style="{{ n.style }}" style-hover="background: var(--hover,#eceee6);">
+          <span style="font-size: 13.5px;">{{ n.label }}</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; opacity: 0.55;">{{ n.count }}</span>
+        </button>
+      </sc-for>
+    </nav>
+    <div style="padding: 18px 16px 0;">
+      <button onClick="{{ openNew }}" style="width: 100%; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--accent,#b8402c); background: var(--accent,#b8402c); color: #fff; font-size: 13.5px; font-weight: 500; cursor: pointer; text-align: left;" style-hover="opacity: 0.88;">+ &nbsp;New task</button>
+    </div>
+    <div style="margin-top: auto; padding: 16px; border-top: 1px solid var(--line,#dfe1d9); display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted,#6a706a);">Appearance</div>
+      <div style="display: flex; gap: 6px;">
+        <sc-for list="{{ themeOptions }}" as="t" hint-placeholder-count="2">
+          <button onClick="{{ t.go }}" style="{{ t.style }}" style-hover="border-color: var(--accent,#b8402c);">{{ t.label }}</button>
+        </sc-for>
+      </div>
+      <div style="display: flex; gap: 6px;">
+        <sc-for list="{{ deviceOptions }}" as="d" hint-placeholder-count="2">
+          <button onClick="{{ d.go }}" style="{{ d.style }}" style-hover="border-color: var(--accent,#b8402c);">{{ d.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+  </aside>
+  </sc-if>
+
+  <!-- ============ MAIN ============ -->
+  <main style="{{ mainStyle }}">
+
+    <header style="{{ headerStyle }}">
+      <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted,#6a706a);">{{ crumb }}</div>
+        <h1 style="margin: 0; font-size: 23px; font-weight: 600; letter-spacing: -0.025em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ pageTitle }}</h1>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px; border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 9px; padding: 8px 11px; width: 260px; max-width: 42vw;">
+          <span style="color: var(--muted,#6a706a); font-size: 13px;">⌕</span>
+          <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Search people, teams, tasks" style="border: none; outline: none; background: transparent; width: 100%; font-size: 13px;" />
+        </div>
+        <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; gap: 6px;">
+            <button onClick="{{ toggleTheme }}" style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 9px; padding: 8px 11px; font-size: 12px; cursor: pointer;">{{ themeShort }}</button>
+            <button onClick="{{ toggleDevice }}" style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 9px; padding: 8px 11px; font-size: 12px; cursor: pointer;">Desktop</button>
+          </div>
+        </sc-if>
+      </div>
+    </header>
+
+    <div style="{{ bodyStyle }}">
+
+    <!-- ============ DASHBOARD ============ -->
+    <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+        <div style="font-size: 13px; color: var(--muted,#6a706a);">Delivery org · 10 people · 4 teams · sprint window 2–26 Aug</div>
+        <div style="display: flex; gap: 6px;">
+          <sc-for list="{{ dashOptions }}" as="o" hint-placeholder-count="2">
+            <button onClick="{{ o.go }}" style="{{ o.style }}" style-hover="border-color: var(--accent,#b8402c);">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="{{ kpiGrid }}">
+        <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+          <div style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted,#6a706a);">{{ k.label }}</div>
+            <div style="font-size: 30px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;">{{ k.value }}</div>
+            <div style="font-size: 12px; color: var(--muted,#6a706a);">{{ k.note }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="{{ chartGrid }}">
+        <section style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; padding: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600;">Progress over time</h2>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted,#6a706a);">avg % complete, all open tasks</div>
+          </div>
+          {{ lineChart }}
+          <div style="display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap;">
+            <sc-for list="{{ trendLegend }}" as="l" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted,#6a706a);">
+                <span style="width: 9px; height: 9px; border-radius: 3px; background: {{ l.color }};"></span>
+                <span>{{ l.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <section style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+          <h2 style="margin: 0; font-size: 15px; font-weight: 600;">Status mix</h2>
+          <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+            {{ donutChart }}
+            <div style="display: flex; flex-direction: column; gap: 10px; min-width: 132px;">
+              <sc-for list="{{ statusMix }}" as="s" hint-placeholder-count="3">
+                <div style="display: flex; align-items: center; gap: 9px;">
+                  <span style="width: 9px; height: 9px; border-radius: 3px; background: {{ s.color }};"></span>
+                  <span style="font-size: 13px;">{{ s.label }}</span>
+                  <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px;">{{ s.count }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; overflow: hidden;">
+        <div style="padding: 15px 18px; border-bottom: 1px solid var(--line,#dfe1d9); display: flex; justify-content: space-between; align-items: baseline;">
+          <h2 style="margin: 0; font-size: 15px; font-weight: 600;">Teams</h2>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted,#6a706a);">avg progress · tasks · leader</div>
+        </div>
+        <sc-for list="{{ teamRows }}" as="t" hint-placeholder-count="4">
+          <button onClick="{{ t.go }}" style="width: 100%; display: grid; grid-template-columns: 1.3fr 1fr 0.7fr; gap: 14px; align-items: center; padding: 14px 18px; border: none; border-top: 1px solid var(--line,#dfe1d9); background: transparent; cursor: pointer; text-align: left;" style-hover="background: var(--hover,#eceee6);">
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <span style="font-size: 14px; font-weight: 550;">{{ t.name }}</span>
+              <span style="font-size: 12px; color: var(--muted,#6a706a);">Lead · {{ t.leader }}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="flex: 1; height: 6px; border-radius: 3px; background: var(--track,#e6e8e0); overflow: hidden;">
+                <div style="height: 100%; width: {{ t.pctLabel }}; background: var(--accent,#b8402c);"></div>
+              </div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; width: 38px; text-align: right;">{{ t.pctLabel }}</span>
+            </div>
+            <div style="font-size: 12.5px; color: var(--muted,#6a706a); text-align: right;">{{ t.taskNote }}</div>
+          </button>
+        </sc-for>
+      </section>
+
+      <section style="{{ peopleGrid }}">
+        <sc-for list="{{ personCards }}" as="p" hint-placeholder-count="6">
+          <button onClick="{{ p.go }}" style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; text-align: left;" style-hover="border-color: var(--accent,#b8402c);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="width: 30px; height: 30px; border-radius: 50%; background: var(--accentSoft,#f4e0da); color: var(--accent,#b8402c); display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;">{{ p.initials }}</span>
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 13.5px; font-weight: 550;">{{ p.name }}</span>
+                <span style="font-size: 11.5px; color: var(--muted,#6a706a);">{{ p.role }}</span>
+              </div>
+            </div>
+            <div style="height: 6px; border-radius: 3px; background: var(--track,#e6e8e0); overflow: hidden;">
+              <div style="height: 100%; width: {{ p.pctLabel }}; background: {{ p.barColor }};"></div>
+            </div>
+            <div style="font-size: 11.5px; color: var(--muted,#6a706a);">{{ p.summary }}</div>
+          </button>
+        </sc-for>
+      </section>
+    </div>
+    </sc-if>
+
+    <!-- ============ TASK LIST ============ -->
+    <sc-if value="{{ isTasks }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <sc-for list="{{ statusFilters }}" as="f" hint-placeholder-count="4">
+            <button onClick="{{ f.go }}" style="{{ f.style }}" style-hover="border-color: var(--accent,#b8402c);">{{ f.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <sc-for list="{{ layoutOptions }}" as="o" hint-placeholder-count="2">
+            <button onClick="{{ o.go }}" style="{{ o.style }}" style-hover="border-color: var(--accent,#b8402c);">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <sc-if value="{{ isTableLayout }}" hint-placeholder-val="{{ true }}">
+      <section style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; overflow: hidden;">
+        <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+        <div style="display: grid; grid-template-columns: 84px 2fr 1.1fr 1.2fr 2.2fr; gap: 14px; padding: 12px 18px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted,#6a706a); border-bottom: 1px solid var(--line,#dfe1d9);">
+          <div>ID</div><div>Task</div><div>Assigned to</div><div>Progress</div><div>Last comment</div>
+        </div>
+        <sc-for list="{{ taskRows }}" as="t" hint-placeholder-count="8">
+          <button onClick="{{ t.go }}" style="width: 100%; display: grid; grid-template-columns: 84px 2fr 1.1fr 1.2fr 2.2fr; gap: 14px; align-items: center; padding: 15px 18px; border: none; border-top: 1px solid var(--line,#dfe1d9); background: transparent; cursor: pointer; text-align: left;" style-hover="background: var(--hover,#eceee6);">
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--muted,#6a706a);">{{ t.id }}</div>
+            <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+              <span style="font-size: 13.5px; font-weight: 550; line-height: 1.35;">{{ t.title }}</span>
+              <span style="font-size: 11.5px; color: var(--muted,#6a706a);">{{ t.metaLine }}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+              <span style="width: 24px; height: 24px; flex: 0 0 24px; border-radius: 50%; background: var(--accentSoft,#f4e0da); color: var(--accent,#b8402c); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;">{{ t.initials }}</span>
+              <span style="font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ t.assignee }}</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <span style="font-size: 11px; padding: 2px 7px; border-radius: 20px; background: {{ t.statusBg }}; color: {{ t.statusFg }};">{{ t.status }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">{{ t.pctLabel }}</span>
+              </div>
+              <div style="height: 5px; border-radius: 3px; background: var(--track,#e6e8e0); overflow: hidden;">
+                <div style="height: 100%; width: {{ t.pctLabel }}; background: {{ t.barColor }};"></div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+              <span style="font-size: 12.5px; line-height: 1.4; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ t.lastComment }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--muted,#6a706a);">{{ t.lastCommentMeta }}</span>
+            </div>
+          </button>
+        </sc-for>
+        </sc-if>
+        <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+        <sc-for list="{{ taskRows }}" as="t" hint-placeholder-count="6">
+          <button onClick="{{ t.go }}" style="width: 100%; display: flex; flex-direction: column; gap: 9px; padding: 14px 15px; border: none; border-top: 1px solid var(--line,#dfe1d9); background: transparent; cursor: pointer; text-align: left;">
+            <div style="display: flex; justify-content: space-between; gap: 10px; align-items: baseline;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted,#6a706a);">{{ t.id }}</span>
+              <span style="font-size: 10.5px; padding: 2px 7px; border-radius: 20px; background: {{ t.statusBg }}; color: {{ t.statusFg }};">{{ t.status }}</span>
+            </div>
+            <span style="font-size: 14px; font-weight: 550; line-height: 1.35;">{{ t.title }}</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="flex: 1; height: 5px; border-radius: 3px; background: var(--track,#e6e8e0); overflow: hidden;">
+                <div style="height: 100%; width: {{ t.pctLabel }}; background: {{ t.barColor }};"></div>
+              </div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;">{{ t.pctLabel }}</span>
+            </div>
+            <span style="font-size: 12px; color: var(--muted,#6a706a); line-height: 1.45;">{{ t.assignee }} · {{ t.lastComment }}</span>
+          </button>
+        </sc-for>
+        </sc-if>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ isLaneLayout }}" hint-placeholder-val="{{ false }}">
+      <div style="{{ laneGrid }}">
+        <sc-for list="{{ lanes }}" as="l" hint-placeholder-count="3">
+          <section style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 9px; padding: 0 2px;">
+              <span style="width: 9px; height: 9px; border-radius: 3px; background: {{ l.color }};"></span>
+              <span style="font-size: 13px; font-weight: 600;">{{ l.label }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--muted,#6a706a);">{{ l.count }}</span>
+            </div>
+            <sc-for list="{{ l.items }}" as="t" hint-placeholder-count="3">
+              <button onClick="{{ t.go }}" style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; text-align: left;" style-hover="border-color: var(--accent,#b8402c);">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px;">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted,#6a706a);">{{ t.id }}</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">{{ t.pctLabel }}</span>
+                </div>
+                <span style="font-size: 13.5px; font-weight: 550; line-height: 1.35;">{{ t.title }}</span>
+                <div style="height: 5px; border-radius: 3px; background: var(--track,#e6e8e0); overflow: hidden;">
+                  <div style="height: 100%; width: {{ t.pctLabel }}; background: {{ t.barColor }};"></div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 7px;">
+                  <span style="width: 21px; height: 21px; border-radius: 50%; background: var(--accentSoft,#f4e0da); color: var(--accent,#b8402c); display: flex; align-items: center; justify-content: center; font-size: 9.5px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;">{{ t.initials }}</span>
+                  <span style="font-size: 12px; color: var(--muted,#6a706a);">{{ t.assignee }}</span>
+                </div>
+                <div style="font-size: 12px; line-height: 1.45; padding-top: 8px; border-top: 1px solid var(--line,#dfe1d9); color: var(--ink,#171a16);">{{ t.lastCommentShort }}</div>
+              </button>
+            </sc-for>
+          </section>
+        </sc-for>
+      </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <!-- ============ TASK DETAIL ============ -->
+    <sc-if value="{{ isTaskDetail }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <button onClick="{{ backToTasks }}" style="align-self: flex-start; border: none; background: transparent; color: var(--muted,#6a706a); font-size: 12.5px; cursor: pointer; padding: 0;" style-hover="color: var(--accent,#b8402c);">← All tasks</button>
+
+      <div style="{{ detailGrid }}">
+        <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+          <section style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--muted,#6a706a);">{{ task.id }}</span>
+              <span style="font-size: 11px; padding: 2px 8px; border-radius: 20px; background: {{ task.statusBg }}; color: {{ task.statusFg }};">{{ task.status }}</span>
+            </div>
+            <h2 style="margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.3;">{{ task.title }}</h2>
+            <p style="margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--muted,#6a706a); max-width: 62ch;">{{ task.description }}</p>
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <div style="flex: 1; height: 8px; border-radius: 4px; background: var(--track,#e6e8e0); overflow: hidden;">
+                <div style="height: 100%; width: {{ task.pctLabel }}; background: {{ task.barColor }};"></div>
+              </div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 500;">{{ task.pctLabel }}</span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <span style="font-size: 12px; color: var(--muted,#6a706a);">Set progress</span>
+              <sc-for list="{{ pctSteps }}" as="s" hint-placeholder-count="5">
+                <button onClick="{{ s.go }}" style="{{ s.style }}" style-hover="border-color: var(--accent,#b8402c);">{{ s.label }}</button>
+              </sc-for>
+            </div>
+          </section>
+
+          <section style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <h3 style="margin: 0; font-size: 15px; font-weight: 600;">Progress log</h3>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted,#6a706a);">{{ task.commentCount }} comments · oldest first</span>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+              <sc-for list="{{ comments }}" as="c" hint-placeholder-count="4">
+                <div style="display: grid; grid-template-columns: 30px 1fr; gap: 14px;">
+                  <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                    <span style="width: 26px; height: 26px; border-radius: 50%; background: var(--accentSoft,#f4e0da); color: var(--accent,#b8402c); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;">{{ c.initials }}</span>
+                    <div style="{{ c.railStyle }}"></div>
+                  </div>
+                  <div style="padding-bottom: 20px; display: flex; flex-direction: column; gap: 5px; min-width: 0;">
+                    <div style="display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--muted,#6a706a);">{{ c.ordinal }}</span>
+                      <span style="font-size: 13px; font-weight: 550;">{{ c.by }}</span>
+                      <span style="font-size: 11.5px; color: var(--muted,#6a706a);">{{ c.at }}</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 1px 7px; border-radius: 20px; border: 1px solid var(--line,#dfe1d9);">{{ c.pctLabel }}</span>
+                    </div>
+                    <p style="margin: 0; font-size: 13.5px; line-height: 1.55;">{{ c.text }}</p>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: flex-start; border-top: 1px solid var(--line,#dfe1d9); padding-top: 16px;">
+              <input value="{{ draft }}" onChange="{{ onDraft }}" placeholder="Explain the current percentage…" style="flex: 1; border: 1px solid var(--line,#dfe1d9); background: var(--bg,#f2f3ee); border-radius: 9px; padding: 10px 12px; font-size: 13px; outline: none;" />
+              <button onClick="{{ addComment }}" style="border: 1px solid var(--accent,#b8402c); background: var(--accent,#b8402c); color: #fff; border-radius: 9px; padding: 10px 15px; font-size: 13px; cursor: pointer;" style-hover="opacity: 0.88;">Log</button>
+            </div>
+          </section>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+          <section style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <h3 style="margin: 0; font-size: 14px; font-weight: 600;">Assignment</h3>
+            <sc-for list="{{ taskMeta }}" as="m" hint-placeholder-count="5">
+              <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px;">
+                <span style="color: var(--muted,#6a706a);">{{ m.label }}</span>
+                <span style="text-align: right; font-weight: 500;">{{ m.value }}</span>
+              </div>
+            </sc-for>
+            <button onClick="{{ openReassign }}" style="margin-top: 4px; border: 1px solid var(--line,#dfe1d9); background: transparent; border-radius: 9px; padding: 9px; font-size: 12.5px; cursor: pointer;" style-hover="border-color: var(--accent,#b8402c);">Reassign task</button>
+          </section>
+
+          <section style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+            <h3 style="margin: 0; font-size: 14px; font-weight: 600;">Reassignment history</h3>
+            <sc-if value="{{ hasReassignments }}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <sc-for list="{{ reassignments }}" as="r" hint-placeholder-count="2">
+                <div style="display: flex; flex-direction: column; gap: 5px; padding-left: 12px; border-left: 2px solid var(--accentSoft,#f4e0da);">
+                  <div style="font-size: 12.5px; font-weight: 550;">{{ r.move }}</div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--muted,#6a706a);">{{ r.meta }}</div>
+                  <div style="font-size: 12.5px; line-height: 1.5; color: var(--muted,#6a706a);">{{ r.why }}</div>
+                </div>
+              </sc-for>
+            </div>
+            </sc-if>
+            <sc-if value="{{ noReassignments }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 12.5px; color: var(--muted,#6a706a);">Never reassigned. Held by the original owner since {{ task.dateAssigned }}.</div>
+            </sc-if>
+          </section>
+
+          <section style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px;">
+            <h3 style="margin: 0; font-size: 14px; font-weight: 600;">This task over time</h3>
+            {{ taskSpark }}
+          </section>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ============ PERSON ============ -->
+    <sc-if value="{{ isPerson }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      <button onClick="{{ backToDash }}" style="align-self: flex-start; border: none; background: transparent; color: var(--muted,#6a706a); font-size: 12.5px; cursor: pointer; padding: 0;" style-hover="color: var(--accent,#b8402c);">← Dashboard</button>
+
+      <section style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; padding: 20px; display: flex; gap: 18px; align-items: center; flex-wrap: wrap;">
+        <span style="width: 52px; height: 52px; border-radius: 50%; background: var(--accentSoft,#f4e0da); color: var(--accent,#b8402c); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;">{{ person.initials }}</span>
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <div style="font-size: 19px; font-weight: 600; letter-spacing: -0.02em;">{{ person.name }}</div>
+          <div style="font-size: 13px; color: var(--muted,#6a706a);">{{ person.role }} · {{ person.teamName }}</div>
+        </div>
+        <div style="margin-left: auto; display: flex; gap: 26px; flex-wrap: wrap;">
+          <sc-for list="{{ personStats }}" as="s" hint-placeholder-count="4">
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted,#6a706a);">{{ s.label }}</span>
+              <span style="font-size: 21px; font-weight: 600; letter-spacing: -0.02em;">{{ s.value }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <div style="font-size: 13.5px; line-height: 1.6; color: var(--muted,#6a706a); max-width: 70ch;">{{ person.narrative }}</div>
+
+      <section style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; overflow: hidden;">
+        <div style="padding: 14px 18px; border-bottom: 1px solid var(--line,#dfe1d9); font-size: 14px; font-weight: 600;">Task history</div>
+        <sc-for list="{{ personTasks }}" as="t" hint-placeholder-count="4">
+          <button onClick="{{ t.go }}" style="width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 18px; border: none; border-top: 1px solid var(--line,#dfe1d9); background: transparent; cursor: pointer; text-align: left; flex-wrap: wrap;" style-hover="background: var(--hover,#eceee6);">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--muted,#6a706a); width: 62px;">{{ t.id }}</span>
+            <span style="font-size: 13.5px; font-weight: 550; flex: 1; min-width: 180px;">{{ t.title }}</span>
+            <span style="font-size: 11px; padding: 2px 8px; border-radius: 20px; background: {{ t.statusBg }}; color: {{ t.statusFg }};">{{ t.status }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; width: 40px; text-align: right;">{{ t.pctLabel }}</span>
+            <span style="font-size: 11.5px; color: var(--muted,#6a706a); width: 100%;">{{ t.roleNote }}</span>
+          </button>
+        </sc-for>
+      </section>
+    </div>
+    </sc-if>
+
+    <!-- ============ TEAM ============ -->
+    <sc-if value="{{ isTeam }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      <button onClick="{{ backToDash }}" style="align-self: flex-start; border: none; background: transparent; color: var(--muted,#6a706a); font-size: 12.5px; cursor: pointer; padding: 0;" style-hover="color: var(--accent,#b8402c);">← Dashboard</button>
+
+      <section style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: flex-start;">
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="font-size: 19px; font-weight: 600; letter-spacing: -0.02em;">{{ team.name }}</div>
+            <div style="font-size: 13px; color: var(--muted,#6a706a);">Team leader · {{ team.leader }}</div>
+          </div>
+          <div style="display: flex; gap: 26px; flex-wrap: wrap;">
+            <sc-for list="{{ teamStats }}" as="s" hint-placeholder-count="3">
+              <div style="display: flex; flex-direction: column; gap: 3px;">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted,#6a706a);">{{ s.label }}</span>
+                <span style="font-size: 21px; font-weight: 600; letter-spacing: -0.02em;">{{ s.value }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <sc-for list="{{ teamMembers }}" as="m" hint-placeholder-count="3">
+            <button onClick="{{ m.go }}" style="display: flex; align-items: center; gap: 9px; border: 1px solid var(--line,#dfe1d9); background: transparent; border-radius: 30px; padding: 6px 12px 6px 6px; cursor: pointer;" style-hover="border-color: var(--accent,#b8402c);">
+              <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--accentSoft,#f4e0da); color: var(--accent,#b8402c); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;">{{ m.initials }}</span>
+              <span style="font-size: 12.5px;">{{ m.name }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--muted,#6a706a);">{{ m.pctLabel }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; overflow: hidden;">
+        <div style="padding: 14px 18px; border-bottom: 1px solid var(--line,#dfe1d9); font-size: 14px; font-weight: 600;">Team tasks</div>
+        <sc-for list="{{ teamTasks }}" as="t" hint-placeholder-count="4">
+          <button onClick="{{ t.go }}" style="width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 18px; border: none; border-top: 1px solid var(--line,#dfe1d9); background: transparent; cursor: pointer; text-align: left; flex-wrap: wrap;" style-hover="background: var(--hover,#eceee6);">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--muted,#6a706a); width: 62px;">{{ t.id }}</span>
+            <span style="font-size: 13.5px; font-weight: 550; flex: 1; min-width: 180px;">{{ t.title }}</span>
+            <span style="font-size: 12px; color: var(--muted,#6a706a);">{{ t.assignee }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; width: 40px; text-align: right;">{{ t.pctLabel }}</span>
+          </button>
+        </sc-for>
+      </section>
+    </div>
+    </sc-if>
+
+    <!-- ============ SEARCH ============ -->
+    <sc-if value="{{ isSearch }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      <div style="font-size: 13px; color: var(--muted,#6a706a);">{{ searchSummary }}</div>
+
+      <sc-if value="{{ hasPeopleResults }}" hint-placeholder-val="{{ true }}">
+      <section style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted,#6a706a);">People</div>
+        <div style="{{ peopleGrid }}">
+          <sc-for list="{{ peopleResults }}" as="p" hint-placeholder-count="3">
+            <button onClick="{{ p.go }}" style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; text-align: left;" style-hover="border-color: var(--accent,#b8402c);">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="width: 30px; height: 30px; border-radius: 50%; background: var(--accentSoft,#f4e0da); color: var(--accent,#b8402c); display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;">{{ p.initials }}</span>
+                <div style="display: flex; flex-direction: column;">
+                  <span style="font-size: 13.5px; font-weight: 550;">{{ p.name }}</span>
+                  <span style="font-size: 11.5px; color: var(--muted,#6a706a);">{{ p.role }}</span>
+                </div>
+              </div>
+              <div style="height: 6px; border-radius: 3px; background: var(--track,#e6e8e0); overflow: hidden;">
+                <div style="height: 100%; width: {{ p.pctLabel }}; background: {{ p.barColor }};"></div>
+              </div>
+              <div style="font-size: 11.5px; color: var(--muted,#6a706a);">{{ p.summary }}</div>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ hasTaskResults }}" hint-placeholder-val="{{ true }}">
+      <section style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted,#6a706a);">Tasks</div>
+        <div style="border: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); border-radius: 12px; overflow: hidden;">
+          <sc-for list="{{ taskResults }}" as="t" hint-placeholder-count="4">
+            <button onClick="{{ t.go }}" style="width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 18px; border: none; border-top: 1px solid var(--line,#dfe1d9); background: transparent; cursor: pointer; text-align: left; flex-wrap: wrap;" style-hover="background: var(--hover,#eceee6);">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--muted,#6a706a); width: 62px;">{{ t.id }}</span>
+              <span style="font-size: 13.5px; font-weight: 550; flex: 1; min-width: 160px;">{{ t.title }}</span>
+              <span style="font-size: 12px; color: var(--muted,#6a706a);">{{ t.assignee }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">{{ t.pctLabel }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+        <div style="border: 1px dashed var(--line,#dfe1d9); border-radius: 12px; padding: 34px; text-align: center; font-size: 13px; color: var(--muted,#6a706a);">Nothing matches that. Try a name, a team, or a task ID.</div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    </div>
+
+    <!-- ============ MOBILE TABS ============ -->
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+    <nav style="display: flex; border-top: 1px solid var(--line,#dfe1d9); background: var(--panel,#fbfbf8); padding: 6px 4px 10px;">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="4">
+        <button onClick="{{ n.go }}" style="{{ n.tabStyle }}">
+          <span style="font-size: 11.5px;">{{ n.label }}</span>
+        </button>
+      </sc-for>
+      <button onClick="{{ openNew }}" style="flex: 1; min-height: 46px; border: none; background: transparent; color: var(--accent,#b8402c); font-size: 11.5px; cursor: pointer;">New</button>
+    </nav>
+    </sc-if>
+  </main>
+
+  <!-- ============ NEW TASK / REASSIGN MODAL ============ -->
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+  <div style="position: fixed; inset: 0; background: rgba(12,14,11,0.42); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 40;">
+    <div style="width: 100%; max-width: 520px; background: var(--panel,#fbfbf8); border: 1px solid var(--line,#dfe1d9); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 16px; max-height: 88vh; overflow: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <h3 style="margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.02em;">{{ modalTitle }}</h3>
+        <button onClick="{{ closeModal }}" style="border: none; background: transparent; font-size: 18px; color: var(--muted,#6a706a); cursor: pointer; line-height: 1;">×</button>
+      </div>
+
+      <sc-if value="{{ isNewModal }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <label style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 12px; color: var(--muted,#6a706a);">Task description</span>
+          <input value="{{ form.title }}" onChange="{{ onFormTitle }}" placeholder="Ship idempotency keys for retries" style="border: 1px solid var(--line,#dfe1d9); background: var(--bg,#f2f3ee); border-radius: 9px; padding: 10px 12px; font-size: 13px; outline: none;" />
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 12px; color: var(--muted,#6a706a);">Assign to</span>
+          <select value="{{ form.assignee }}" onChange="{{ onFormAssignee }}" style="border: 1px solid var(--line,#dfe1d9); background: var(--bg,#f2f3ee); border-radius: 9px; padding: 10px 12px; font-size: 13px; outline: none;">
+            <sc-for list="{{ assigneeOptions }}" as="a" hint-placeholder-count="6">
+              <option value="{{ a.value }}">{{ a.label }}</option>
+            </sc-for>
+          </select>
+        </label>
+        <div style="display: flex; gap: 12px;">
+          <label style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+            <span style="font-size: 12px; color: var(--muted,#6a706a);">Date assigned</span>
+            <input value="{{ form.date }}" onChange="{{ onFormDate }}" style="border: 1px solid var(--line,#dfe1d9); background: var(--bg,#f2f3ee); border-radius: 9px; padding: 10px 12px; font-size: 13px; outline: none;" />
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+            <span style="font-size: 12px; color: var(--muted,#6a706a);">Opening note</span>
+            <input value="{{ form.note }}" onChange="{{ onFormNote }}" placeholder="At 0% because…" style="border: 1px solid var(--line,#dfe1d9); background: var(--bg,#f2f3ee); border-radius: 9px; padding: 10px 12px; font-size: 13px; outline: none;" />
+          </label>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isReassignModal }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-size: 13px; color: var(--muted,#6a706a);">{{ reassignFromLine }}</div>
+        <label style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 12px; color: var(--muted,#6a706a);">New owner</span>
+          <select value="{{ form.assignee }}" onChange="{{ onFormAssignee }}" style="border: 1px solid var(--line,#dfe1d9); background: var(--bg,#f2f3ee); border-radius: 9px; padding: 10px 12px; font-size: 13px; outline: none;">
+            <sc-for list="{{ assigneeOptions }}" as="a" hint-placeholder-count="6">
+              <option value="{{ a.value }}">{{ a.label }}</option>
+            </sc-for>
+          </select>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 12px; color: var(--muted,#6a706a);">Reason</span>
+          <input value="{{ form.note }}" onChange="{{ onFormNote }}" placeholder="Why is it moving?" style="border: 1px solid var(--line,#dfe1d9); background: var(--bg,#f2f3ee); border-radius: 9px; padding: 10px 12px; font-size: 13px; outline: none;" />
+        </label>
+      </div>
+      </sc-if>
+
+      <div style="display: flex; justify-content: flex-end; gap: 9px; padding-top: 4px;">
+        <button onClick="{{ closeModal }}" style="border: 1px solid var(--line,#dfe1d9); background: transparent; border-radius: 9px; padding: 10px 15px; font-size: 13px; cursor: pointer;">Cancel</button>
+        <button onClick="{{ submitModal }}" style="border: 1px solid var(--accent,#b8402c); background: var(--accent,#b8402c); color: #fff; border-radius: 9px; padding: 10px 16px; font-size: 13px; cursor: pointer;" style-hover="opacity: 0.88;">{{ modalCta }}</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;paper&quot;,&quot;ink&quot;],&quot;default&quot;:&quot;paper&quot;,&quot;tsType&quot;:&quot;'paper' | 'ink'&quot;,&quot;section&quot;:&quot;Direction&quot;},&quot;device&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;desktop&quot;,&quot;mobile&quot;],&quot;default&quot;:&quot;desktop&quot;,&quot;tsType&quot;:&quot;'desktop' | 'mobile'&quot;,&quot;section&quot;:&quot;Direction&quot;},&quot;taskLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;table&quot;,&quot;lanes&quot;],&quot;default&quot;:&quot;table&quot;,&quot;tsType&quot;:&quot;'table' | 'lanes'&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;dashLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;split&quot;,&quot;focus&quot;],&quot;default&quot;:&quot;split&quot;,&quot;tsType&quot;:&quot;'split' | 'focus'&quot;,&quot;section&quot;:&quot;Layout&quot;}}">
+const THEMES = {
+  paper: { bg:'#f2f3ee', panel:'#fbfbf8', ink:'#171a16', muted:'#6a706a', line:'#dfe1d9', track:'#e6e8e0', hover:'#eceee6', accent:'#b8402c', accentSoft:'#f4e0da' },
+  ink:   { bg:'#131611', panel:'#1b1f19', ink:'#eef0ea', muted:'#98a094', line:'#2c3228', track:'#262c23', hover:'#232921', accent:'#e2664f', accentSoft:'#33231f' }
+};
+
+const PEOPLE = [
+  { id:'p1', name:'Amara Osei', role:'Engineering manager', team:'t1' },
+  { id:'p2', name:'Devin Roche', role:'Backend engineer', team:'t1' },
+  { id:'p3', name:'Lena Fischer', role:'iOS engineer', team:'t2' },
+  { id:'p4', name:'Tomás Rivera', role:'Android engineer', team:'t2' },
+  { id:'p5', name:'Priya Raman', role:'Staff engineer', team:'t3' },
+  { id:'p6', name:'Nikhil Shah', role:'Backend engineer', team:'t3' },
+  { id:'p7', name:'Grace Mbeki', role:'Data lead', team:'t4' },
+  { id:'p8', name:'Jonas Weber', role:'Data engineer', team:'t4' },
+  { id:'p9', name:'Sofia Cardoso', role:'QA engineer', team:'t1' },
+  { id:'p10', name:'Ivan Petrov', role:'Site reliability', team:'t1' }
+];
+
+const TEAMS = [
+  { id:'t1', name:'Platform', lead:'p1' },
+  { id:'t2', name:'Mobile', lead:'p3' },
+  { id:'t3', name:'Payments', lead:'p5' },
+  { id:'t4', name:'Data', lead:'p7' }
+];
+
+const TASKS = [
+  { id:'TSK-401', title:'Migrate auth service to the new session store', description:'Cut over token validation to the shared session store, keep the old path behind a flag for one release, and remove it after two clean weeks.', by:'p1', kind:'person', to:'p2', date:'2 Aug', comments:[
+    { by:'p2', at:'2 Aug, 09:14', pct:0, text:'At 0% because the staging cluster has no session store yet. SRE ticket filed.' },
+    { by:'p10', at:'6 Aug, 11:02', pct:20, text:'Store is up in staging. 20% — schema is in place, no traffic on it.' },
+    { by:'p2', at:'14 Aug, 16:40', pct:55, text:'55%: read path is fully migrated behind the flag. Write path still dual-writing.' },
+    { by:'p2', at:'24 Aug, 10:05', pct:78, text:'78% — dual-write removed for internal users. Holding here until the flag has run a full week clean.' }
+  ], reassigns:[] },
+  { id:'TSK-402', title:'Idempotency keys on the payments retry path', description:'Duplicate charges appear when the client retries a timed-out request. Add idempotency keys end to end and backfill the audit table.', by:'p1', kind:'person', to:'p6', date:'2 Aug', comments:[
+    { by:'p5', at:'3 Aug, 08:20', pct:10, text:'10%: design note written, needs a decision on key lifetime before code starts.' },
+    { by:'p6', at:'12 Aug, 14:30', pct:45, text:'45% — keys are generated and stored. Replay handling for partial failures is not done.' },
+    { by:'p6', at:'22 Aug, 09:48', pct:70, text:'At 70% because replay works in tests but the backfill script is still running against the audit table.' }
+  ], reassigns:[ { from:'p5', to:'p6', by:'p1', at:'11 Aug', why:'Priya moved to the ledger reconciliation spike; Nikhil already had the retry code loaded.' } ] },
+  { id:'TSK-403', title:'Offline draft sync for the mobile composer', description:'Drafts written without a connection must survive app restarts and merge without clobbering server edits.', by:'p3', kind:'team', to:'t2', date:'4 Aug', comments:[
+    { by:'p3', at:'5 Aug, 10:11', pct:15, text:'15%: local store landed on iOS. Android has not started.' },
+    { by:'p4', at:'15 Aug, 17:26', pct:40, text:'40% — Android store matches iOS. Conflict merge is still last-write-wins, which we agreed is not shippable.' },
+    { by:'p3', at:'25 Aug, 12:03', pct:62, text:'62%: merge rules agreed and implemented on iOS. Android port is the remaining work.' }
+  ], reassigns:[] },
+  { id:'TSK-404', title:'Ledger reconciliation spike', description:'Establish whether nightly reconciliation can run against the read replica without breaching the four-hour window.', by:'p1', kind:'person', to:'p5', date:'11 Aug', comments:[
+    { by:'p5', at:'11 Aug, 15:40', pct:0, text:'At 0% because the spike only starts once the payments handover to Nikhil is complete.' },
+    { by:'p5', at:'18 Aug, 09:30', pct:50, text:'50% — replica timings measured for three of six job stages. Early read: it fits, with no headroom.' },
+    { by:'p5', at:'26 Aug, 08:15', pct:85, text:'85%: all stages measured, writing the recommendation. Proposing a two-phase run.' }
+  ], reassigns:[] },
+  { id:'TSK-405', title:'Event schema registry rollout', description:'Publish the registry, move the three highest-volume producers onto validated schemas, and fail builds on incompatible changes.', by:'p7', kind:'team', to:'t4', date:'2 Aug', comments:[
+    { by:'p7', at:'2 Aug, 11:00', pct:0, text:'0% — waiting on the registry service to be provisioned.' },
+    { by:'p8', at:'10 Aug, 13:22', pct:35, text:'35%: registry is live, first producer validated in CI.' },
+    { by:'p8', at:'20 Aug, 16:05', pct:100, text:'100% — all three producers validated, CI blocks incompatible changes as of today.' }
+  ], reassigns:[] },
+  { id:'TSK-406', title:'Cut cold-start time on the release build', description:'Cold start is 2.9s on the reference device. Target is under 1.8s without dropping the startup experiment framework.', by:'p3', kind:'person', to:'p4', date:'6 Aug', comments:[
+    { by:'p4', at:'8 Aug, 09:50', pct:25, text:'25%: traced startup, found two blocking disk reads and an eager DI graph.' },
+    { by:'p4', at:'21 Aug, 15:18', pct:58, text:'58% — disk reads deferred, now at 2.2s. The DI change is riskier and needs review.' }
+  ], reassigns:[] },
+  { id:'TSK-407', title:'Flaky checkout suite quarantine', description:'Quarantine the twelve flakiest checkout tests, root-cause the top three, and publish a weekly flake report.', by:'p1', kind:'person', to:'p9', date:'5 Aug', comments:[
+    { by:'p9', at:'7 Aug, 10:40', pct:30, text:'30%: all twelve quarantined, report scaffolded.' },
+    { by:'p9', at:'19 Aug, 11:55', pct:100, text:'100% — three root causes fixed and the report has run for two weeks. Closing.' }
+  ], reassigns:[] },
+  { id:'TSK-408', title:'Region failover runbook and game day', description:'Write the failover runbook for the primary region and rehearse it with the on-call rotation.', by:'p1', kind:'person', to:'p10', date:'8 Aug', comments:[
+    { by:'p10', at:'9 Aug, 08:30', pct:20, text:'20%: runbook drafted from the last incident timeline.' },
+    { by:'p10', at:'23 Aug, 14:44', pct:45, text:'At 45% because the game day slipped a week — two of the four on-call engineers were in the release freeze.' }
+  ], reassigns:[] },
+  { id:'TSK-409', title:'Deprecate the v1 public API', description:'Announce the sunset, ship the migration guide, and move the remaining eleven integrations off v1.', by:'p1', kind:'team', to:'t1', date:'4 Aug', comments:[
+    { by:'p1', at:'4 Aug, 09:05', pct:0, text:'0% — announcement copy is with the docs team.' },
+    { by:'p2', at:'13 Aug, 12:17', pct:30, text:'30%: sunset announced, guide published, four integrations migrated.' },
+    { by:'p2', at:'26 Aug, 09:20', pct:52, text:'52% — seven of eleven migrated. The remaining four are on the enterprise plan and need scheduled windows.' }
+  ], reassigns:[ { from:'p9', to:'t1', by:'p1', at:'12 Aug', why:'Scope grew past one person once the enterprise integrations were counted, so it moved to the team.' } ] },
+  { id:'TSK-410', title:'Self-serve usage dashboard', description:'Give customers a usage view built on the metered events pipeline, with export and a 13-month window.', by:'p7', kind:'person', to:'p8', date:'14 Aug', comments:[
+    { by:'p8', at:'15 Aug, 10:00', pct:0, text:'0% because the metered events backfill has to finish before any query work is meaningful.' },
+    { by:'p8', at:'26 Aug, 11:30', pct:18, text:'18% — backfill is at month nine of thirteen. Query layer sketched, nothing shipped.' }
+  ], reassigns:[] },
+  { id:'TSK-411', title:'Secrets rotation for build agents', description:'Rotate the long-lived build credentials to short-lived tokens and remove the shared vault path.', by:'p1', kind:'person', to:'p10', date:'2 Aug', comments:[
+    { by:'p10', at:'4 Aug, 09:00', pct:40, text:'40%: token issuer wired into two of five agent pools.' },
+    { by:'p10', at:'16 Aug, 15:35', pct:100, text:'100% — all pools rotated, shared vault path deleted and audited.' }
+  ], reassigns:[] },
+  { id:'TSK-412', title:'Card scanning in the payments SDK', description:'Add on-device card scanning to the SDK, gated per merchant, with no image ever leaving the device.', by:'p5', kind:'person', to:'p3', date:'18 Aug', comments:[
+    { by:'p3', at:'19 Aug, 13:10', pct:0, text:'At 0% because the SDK release train is frozen until the cold-start work lands.' }
+  ], reassigns:[ { from:'p4', to:'p3', by:'p5', at:'22 Aug', why:'Tomás is fully committed to cold-start; Lena picks it up after the freeze lifts.' } ] }
+];
+
+const TREND = [
+  { date:'2 Aug', pct:12 }, { date:'6 Aug', pct:24 }, { date:'10 Aug', pct:33 },
+  { date:'14 Aug', pct:41 }, { date:'18 Aug', pct:50 }, { date:'22 Aug', pct:57 }, { date:'26 Aug', pct:64 }
+];
+
+const NAV = [
+  { view:'dashboard', label:'Dashboard' },
+  { view:'tasks', label:'Tasks' },
+  { view:'teams', label:'Teams' },
+  { view:'people', label:'People' }
+];
+
+class Component extends DCLogic {
+  state = {
+    view: 'dashboard', taskId: null, personId: null, teamId: 't1',
+    query: '', filter: 'All', tasks: TASKS, draft: '', modal: null,
+    theme: null, device: null, taskLayout: null, dashLayout: null,
+    form: { title:'', assignee:'p2', date:'26 Aug', note:'' }
+  };
+
+  // ---- helpers
+  componentDidUpdate(prev) {
+    ['theme','device','taskLayout','dashLayout'].forEach(k => {
+      if (prev[k] !== this.props[k] && this.state[k] !== null) this.setState({ [k]: null });
+    });
+  }
+  T() { return THEMES[this.state.theme || this.props.theme || 'paper']; }
+  person(id) { return PEOPLE.find(p => p.id === id); }
+  team(id) { return TEAMS.find(t => t.id === id); }
+  initials(name) { return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase(); }
+  assigneeName(t) { return t.kind === 'team' ? this.team(t.to).name + ' (team)' : this.person(t.to).name; }
+  assigneeInitials(t) { return t.kind === 'team' ? this.team(t.to).name.slice(0,2).toUpperCase() : this.initials(this.person(t.to).name); }
+  pct(t) { const c = t.comments[t.comments.length - 1]; return c ? c.pct : 0; }
+  status(t) { const p = this.pct(t); return p === 100 ? 'Completed' : p === 0 ? 'Pending' : 'Ongoing'; }
+  statusColor(s) { const T = this.T(); return s === 'Completed' ? T.accent : s === 'Ongoing' ? (this.isDark() ? '#8ca07f' : '#5e7a52') : T.muted; }
+  isDark() { return (this.state.theme || this.props.theme || 'paper') === 'ink'; }
+  statusChip(s) {
+    const T = this.T();
+    if (s === 'Completed') return { bg: T.accentSoft, fg: T.accent };
+    if (s === 'Ongoing') return { bg: this.isDark() ? '#232b20' : '#e7eee2', fg: this.isDark() ? '#a9bd9c' : '#4c6642' };
+    return { bg: this.isDark() ? '#24282210' : '#eceee6', fg: T.muted };
+  }
+  barColor(t) { return this.statusColor(this.status(t)); }
+  device() { return this.state.device || this.props.device || 'desktop'; }
+  layout() { return this.state.taskLayout || this.props.taskLayout || 'table'; }
+  dash() { return this.state.dashLayout || this.props.dashLayout || 'split'; }
+
+  personTasksOf(id) {
+    const p = this.person(id);
+    return this.state.tasks.filter(t =>
+      (t.kind === 'person' && t.to === id) ||
+      (t.kind === 'team' && p && t.to === p.team) ||
+      t.reassigns.some(r => r.from === id) ||
+      t.comments.some(c => c.by === id));
+  }
+  ownedBy(id) {
+    const p = this.person(id);
+    return this.state.tasks.filter(t => (t.kind === 'person' && t.to === id) || (t.kind === 'team' && p && t.to === p.team));
+  }
+  avg(list) { if (!list.length) return 0; return Math.round(list.reduce((a, t) => a + this.pct(t), 0) / list.length); }
+
+  // ---- actions
+  go(view, extra) { return () => this.setState(Object.assign({ view }, extra || {})); }
+  btn(active) {
+    const T = this.T();
+    return `padding: 6px 11px; border-radius: 8px; font-size: 12px; cursor: pointer; border: 1px solid ${active ? T.accent : T.line}; background: ${active ? T.accentSoft : 'transparent'}; color: ${active ? T.accent : T.muted};`;
+  }
+
+  setPct(id, pct) {
+    return () => this.setState(s => ({
+      tasks: s.tasks.map(t => t.id !== id ? t : Object.assign({}, t, {
+        comments: t.comments.concat([{ by:'p1', at:'26 Aug, now', pct, text: pct === 100 ? 'Marked 100% — work is done and verified.' : 'Progress set to ' + pct + '% from the task view.' }])
+      }))
+    }));
+  }
+  addComment = () => {
+    const { draft, taskId } = this.state;
+    if (!draft.trim()) return;
+    this.setState(s => ({
+      draft: '',
+      tasks: s.tasks.map(t => t.id !== taskId ? t : Object.assign({}, t, {
+        comments: t.comments.concat([{ by:'p1', at:'26 Aug, now', pct: this.pct(t), text: draft }])
+      }))
+    }));
+  };
+  submitModal = () => {
+    const { modal, form } = this.state;
+    if (modal === 'new') {
+      const kind = form.assignee.startsWith('t') ? 'team' : 'person';
+      const id = 'TSK-' + (413 + this.state.tasks.length - TASKS.length);
+      const task = { id, title: form.title || 'Untitled task', description: form.note || 'No description yet.', by:'p1', kind, to: form.assignee, date: form.date,
+        comments: [{ by:'p1', at: form.date + ', now', pct: 0, text: form.note || 'At 0% because the task was just created.' }], reassigns: [] };
+      this.setState(s => ({ tasks: [task].concat(s.tasks), modal: null, view: 'task', taskId: id, form: { title:'', assignee:'p2', date:'26 Aug', note:'' } }));
+    } else if (modal === 'reassign') {
+      const id = this.state.taskId;
+      this.setState(s => ({
+        modal: null,
+        tasks: s.tasks.map(t => {
+          if (t.id !== id) return t;
+          const kind = form.assignee.startsWith('t') ? 'team' : 'person';
+          return Object.assign({}, t, { kind, to: form.assignee,
+            reassigns: t.reassigns.concat([{ from: t.to, to: form.assignee, by:'p1', at:'26 Aug', why: form.note || 'No reason given.' }]) });
+        })
+      }));
+    }
+  };
+
+  // ---- charts
+  lineChart(T) {
+    const w = 620, h = 190, pad = { l: 34, r: 14, t: 14, b: 26 };
+    const n = TREND.length;
+    const x = i => pad.l + i * (w - pad.l - pad.r) / (n - 1);
+    const y = p => pad.t + (100 - p) / 100 * (h - pad.t - pad.b);
+    const pts = TREND.map((d, i) => [x(i), y(d.pct)]);
+    const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    const area = line + ' L' + pts[n-1][0].toFixed(1) + ' ' + y(0) + ' L' + pts[0][0].toFixed(1) + ' ' + y(0) + ' Z';
+    const e = React.createElement;
+    const kids = [];
+    [0, 25, 50, 75, 100].forEach(g => {
+      kids.push(e('line', { key:'g'+g, x1: pad.l, x2: w - pad.r, y1: y(g), y2: y(g), stroke: T.line, strokeWidth: 1 }));
+      kids.push(e('text', { key:'gt'+g, x: pad.l - 8, y: y(g) + 3.5, textAnchor:'end', fill: T.muted, fontSize: 9, fontFamily:'IBM Plex Mono, monospace' }, g));
+    });
+    kids.push(e('path', { key:'a', d: area, fill: T.accentSoft, opacity: 0.75 }));
+    kids.push(e('path', { key:'l', d: line, fill:'none', stroke: T.accent, strokeWidth: 2, strokeLinejoin:'round' }));
+    TREND.forEach((d, i) => {
+      kids.push(e('circle', { key:'c'+i, cx: x(i), cy: y(d.pct), r: 3.4, fill: T.panel, stroke: T.accent, strokeWidth: 2 }));
+      kids.push(e('text', { key:'v'+i, x: x(i), y: y(d.pct) - 10, textAnchor:'middle', fill: T.ink, fontSize: 10, fontFamily:'IBM Plex Mono, monospace' }, d.pct + '%'));
+      kids.push(e('text', { key:'d'+i, x: x(i), y: h - 6, textAnchor:'middle', fill: T.muted, fontSize: 9.5, fontFamily:'IBM Plex Mono, monospace' }, d.date));
+    });
+    return e('svg', { viewBox: '0 0 ' + w + ' ' + h, style: { width:'100%', height:'auto', display:'block' } }, kids);
+  }
+
+  donut(T, mix, total) {
+    const e = React.createElement, r = 52, C = 2 * Math.PI * r;
+    let acc = 0;
+    const rings = mix.map((s, i) => {
+      const frac = total ? s.count / total : 0;
+      const el = e('circle', { key:i, cx: 70, cy: 70, r, fill:'none', stroke: s.color, strokeWidth: 17,
+        strokeDasharray: (frac * C).toFixed(2) + ' ' + C, strokeDashoffset: (-acc * C).toFixed(2),
+        transform: 'rotate(-90 70 70)' });
+      acc += frac; return el;
+    });
+    return e('svg', { viewBox:'0 0 140 140', style: { width: 140, height: 140, flex:'0 0 auto' } }, [
+      e('circle', { key:'bg', cx:70, cy:70, r, fill:'none', stroke: T.track, strokeWidth: 17 }),
+      ...rings,
+      e('text', { key:'t', x:70, y:66, textAnchor:'middle', fill: T.ink, fontSize: 22, fontWeight: 600 }, total),
+      e('text', { key:'s', x:70, y:84, textAnchor:'middle', fill: T.muted, fontSize: 9.5, fontFamily:'IBM Plex Mono, monospace' }, 'TASKS')
+    ]);
+  }
+
+  spark(T, task) {
+    const e = React.createElement, w = 300, h = 110, pad = 18;
+    const pts = task.comments.map((c, i) => [pad + i * (w - pad * 2) / Math.max(1, task.comments.length - 1), pad + (100 - c.pct) / 100 * (h - pad * 2)]);
+    const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    const kids = [e('path', { key:'l', d: line, fill:'none', stroke: T.accent, strokeWidth: 2 })];
+    task.comments.forEach((c, i) => {
+      kids.push(e('circle', { key:'c'+i, cx: pts[i][0], cy: pts[i][1], r: 3.2, fill: T.panel, stroke: T.accent, strokeWidth: 2 }));
+      kids.push(e('text', { key:'t'+i, x: pts[i][0], y: pts[i][1] - 9, textAnchor:'middle', fill: T.muted, fontSize: 9, fontFamily:'IBM Plex Mono, monospace' }, c.pct + '%'));
+    });
+    return e('svg', { viewBox:'0 0 ' + w + ' ' + h, style: { width:'100%', height:'auto', display:'block' } }, kids);
+  }
+
+  renderVals() {
+    const T = this.T(), S = this.state, tasks = S.tasks;
+    const device = this.device(), isMobile = device === 'mobile', isDesktop = !isMobile;
+    const themeVars = { '--bg':T.bg, '--panel':T.panel, '--ink':T.ink, '--muted':T.muted, '--line':T.line, '--track':T.track, '--hover':T.hover, '--accent':T.accent, '--accentSoft':T.accentSoft };
+
+    const row = t => {
+      const s = this.status(t), chip = this.statusChip(s), last = t.comments[t.comments.length - 1];
+      return {
+        id: t.id, title: t.title, status: s, statusBg: chip.bg, statusFg: chip.fg,
+        pctLabel: this.pct(t) + '%', barColor: this.barColor(t),
+        assignee: this.assigneeName(t), initials: this.assigneeInitials(t),
+        metaLine: 'by ' + this.person(t.by).name + ' · ' + t.date + (t.reassigns.length ? ' · reassigned ' + t.reassigns.length + '×' : ''),
+        lastComment: last ? last.text : '—',
+        lastCommentShort: last ? (last.text.length > 96 ? last.text.slice(0, 94) + '…' : last.text) : '—',
+        lastCommentMeta: last ? this.person(last.by).name + ' · ' + last.at : '',
+        go: this.go('task', { taskId: t.id })
+      };
+    };
+
+    // nav
+    const counts = { dashboard: '', tasks: tasks.length, teams: TEAMS.length, people: PEOPLE.length };
+    const navView = S.view === 'task' ? 'tasks' : S.view === 'person' ? 'people' : S.view === 'team' ? 'teams' : S.view;
+    const nav = NAV.map(n => {
+      const active = navView === n.view;
+      return { label: n.label, count: counts[n.view],
+        style: `display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 11px; border-radius: 8px; border: none; cursor: pointer; text-align: left; background: ${active ? T.accentSoft : 'transparent'}; color: ${active ? T.accent : T.ink}; font-weight: ${active ? 550 : 400};`,
+        tabStyle: `flex: 1; min-height: 46px; border: none; background: transparent; cursor: pointer; color: ${active ? T.accent : T.muted};`,
+        go: this.go(n.view === 'teams' ? 'team' : n.view === 'people' ? 'person' : n.view, n.view === 'people' ? { personId: S.personId || 'p2' } : {}) };
+    });
+
+    const statusMix = ['Completed','Ongoing','Pending'].map(s => ({ label: s, color: this.statusColor(s), count: tasks.filter(t => this.status(t) === s).length }));
+    const total = tasks.length;
+
+    const titles = { dashboard:'Delivery overview', tasks:'All tasks', task:'Task', person:'Person', team:'Team', search:'Search' };
+    const activeTask = tasks.find(t => t.id === S.taskId) || tasks[0];
+    const activePerson = this.person(S.personId || 'p2');
+    const activeTeam = this.team(S.teamId || 't1');
+
+    let pageTitle = titles[S.view], crumb = 'Throughline';
+    if (S.view === 'task') { pageTitle = activeTask.title; crumb = 'Tasks / ' + activeTask.id; }
+    if (S.view === 'person') { pageTitle = activePerson.name; crumb = 'People'; }
+    if (S.view === 'team') { pageTitle = activeTeam.name; crumb = 'Teams'; }
+    if (S.view === 'search') { pageTitle = 'Results for “' + S.query + '”'; crumb = 'Search'; }
+    if (S.view === 'dashboard') crumb = 'Delivery org';
+
+    // task list
+    const filtered = tasks.filter(t => S.filter === 'All' || this.status(t) === S.filter);
+    const lanes = ['Pending','Ongoing','Completed'].map(s => {
+      const items = tasks.filter(t => this.status(t) === s);
+      return { label: s, color: this.statusColor(s), count: items.length, items: items.map(row) };
+    });
+
+    // detail
+    const at = activeTask, atStatus = this.status(at), atChip = this.statusChip(atStatus);
+    const comments = at.comments.map((c, i) => ({
+      ordinal: '#' + (i + 1), by: this.person(c.by).name, initials: this.initials(this.person(c.by).name),
+      at: c.at, pctLabel: c.pct + '%', text: c.text,
+      railStyle: i === at.comments.length - 1 ? 'display: none;' : `flex: 1; width: 1px; background: ${T.line};`
+    }));
+    const taskMeta = [
+      { label:'Assigned to', value: this.assigneeName(at) },
+      { label:'Assigned by', value: this.person(at.by).name },
+      { label:'Date assigned', value: at.date },
+      { label:'Status', value: atStatus },
+      { label:'Reassignments', value: String(at.reassigns.length) }
+    ];
+    const reassignments = at.reassigns.map(r => ({
+      move: (r.from.startsWith('t') ? this.team(r.from).name + ' (team)' : this.person(r.from).name) + ' → ' + (r.to.startsWith('t') ? this.team(r.to).name + ' (team)' : this.person(r.to).name),
+      meta: 'by ' + this.person(r.by).name + ' · ' + r.at, why: r.why
+    }));
+
+    // people & teams
+    const personCards = PEOPLE.map(p => {
+      const owned = this.ownedBy(p.id), done = owned.filter(t => this.status(t) === 'Completed').length, avg = this.avg(owned);
+      return { name: p.name, role: p.role, initials: this.initials(p.name), pctLabel: avg + '%',
+        barColor: avg === 100 ? T.accent : this.statusColor('Ongoing'),
+        summary: owned.length + ' tasks · ' + done + ' completed · ' + avg + '% average',
+        go: this.go('person', { personId: p.id }) };
+    });
+    const teamRows = TEAMS.map(tm => {
+      const list = tasks.filter(t => (t.kind === 'team' && t.to === tm.id) || (t.kind === 'person' && this.person(t.to).team === tm.id));
+      return { name: tm.name, leader: this.person(tm.lead).name, pctLabel: this.avg(list) + '%',
+        taskNote: list.length + ' tasks · ' + list.filter(t => this.status(t) === 'Completed').length + ' done',
+        go: this.go('team', { teamId: tm.id }) };
+    });
+
+    const ap = activePerson, apOwned = this.ownedBy(ap.id), apAll = this.personTasksOf(ap.id), apAvg = this.avg(apOwned);
+    const apDone = apOwned.filter(t => this.status(t) === 'Completed').length;
+    const personStats = [
+      { label:'Avg progress', value: apAvg + '%' },
+      { label:'Assigned', value: String(apOwned.length) },
+      { label:'Completed', value: String(apDone) },
+      { label:'Comments', value: String(tasks.reduce((a, t) => a + t.comments.filter(c => c.by === ap.id).length, 0)) }
+    ];
+    const personNarrative = apDone === apOwned.length && apOwned.length
+      ? ap.name + ' has closed out every task currently assigned to them.'
+      : ap.name + ' is at ' + apAvg + '% across ' + apOwned.length + ' assigned tasks, with ' + apDone + ' fully completed. ' + (apAll.length - apOwned.length > 0 ? 'Also appears on ' + (apAll.length - apOwned.length) + ' task(s) through reassignment or commentary.' : '');
+
+    const atm = activeTeam, teamTaskList = tasks.filter(t => (t.kind === 'team' && t.to === atm.id) || (t.kind === 'person' && this.person(t.to).team === atm.id));
+    const members = PEOPLE.filter(p => p.team === atm.id);
+
+    // search
+    const q = S.query.trim().toLowerCase();
+    const peopleResults = q ? personCards.filter((c, i) => (PEOPLE[i].name + ' ' + PEOPLE[i].role + ' ' + this.team(PEOPLE[i].team).name).toLowerCase().includes(q)) : [];
+    const taskResults = q ? tasks.filter(t => (t.id + ' ' + t.title + ' ' + this.assigneeName(t)).toLowerCase().includes(q)).map(row) : [];
+
+    const assigneeOptions = PEOPLE.map(p => ({ value: p.id, label: p.name + ' — ' + p.role }))
+      .concat(TEAMS.map(t => ({ value: t.id, label: t.name + ' (team)' })));
+
+    const gridCols = isMobile ? '1fr' : 'repeat(auto-fit, minmax(190px, 1fr))';
+
+    return {
+      themeVars, isMobile, isDesktop, nav, query: S.query, crumb, pageTitle,
+      shellStyle: isMobile
+        ? `width: 420px; max-width: 100%; min-height: 100vh; border-left: 1px solid ${T.line}; border-right: 1px solid ${T.line}; display: flex; background: ${T.bg};`
+        : 'width: 100%; max-width: 1480px; display: flex; min-height: 100vh;',
+      mainStyle: 'flex: 1; min-width: 0; display: flex; flex-direction: column;',
+      headerStyle: `display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: ${isMobile ? '16px 16px 12px' : '22px 30px'}; border-bottom: 1px solid ${T.line}; background: ${T.bg}; flex-wrap: ${isMobile ? 'wrap' : 'nowrap'};`,
+      bodyStyle: `flex: 1; padding: ${isMobile ? '16px 14px 22px' : '26px 30px 44px'};`,
+      themeShort: this.isDark() ? 'Paper' : 'Ink',
+      toggleTheme: () => this.setState({ theme: this.isDark() ? 'paper' : 'ink' }),
+      toggleDevice: () => this.setState({ device: isMobile ? 'desktop' : 'mobile' }),
+      themeOptions: [['paper','Paper'],['ink','Ink']].map(([v, l]) => ({ label: l, style: this.btn((S.theme || this.props.theme || 'paper') === v) + ' flex: 1;', go: () => this.setState({ theme: v }) })),
+      deviceOptions: [['desktop','Desktop'],['mobile','Mobile']].map(([v, l]) => ({ label: l, style: this.btn(device === v) + ' flex: 1;', go: () => this.setState({ device: v }) })),
+      openNew: () => this.setState({ modal: 'new' }),
+
+      isDashboard: S.view === 'dashboard', isTasks: S.view === 'tasks', isTaskDetail: S.view === 'task',
+      isPerson: S.view === 'person', isTeam: S.view === 'team', isSearch: S.view === 'search',
+
+      dashOptions: [['split','Split view'],['focus','Trend focus']].map(([v, l]) => ({ label: l, style: this.btn(this.dash() === v), go: () => this.setState({ dashLayout: v }) })),
+      kpiGrid: `display: grid; grid-template-columns: ${isMobile ? '1fr 1fr' : 'repeat(4, 1fr)'}; gap: 12px;`,
+      chartGrid: `display: grid; grid-template-columns: ${isMobile || this.dash() === 'focus' ? '1fr' : '1.55fr 1fr'}; gap: 14px;`,
+      peopleGrid: `display: grid; grid-template-columns: ${gridCols}; gap: 12px;`,
+      kpis: [
+        { label:'Org progress', value: this.avg(tasks) + '%', note:'weighted average across ' + total + ' tasks' },
+        { label:'Completed', value: String(statusMix[0].count), note:'closed in this window' },
+        { label:'Ongoing', value: String(statusMix[1].count), note:'between 1% and 99%' },
+        { label:'Stalled at 0%', value: String(statusMix[2].count), note:'each has a logged reason' }
+      ],
+      lineChart: this.lineChart(T),
+      donutChart: this.donut(T, statusMix, total),
+      statusMix, trendLegend: [
+        { label:'2–10 Aug · ramp', color: T.accentSoft },
+        { label:'14–22 Aug · steady', color: T.accent },
+        { label:'26 Aug · current 64%', color: this.statusColor('Ongoing') }
+      ],
+      teamRows, personCards,
+
+      statusFilters: ['All','Pending','Ongoing','Completed'].map(f => ({ label: f, style: this.btn(S.filter === f), go: () => this.setState({ filter: f }) })),
+      layoutOptions: [['table','Table'],['lanes','Lanes']].map(([v, l]) => ({ label: l, style: this.btn(this.layout() === v), go: () => this.setState({ taskLayout: v }) })),
+      isTableLayout: this.layout() === 'table', isLaneLayout: this.layout() === 'lanes',
+      laneGrid: `display: grid; grid-template-columns: ${isMobile ? '1fr' : 'repeat(3, 1fr)'}; gap: 14px; align-items: start;`,
+      taskRows: filtered.map(row), lanes,
+
+      detailGrid: `display: grid; grid-template-columns: ${isMobile ? '1fr' : '1.7fr 1fr'}; gap: 16px; align-items: start;`,
+      task: { id: at.id, title: at.title, description: at.description, status: atStatus, statusBg: atChip.bg, statusFg: atChip.fg,
+        pctLabel: this.pct(at) + '%', barColor: this.barColor(at), commentCount: String(at.comments.length), dateAssigned: at.date },
+      comments, taskMeta, reassignments, hasReassignments: at.reassigns.length > 0, noReassignments: at.reassigns.length === 0,
+      taskSpark: this.spark(T, at),
+      pctSteps: [0, 25, 50, 75, 100].map(p => ({ label: p + '%', style: this.btn(this.pct(at) === p), go: this.setPct(at.id, p) })),
+      backToTasks: this.go('tasks'), backToDash: this.go('dashboard'),
+      draft: S.draft, onDraft: e => this.setState({ draft: e.target.value }), addComment: this.addComment,
+      openReassign: () => this.setState({ modal: 'reassign' }),
+
+      person: { name: ap.name, role: ap.role, initials: this.initials(ap.name), teamName: this.team(ap.team).name, narrative: personNarrative },
+      personStats,
+      personTasks: apAll.map(t => Object.assign(row(t), {
+        roleNote: (t.kind === 'team' ? 'via ' + this.team(t.to).name + ' team' : t.to === ap.id ? 'current owner' : 'previously assigned') +
+          (t.reassigns.some(r => r.from === ap.id) ? ' · handed off ' + t.reassigns.filter(r => r.from === ap.id)[0].at : '') +
+          ' · ' + t.comments.filter(c => c.by === ap.id).length + ' comments logged'
+      })),
+
+      team: { name: atm.name, leader: this.person(atm.lead).name },
+      teamStats: [
+        { label:'Avg progress', value: this.avg(teamTaskList) + '%' },
+        { label:'Tasks', value: String(teamTaskList.length) },
+        { label:'Members', value: String(members.length) }
+      ],
+      teamMembers: members.map(m => ({ name: m.name, initials: this.initials(m.name), pctLabel: this.avg(this.ownedBy(m.id)) + '%', go: this.go('person', { personId: m.id }) })),
+      teamTasks: teamTaskList.map(row),
+
+      onQuery: e => { const v = e.target.value; this.setState({ query: v, view: v.trim() ? 'search' : 'dashboard' }); },
+      searchSummary: peopleResults.length + ' people · ' + taskResults.length + ' tasks matching “' + S.query + '”',
+      peopleResults, taskResults, hasPeopleResults: peopleResults.length > 0, hasTaskResults: taskResults.length > 0,
+      noResults: !!q && !peopleResults.length && !taskResults.length,
+
+      modalOpen: !!S.modal, isNewModal: S.modal === 'new', isReassignModal: S.modal === 'reassign',
+      modalTitle: S.modal === 'reassign' ? 'Reassign ' + at.id : 'New task',
+      modalCta: S.modal === 'reassign' ? 'Reassign' : 'Create task',
+      reassignFromLine: 'Currently with ' + this.assigneeName(at) + ', assigned ' + at.date + '. The move is recorded with who did it and why.',
+      closeModal: () => this.setState({ modal: null }),
+      submitModal: this.submitModal,
+      form: S.form,
+      onFormTitle: e => { const v = e.target.value; this.setState(s => ({ form: Object.assign({}, s.form, { title: v }) })); },
+      onFormAssignee: e => { const v = e.target.value; this.setState(s => ({ form: Object.assign({}, s.form, { assignee: v }) })); },
+      onFormDate: e => { const v = e.target.value; this.setState(s => ({ form: Object.assign({}, s.form, { date: v }) })); },
+      onFormNote: e => { const v = e.target.value; this.setState(s => ({ form: Object.assign({}, s.form, { note: v }) })); },
+      assigneeOptions
+    };
+  }
+}
+</script>
+</body>
+</html>
