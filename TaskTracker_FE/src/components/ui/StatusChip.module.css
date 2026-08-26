@@ -1,0 +1,27 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.completed {
+  color: var(--status-completed);
+  background: var(--status-completed-bg);
+}
+
+.ongoing {
+  color: var(--status-ongoing);
+  background: var(--status-ongoing-bg);
+}
+
+.pending {
+  color: var(--status-pending);
+  background: var(--status-pending-bg);
+}

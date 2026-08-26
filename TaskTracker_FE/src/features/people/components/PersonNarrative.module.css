@@ -1,0 +1,7 @@
+.narrative {
+  font-size: 14px;
+  color: var(--ink);
+  padding: var(--space-4);
+  background: var(--khaki-soft);
+  border-radius: var(--radius-md);
+}

@@ -1,0 +1,33 @@
+.bar {
+  display: flex;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  z-index: 50;
+}
+
+.tab,
+.tabActive {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.tab {
+  color: var(--muted);
+}
+
+.tabActive {
+  color: var(--accent-strong);
+  border-top: 2px solid var(--accent-strong);
+}

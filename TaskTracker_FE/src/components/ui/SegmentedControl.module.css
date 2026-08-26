@@ -1,0 +1,28 @@
+.track {
+  display: inline-flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--track);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.option,
+.optionActive {
+  padding: var(--space-1) var(--space-3);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+}
+
+.option:hover {
+  color: var(--ink);
+  background: var(--hover);
+}
+
+.optionActive {
+  background: var(--accent-strong);
+  color: var(--panel);
+}

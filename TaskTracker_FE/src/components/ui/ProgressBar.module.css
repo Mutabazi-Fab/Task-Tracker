@@ -1,0 +1,27 @@
+.track {
+  width: 100%;
+  height: 8px;
+  background: var(--track);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.fillCompleted,
+.fillOngoing,
+.fillPending {
+  height: 100%;
+  border-radius: var(--radius-sm);
+  transition: width 200ms ease;
+}
+
+.fillCompleted {
+  background: var(--status-completed);
+}
+
+.fillOngoing {
+  background: var(--status-ongoing);
+}
+
+.fillPending {
+  background: var(--status-pending);
+}

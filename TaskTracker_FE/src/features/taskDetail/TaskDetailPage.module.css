@@ -1,0 +1,23 @@
+.progressRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.sparklineLabel,
+.sectionHeading {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: var(--space-4);
+}
+
+@media (max-width: 768px) {
+  .progressRow {
+    grid-template-columns: 1fr;
+  }
+}

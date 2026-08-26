@@ -1,0 +1,30 @@
+/* Fixed-width numeric columns don't collapse to one column below 768px like
+   the other dashboard grids — instead of squeezing them, the table scrolls
+   horizontally inside its own container so the page itself never does. */
+.scrollWrap {
+  overflow-x: auto;
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  min-width: 460px;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 1.5fr 1.2fr 70px 70px;
+  gap: var(--space-4);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--khaki);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.headerRight {
+  text-align: right;
+}

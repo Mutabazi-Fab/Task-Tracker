@@ -1,0 +1,45 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.topBar {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-3) var(--space-8);
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.mainMobile {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-4);
+  padding-bottom: calc(var(--space-8) + 48px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+@media (max-width: 768px) {
+  .topBar {
+    padding: var(--space-3) var(--space-4);
+  }
+}
