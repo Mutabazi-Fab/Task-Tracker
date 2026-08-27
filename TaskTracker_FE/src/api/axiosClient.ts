@@ -39,12 +39,14 @@ export const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use((config) => {
   try {
-    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+    // "Remember me" (unchecked) puts the token in sessionStorage instead of localStorage
+    // — see AuthContext's storeToken — so both are checked here.
+    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) ?? sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
     if (token) {
       config.headers.set('Authorization', `Bearer ${token}`)
     }
   } catch {
-    // localStorage unavailable — request just goes out unauthenticated.
+    // Storage unavailable — request just goes out unauthenticated.
   }
   return config
 })

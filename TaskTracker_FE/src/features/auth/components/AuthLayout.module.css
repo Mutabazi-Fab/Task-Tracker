@@ -1,34 +1,105 @@
 .page {
   min-height: 100vh;
   display: flex;
+  background: var(--panel);
+}
+
+/* Branding + rotating description — left side, our system's copy (not the form's). Hidden
+   below ~900px so a phone just gets the form, full width. */
+.brandPanel {
+  display: none;
+  flex: 1;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--bg);
-  padding: var(--space-5);
+  gap: var(--space-8);
+  background: var(--track);
+  padding: var(--space-8);
 }
 
-.card {
-  width: 100%;
-  max-width: 380px;
+@media (min-width: 900px) {
+  .brandPanel {
+    display: flex;
+  }
+}
+
+.brandContent {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: var(--space-5);
+  max-width: 420px;
+  text-align: center;
 }
 
-.logoWrap {
+.logoBadge {
+  width: 168px;
+  height: 168px;
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
   display: flex;
+  align-items: center;
   justify-content: center;
 }
 
 .logo {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-lg);
-  object-fit: cover;
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+}
+
+.slideHeading {
+  font-family: var(--font-sans);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+.slideBody {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.dots {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.dot,
+.dotActive {
+  width: 20px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+  transition: background 160ms ease;
+}
+
+.dotActive {
+  background: var(--accent-strong);
+}
+
+/* The form — right side. */
+.formPanel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: var(--panel);
+}
+
+.formCard {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 
 .heading {
-  text-align: center;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -36,7 +107,7 @@
 
 .title {
   font-family: var(--font-sans);
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.025em;
   color: var(--ink);
@@ -44,7 +115,7 @@
 
 .subtitle {
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
 }
 
@@ -55,7 +126,6 @@
 }
 
 .footer {
-  text-align: center;
   font-family: var(--font-sans);
   font-size: 13px;
   color: var(--muted);

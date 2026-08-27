@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ErrorMessage } from '../../components/ui/ErrorMessage'
-import { TextField } from '../../components/ui/TextField'
+import { Icon } from '../../components/ui/Icon'
 import { ROUTES } from '../../app/routes'
+import { AuthField } from './components/AuthField'
 import { AuthLayout } from './components/AuthLayout'
 import { useAuth } from './useAuth'
 import type { ApiError } from '../../api/axiosClient'
 import styles from './components/AuthLayout.module.css'
+import loginStyles from './LoginPage.module.css'
 
 export function LoginPage() {
   const { login } = useAuth()
@@ -16,6 +18,8 @@ export function LoginPage() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [remember, setRemember] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -28,7 +32,7 @@ export function LoginPage() {
     setSubmitting(true)
     setError(null)
     try {
-      await login({ email: email.trim(), password })
+      await login({ email: email.trim(), password }, remember)
       const redirectTo = (location.state as { from?: string } | null)?.from ?? ROUTES.dashboard
       navigate(redirectTo, { replace: true })
     } catch (err) {
@@ -40,31 +44,48 @@ export function LoginPage() {
 
   return (
     <AuthLayout
-      title="Sign in to Throughline"
-      subtitle="Task progress tracking"
+      title="Welcome Back"
+      subtitle="Sign in to keep tracking your team's progress"
       footerText="Don't have an account?"
       footerLinkTo={ROUTES.signup}
       footerLinkLabel="Create one"
     >
       <form className={styles.form} onSubmit={handleSubmit}>
-        <TextField
-          label="Email"
+        <AuthField
+          label="Email Address"
           type="email"
+          icon="mail"
           value={email}
           onChange={setEmail}
-          placeholder="you@example.com"
+          placeholder="Enter your email"
           autoComplete="email"
           required
         />
-        <TextField
+        <AuthField
           label="Password"
-          type="password"
+          type={showPassword ? 'text' : 'password'}
+          icon="lock"
           value={password}
           onChange={setPassword}
-          placeholder="••••••••"
+          placeholder="Enter your password"
           autoComplete="current-password"
           required
+          trailing={
+            <button
+              type="button"
+              className={loginStyles.eyeButton}
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              <Icon name={showPassword ? 'eyeOff' : 'eye'} size={16} />
+            </button>
+          }
         />
+
+        <label className={loginStyles.rememberRow}>
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+          Remember me
+        </label>
 
         {error && <ErrorMessage message={error} />}
 

@@ -10,7 +10,12 @@ export interface AuthContextValue {
   status: AuthStatus
   currentUser: Person | null
   isDirector: boolean
-  login: (request: LoginRequest) => Promise<void>
+  /** remember=true persists the token in localStorage (survives closing the browser);
+   *  false keeps it in sessionStorage only (gone once the tab closes) — the "Remember me"
+   *  checkbox on LoginPage. */
+  login: (request: LoginRequest, remember: boolean) => Promise<void>
+  /** Always remembered — there's no checkbox on signup, and someone who just created an
+   *  account has no reason to expect it to sign them out the moment they close the tab. */
   signup: (request: SignupRequest) => Promise<void>
   logout: () => void
 }
@@ -19,23 +24,30 @@ export const AuthContext = createContext<AuthContextValue | null>(null)
 
 function readStoredToken(): string | null {
   try {
-    return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+    return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) ?? sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
   } catch {
     return null
   }
 }
 
-function storeToken(token: string) {
+function storeToken(token: string, remember: boolean) {
   try {
-    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token)
+    if (remember) {
+      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token)
+      sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+    } else {
+      sessionStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token)
+      localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+    }
   } catch {
-    // localStorage unavailable — the session just won't survive a reload.
+    // Storage unavailable — the session just won't survive a reload either way.
   }
 }
 
 function clearStoredToken() {
   try {
     localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+    sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
   } catch {
     // Nothing to clean up if it was never readable.
   }
@@ -84,15 +96,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized)
   }, [])
 
-  const login = useCallback(async (request: LoginRequest) => {
+  const login = useCallback(async (request: LoginRequest, remember: boolean) => {
     const auth = await loginRequest(request)
-    storeToken(auth.token)
+    storeToken(auth.token, remember)
     await hydrate()
   }, [hydrate])
 
   const signup = useCallback(async (request: SignupRequest) => {
     const auth = await signupRequest(request)
-    storeToken(auth.token)
+    storeToken(auth.token, true)
     await hydrate()
   }, [hydrate])
 

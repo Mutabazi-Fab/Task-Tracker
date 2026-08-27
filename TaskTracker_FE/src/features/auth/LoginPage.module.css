@@ -1,0 +1,19 @@
+.eyeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.eyeButton:hover {
+  color: var(--ink);
+}
+
+.rememberRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink);
+}

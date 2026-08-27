@@ -51,8 +51,8 @@ export function SignupPage() {
 
   return (
     <AuthLayout
-      title="Create your account"
-      subtitle="Task progress tracking"
+      title="Create Your Account"
+      subtitle="Join Throughline to start tracking your work"
       footerText="Already have an account?"
       footerLinkTo={ROUTES.login}
       footerLinkLabel="Sign in"
