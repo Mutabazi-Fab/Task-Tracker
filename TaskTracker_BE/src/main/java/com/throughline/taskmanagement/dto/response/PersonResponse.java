@@ -5,6 +5,7 @@ public record PersonResponse(
     String fullName,
     String email,
     String role,
+    String rank,
     String teamName,
     Long teamId
 ) {}

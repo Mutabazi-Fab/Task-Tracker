@@ -43,6 +43,7 @@ public class PersonServiceImpl implements PersonService {
         person.setFullName(request.fullName());
         person.setEmail(request.email());
         person.setRole(request.role());
+        person.setRank(request.rank());
 
         if (request.teamId() != null) {
             Team team = teamRepository.findById(request.teamId())
@@ -76,6 +77,7 @@ public class PersonServiceImpl implements PersonService {
         person.setFullName(request.fullName());
         person.setEmail(request.email());
         person.setRole(request.role());
+        person.setRank(request.rank());
 
         if (request.teamId() != null) {
             Team team = teamRepository.findById(request.teamId())

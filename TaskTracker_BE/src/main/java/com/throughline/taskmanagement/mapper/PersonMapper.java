@@ -16,6 +16,7 @@ public class PersonMapper {
                 person.getFullName(),
                 person.getEmail(),
                 person.getRole(),
+                person.getRank(),
                 person.getTeam() != null ? person.getTeam().getName() : null,
                 person.getTeam() != null ? person.getTeam().getId() : null
         );

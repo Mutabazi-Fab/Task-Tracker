@@ -7,5 +7,6 @@ public record CreatePersonRequest(
     @NotBlank String fullName,
     @Email @NotBlank String email,
     @NotBlank String role,
+    String rank,
     Long teamId
 ) {}

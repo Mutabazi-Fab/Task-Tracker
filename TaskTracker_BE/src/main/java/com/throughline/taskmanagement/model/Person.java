@@ -31,6 +31,13 @@ public class Person {
     @Column(nullable = false)
     private String role;
 
+    /**
+     * Military rank (e.g. "Major", "Captain", "Lieutenant Colonel") — optional.
+     * Set only for officers; left null for civilian staff. No validation
+     * annotation on purpose: this is never a required field.
+     */
+    private String rank;
+
     @ManyToOne
     @JoinColumn(name = "team_id")
     private Team team;
