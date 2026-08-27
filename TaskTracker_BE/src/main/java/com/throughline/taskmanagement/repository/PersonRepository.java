@@ -12,9 +12,12 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
     Optional<Person> findByEmail(String email);
     
     boolean existsByEmail(String email);
-    
-    List<Person> findByTeamId(Long teamId);
 
-    @Query("SELECT p FROM Person p WHERE LOWER(p.fullName) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(p.role) LIKE LOWER(CONCAT('%', :q, '%'))")
+    // No findByTeamId — a person can belong to multiple teams now, so "which team is this
+    // person in" is no longer a single-valued question. Look up via TeamMemberRepository instead.
+
+    @Query("SELECT p FROM Person p WHERE LOWER(p.fullName) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(p.jobTitle) LIKE LOWER(CONCAT('%', :q, '%'))")
     List<Person> search(@Param("q") String q);
+
+    Optional<Person> findByEmailIgnoreCase(String email);
 }

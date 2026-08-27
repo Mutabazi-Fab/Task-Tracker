@@ -1,18 +1,28 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../../app/routes'
 import { PageHeader } from '../../components/layout/PageHeader'
+import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { QueryBoundary } from '../../components/feedback/QueryBoundary'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { useAuth } from '../auth/useAuth'
 import { useTeams } from './hooks/useTeams'
+import { CreateTeamModal } from './components/CreateTeamModal'
 import styles from './TeamsListPage.module.css'
 
 export function TeamsListPage() {
   const query = useTeams()
+  const { isDirector } = useAuth()
+  const [createOpen, setCreateOpen] = useState(false)
 
   return (
     <>
-      <PageHeader breadcrumb="Throughline" title="Teams" />
+      <PageHeader
+        breadcrumb="Throughline"
+        title="Teams"
+        right={isDirector ? <Button onClick={() => setCreateOpen(true)}>New team</Button> : undefined}
+      />
       <QueryBoundary query={query}>
         {(teams) =>
           teams.length === 0 ? (
@@ -32,6 +42,8 @@ export function TeamsListPage() {
           )
         }
       </QueryBoundary>
+
+      {isDirector && <CreateTeamModal open={createOpen} onClose={() => setCreateOpen(false)} />}
     </>
   )
 }

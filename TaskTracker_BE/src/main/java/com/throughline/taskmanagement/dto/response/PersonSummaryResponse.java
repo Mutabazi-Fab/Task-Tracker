@@ -2,7 +2,7 @@ package com.throughline.taskmanagement.dto.response;
 
 public record PersonSummaryResponse(
     String name,
-    String role,
+    String jobTitle,
     Double averageProgress,
     long assignedCount,
     long completedCount

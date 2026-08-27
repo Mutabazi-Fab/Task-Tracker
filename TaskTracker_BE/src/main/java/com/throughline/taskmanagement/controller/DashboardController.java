@@ -3,6 +3,8 @@ package com.throughline.taskmanagement.controller;
 import com.throughline.taskmanagement.dto.response.*;
 import com.throughline.taskmanagement.service.DashboardService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -47,5 +49,14 @@ public class DashboardController {
     @GetMapping("/search")
     public ResponseEntity<GlobalSearchResponse> globalSearch(@RequestParam String q) {
         return ResponseEntity.ok(dashboardService.globalSearch(q));
+    }
+
+    /** The Director's Dashboard default view: only the top-level tasks THIS Director
+     *  created, not the whole org's tasks. directorId is passed explicitly (same pattern
+     *  as the rest of the app until Phase 7 wires a real "current user"). */
+    @GetMapping("/director/tasks")
+    public ResponseEntity<Page<TaskListResponse>> getDirectorTasks(
+            @RequestParam Long directorId, Pageable pageable) {
+        return ResponseEntity.ok(dashboardService.getDirectorTasks(directorId, pageable));
     }
 }

@@ -1,7 +1,10 @@
 package com.throughline.taskmanagement.service.impl;
 
 import com.throughline.taskmanagement.dto.response.*;
+import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.enums.TaskStatus;
+import com.throughline.taskmanagement.exception.ForbiddenActionException;
+import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.mapper.PersonMapper;
 import com.throughline.taskmanagement.mapper.TaskMapper;
 import com.throughline.taskmanagement.model.Person;
@@ -11,9 +14,13 @@ import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
+import com.throughline.taskmanagement.repository.TeamMemberRepository;
 import com.throughline.taskmanagement.repository.TeamRepository;
 import com.throughline.taskmanagement.service.DashboardService;
+import com.throughline.taskmanagement.service.PersonService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,8 +40,10 @@ public class DashboardServiceImpl implements DashboardService {
     private final TeamRepository teamRepository;
     private final PersonRepository personRepository;
     private final TaskCommentRepository taskCommentRepository;
+    private final TeamMemberRepository teamMemberRepository;
     private final PersonMapper personMapper;
     private final TaskMapper taskMapper;
+    private final PersonService personService;
 
     @Override
     public DashboardOverviewResponse getOverview() {
@@ -105,9 +114,13 @@ public class DashboardServiceImpl implements DashboardService {
             Double avgProgress = teamTasks.stream().mapToInt(Task::getProgressPercentage).average().orElse(0.0);
             long completed = teamTasks.stream().filter(t -> t.getStatus() == TaskStatus.COMPLETED).count();
             
+            String leaderName = teamMemberRepository.findByTeamIdAndIsLeaderTrue(team.getId())
+                    .map(tm -> tm.getPerson().getFullName())
+                    .orElse("No Leader");
+
             return new TeamLeaderboardResponse(
                     team.getName(),
-                    team.getTeamLeader() != null ? team.getTeamLeader().getFullName() : "No Leader",
+                    leaderName,
                     avgProgress,
                     teamTasks.size(),
                     completed
@@ -127,7 +140,7 @@ public class DashboardServiceImpl implements DashboardService {
             
             return new PersonSummaryResponse(
                     person.getFullName(),
-                    person.getRole(),
+                    person.getJobTitle(),
                     avgProgress,
                     personTasks.size(),
                     completed
@@ -137,12 +150,34 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public GlobalSearchResponse globalSearch(String q) {
-        List<PersonResponse> people = personRepository.search(q).stream().map(personMapper::toResponse).toList();
+        // Per-team breakdown for each matched person — not one blended number across every
+        // team they belong to (see PersonService.getPersonTeamBreakdown).
+        List<PersonSearchResultResponse> people = personRepository.search(q).stream()
+                .map(p -> new PersonSearchResultResponse(
+                        personMapper.toResponse(p, teamMemberRepository.findByPersonId(p.getId())),
+                        personService.getPersonTeamBreakdown(p.getId())
+                ))
+                .toList();
         List<TaskListResponse> tasks = taskRepository.search(q).stream().map(t -> {
             TaskComment lastComment = taskCommentRepository.findFirstByTaskIdOrderByCreatedAtDesc(t.getId()).orElse(null);
             return taskMapper.toListResponse(t, lastComment);
         }).toList();
-        
+
         return new GlobalSearchResponse(people, tasks);
+    }
+
+    @Override
+    public Page<TaskListResponse> getDirectorTasks(Long directorId, Pageable pageable) {
+        Person director = personRepository.findById(directorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+        if (director.getRole() != Role.DIRECTOR) {
+            throw new ForbiddenActionException("Only a Director has a Director's Dashboard.");
+        }
+
+        return taskRepository.findByParentTaskIsNullAndAssignedById(directorId, pageable)
+                .map(t -> {
+                    TaskComment lastComment = taskCommentRepository.findFirstByTaskIdOrderByCreatedAtDesc(t.getId()).orElse(null);
+                    return taskMapper.toListResponse(t, lastComment);
+                });
     }
 }

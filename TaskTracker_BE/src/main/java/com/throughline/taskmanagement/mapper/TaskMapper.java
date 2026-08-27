@@ -51,50 +51,70 @@ public class TaskMapper {
         );
     }
 
-    public TaskListResponse toListResponse(Task task, TaskComment lastComment) {
-        if (task == null) return null;
-        String assigneeName = task.getAssigneeType().name().equals("INDIVIDUAL") ?
+    private String assigneeNameOf(Task task) {
+        return task.getAssigneeType().name().equals("INDIVIDUAL") ?
                 (task.getAssignedPerson() != null ? task.getAssignedPerson().getFullName() : "Unknown") :
                 (task.getAssignedTeam() != null ? task.getAssignedTeam().getName() : "Unknown");
+    }
+
+    public SubtaskSummaryResponse toSubtaskSummary(Task subtask) {
+        if (subtask == null) return null;
+        return new SubtaskSummaryResponse(
+                subtask.getId(),
+                subtask.getTaskCode(),
+                subtask.getTitle(),
+                assigneeNameOf(subtask),
+                subtask.getStatus(),
+                subtask.getProgressPercentage(),
+                subtask.getCreatedByRole()
+        );
+    }
+
+    public TaskListResponse toListResponse(Task task, TaskComment lastComment) {
+        if (task == null) return null;
+        List<SubtaskSummaryResponse> subtasks = task.getSubtasks() != null ?
+                task.getSubtasks().stream().map(this::toSubtaskSummary).toList() : List.of();
 
         return new TaskListResponse(
                 task.getId(),
                 task.getTaskCode(),
                 task.getTitle(),
-                assigneeName,
+                assigneeNameOf(task),
                 task.getAssigneeType(),
                 task.getStatus(),
                 task.getProgressPercentage(),
                 task.getDateAssigned(),
                 task.getAssignedBy().getFullName(),
                 task.getReassignments() != null ? task.getReassignments().size() : 0,
-                toCommentResponse(lastComment)
+                toCommentResponse(lastComment),
+                task.getParentTask() != null ? task.getParentTask().getId() : null,
+                task.getCreatedByRole(),
+                subtasks
         );
     }
 
     public TaskDetailResponse toDetailResponse(Task task) {
         if (task == null) return null;
-        
-        String assigneeName = task.getAssigneeType().name().equals("INDIVIDUAL") ?
-                (task.getAssignedPerson() != null ? task.getAssignedPerson().getFullName() : "Unknown") :
-                (task.getAssignedTeam() != null ? task.getAssignedTeam().getName() : "Unknown");
+
         Long assigneeId = task.getAssigneeType().name().equals("INDIVIDUAL") ?
                 (task.getAssignedPerson() != null ? task.getAssignedPerson().getId() : null) :
                 (task.getAssignedTeam() != null ? task.getAssignedTeam().getId() : null);
 
-        List<CommentResponse> comments = task.getComments() != null ? 
+        List<CommentResponse> comments = task.getComments() != null ?
                 task.getComments().stream().map(this::toCommentResponse).toList() : List.of();
         List<ReassignmentResponse> reassignments = task.getReassignments() != null ?
                 task.getReassignments().stream().map(this::toReassignmentResponse).toList() : List.of();
         List<TaskTimelineResponse> timeline = task.getComments() != null ?
                 task.getComments().stream().map(this::toTimelineResponse).toList() : List.of();
+        List<SubtaskSummaryResponse> subtasks = task.getSubtasks() != null ?
+                task.getSubtasks().stream().map(this::toSubtaskSummary).toList() : List.of();
 
         return new TaskDetailResponse(
                 task.getId(),
                 task.getTaskCode(),
                 task.getTitle(),
                 task.getDescription(),
-                assigneeName,
+                assigneeNameOf(task),
                 assigneeId,
                 task.getAssigneeType(),
                 task.getStatus(),
@@ -102,6 +122,10 @@ public class TaskMapper {
                 task.getDateAssigned(),
                 task.getAssignedBy().getFullName(),
                 task.getAssignedBy().getId(),
+                task.getParentTask() != null ? task.getParentTask().getId() : null,
+                task.getParentTask() != null ? task.getParentTask().getTaskCode() : null,
+                task.getCreatedByRole(),
+                subtasks,
                 comments,
                 reassignments,
                 timeline,

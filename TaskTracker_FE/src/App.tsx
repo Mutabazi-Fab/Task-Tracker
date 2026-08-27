@@ -3,17 +3,21 @@ import { BrowserRouter } from 'react-router-dom'
 import { queryClient } from './app/queryClient'
 import { AppRoutes } from './app/routes'
 import { ThemeProvider } from './features/theme/ThemeProvider'
-import { AppShell } from './components/layout/AppShell'
+import { AuthProvider } from './features/auth/AuthContext'
 
-/** Router + QueryClientProvider only — no layout or feature code of its own. */
+/**
+ * Router + QueryClientProvider + AuthProvider only — no layout or feature code of its
+ * own. AppShell (sidebar + top bar) is no longer wrapped here: /login and /signup render
+ * without it, so each protected route wraps itself individually (see routes.tsx).
+ */
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ThemeProvider>
-          <AppShell>
+          <AuthProvider>
             <AppRoutes />
-          </AppShell>
+          </AuthProvider>
         </ThemeProvider>
       </BrowserRouter>
     </QueryClientProvider>

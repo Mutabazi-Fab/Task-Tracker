@@ -12,7 +12,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "task_comments")
+@Table(name = "task_comments", indexes = {
+        @Index(name = "idx_task_comments_task_id", columnList = "task_id"),
+        @Index(name = "idx_task_comments_author_id", columnList = "author_id")
+})
 @Getter
 @Setter
 public class TaskComment {

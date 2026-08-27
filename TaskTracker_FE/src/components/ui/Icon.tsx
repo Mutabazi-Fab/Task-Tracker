@@ -6,7 +6,7 @@ import styles from './Icon.module.css'
  * viewBox, coloured via currentColor so it inherits whatever text colour
  * its container sets.
  */
-export type IconName = 'dashboard' | 'tasks' | 'people' | 'teams' | 'search' | 'check'
+export type IconName = 'dashboard' | 'tasks' | 'people' | 'teams' | 'search' | 'check' | 'logout'
 
 const PATHS: Record<IconName, string> = {
   dashboard: 'M4 4h6v7H4zM14 4h6v4h-6zM14 11h6v9h-6zM4 14h6v6H4z',
@@ -16,6 +16,7 @@ const PATHS: Record<IconName, string> = {
     'M8.5 10.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM17 10.5a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5zM2.5 19.5a6 6 0 0 1 12 0M13 14.75a5.5 5.5 0 0 1 8.5 4.75',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20.5 20.5l-4.3-4.3',
   check: 'M5 12.5l4.5 4.5L19 7.5',
+  logout: 'M9 4H5.5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1H9M15.5 16l4-4-4-4M19 12H8.5',
 }
 
 interface IconProps {

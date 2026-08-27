@@ -29,8 +29,15 @@ export function PeopleListPage() {
                       <Avatar name={person.fullName} />
                       <div className={styles.identity}>
                         <span className={styles.name}>{person.fullName}</span>
-                        <span className={styles.role}>{person.role}</span>
-                        <span className={styles.team}>{person.teamName ?? 'Unassigned'}</span>
+                        <span className={styles.role}>
+                          {person.jobTitle}
+                          {person.role === 'DIRECTOR' ? ' · Director' : ''}
+                        </span>
+                        <span className={styles.team}>
+                          {person.teams.length > 0
+                            ? person.teams.map((t) => t.teamName).join(', ')
+                            : 'Unassigned'}
+                        </span>
                       </div>
                     </div>
                   </Card>

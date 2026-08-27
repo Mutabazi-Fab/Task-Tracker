@@ -6,6 +6,21 @@ export type AssigneeType = 'INDIVIDUAL' | 'TEAM'
 /** Always derived from progressPercentage server-side — never a form field. */
 export type TaskStatus = 'PENDING' | 'ONGOING' | 'COMPLETED'
 
+/** Who structured a subtask — the Director themself, or the Team Leader of the team
+ *  owning its parent task. Null for a task that predates the hierarchy. */
+export type CreatedByRole = 'DIRECTOR' | 'TEAM_LEADER'
+
+/** One subtask under a top-level task, as shown on the parent's detail view. */
+export interface SubtaskSummary {
+  id: number
+  taskCode: string
+  title: string
+  assigneeName: string
+  status: TaskStatus
+  progressPercentage: number
+  createdByRole: CreatedByRole
+}
+
 /** One point on a task's (or the org's) progress-over-time trend. */
 export interface TaskTimelinePoint {
   percentage: number
@@ -42,6 +57,13 @@ export interface TaskDetail {
   dateAssigned: string
   assignedByName: string
   assignedById: number
+  // null = top-level task (always team-assigned). Non-null = a subtask (always
+  // individual-assigned, can't have subtasks of its own) — see ReassignTaskModal,
+  // which uses this to decide "reassign to a team" vs "reassign to a person".
+  parentTaskId: number | null
+  parentTaskCode: string | null
+  createdByRole: CreatedByRole | null
+  subtasks: SubtaskSummary[]
   comments: TaskComment[]
   reassignments: TaskReassignment[]
   progressTimeline: TaskTimelinePoint[]

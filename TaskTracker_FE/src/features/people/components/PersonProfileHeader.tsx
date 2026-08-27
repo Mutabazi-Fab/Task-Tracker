@@ -9,8 +9,13 @@ export function PersonProfileHeader({ person }: { person: Person }) {
       <Avatar name={person.fullName} size="lg" />
       <div className={styles.identity}>
         <h2 className={styles.name}>{person.fullName}</h2>
-        <p className={styles.role}>{person.role}</p>
-        <p className={styles.unit}>{person.teamName ? `Unit: ${person.teamName}` : 'Unassigned'}</p>
+        <p className={styles.role}>
+          {person.jobTitle}
+          {person.role === 'DIRECTOR' ? ' · Director' : ''}
+        </p>
+        <p className={styles.unit}>
+          {person.teams.length > 0 ? `Unit: ${person.teams.map((t) => t.teamName).join(', ')}` : 'Unassigned'}
+        </p>
       </div>
     </div>
   )

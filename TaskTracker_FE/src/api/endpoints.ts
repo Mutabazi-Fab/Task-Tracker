@@ -7,6 +7,12 @@
 const BASE = '/api/v1'
 
 export const endpoints = {
+  auth: {
+    signup: () => `${BASE}/auth/signup`,
+    login: () => `${BASE}/auth/login`,
+    logout: () => `${BASE}/auth/logout`,
+    me: () => `${BASE}/auth/me`,
+  },
   tasks: {
     list: () => `${BASE}/tasks`,
     create: () => `${BASE}/tasks`,
@@ -29,8 +35,8 @@ export const endpoints = {
     remove: (id: number | string) => `${BASE}/people/${id}`,
     statistics: (id: number | string) => `${BASE}/people/${id}/statistics`,
     tasks: (id: number | string) => `${BASE}/people/${id}/tasks`,
-    assignTeam: (id: number | string, teamId: number | string) =>
-      `${BASE}/people/${id}/team/${teamId}`,
+    // No assignTeam — team membership is exclusively managed through the teams.* endpoints
+    // below now, since a person can belong to multiple teams at once.
   },
   teams: {
     list: () => `${BASE}/teams`,
@@ -40,12 +46,20 @@ export const endpoints = {
     remove: (id: number | string) => `${BASE}/teams/${id}`,
     statistics: (id: number | string) => `${BASE}/teams/${id}/statistics`,
     tasks: (id: number | string) => `${BASE}/teams/${id}/tasks`,
+    members: (id: number | string) => `${BASE}/teams/${id}/members`,
     setLeader: (id: number | string, personId: number | string) =>
       `${BASE}/teams/${id}/leader/${personId}`,
-    addMember: (id: number | string, personId: number | string) =>
-      `${BASE}/teams/${id}/members/${personId}`,
+    // personId goes in the request body (AddTeamMemberRequest), not the URL.
+    addMember: (id: number | string) => `${BASE}/teams/${id}/members`,
     removeMember: (id: number | string, personId: number | string) =>
       `${BASE}/teams/${id}/members/${personId}`,
+    membershipHistory: (id: number | string) => `${BASE}/teams/${id}/membership-history`,
+    activity: () => `${BASE}/teams/activity`,
+  },
+  notifications: {
+    list: () => `${BASE}/notifications`,
+    markRead: (id: number | string) => `${BASE}/notifications/${id}/read`,
+    unreadCount: () => `${BASE}/notifications/unread-count`,
   },
   dashboard: {
     overview: () => `${BASE}/dashboard/overview`,
@@ -54,5 +68,6 @@ export const endpoints = {
     teamLeaderboard: () => `${BASE}/dashboard/team-leaderboard`,
     peopleSummary: () => `${BASE}/dashboard/people-summary`,
     search: () => `${BASE}/dashboard/search`,
+    directorTasks: () => `${BASE}/dashboard/director/tasks`,
   },
 } as const

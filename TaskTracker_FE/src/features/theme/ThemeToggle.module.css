@@ -1,0 +1,59 @@
+/* Small sliding switch — one control, ~56x30px, not two full-size buttons side by side. */
+.track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 56px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--track);
+  flex-shrink: 0;
+}
+
+/* Static, dimmed — the theme NOT currently active, sitting in the exposed side of the
+   track next to the thumb. Same --muted tone used everywhere else for secondary content. */
+.iconSun,
+.iconMoon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.iconSun {
+  left: 8px;
+}
+
+.iconMoon {
+  right: 8px;
+}
+
+/* The sliding thumb — same accent-strong fill + panel-coloured icon as the old active
+   button, just smaller and now positioned absolutely so it can slide. */
+.thumb,
+.thumbCommand {
+  position: absolute;
+  top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-strong);
+  color: var(--panel);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: left 160ms ease;
+}
+
+.thumb {
+  left: 2px;
+}
+
+.thumbCommand {
+  left: 28px;
+}

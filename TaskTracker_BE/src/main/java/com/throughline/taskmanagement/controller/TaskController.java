@@ -1,6 +1,7 @@
 package com.throughline.taskmanagement.controller;
 
 import com.throughline.taskmanagement.dto.request.AddCommentRequest;
+import com.throughline.taskmanagement.dto.request.CreateSubtaskRequest;
 import com.throughline.taskmanagement.dto.request.CreateTaskRequest;
 import com.throughline.taskmanagement.dto.request.ReassignTaskRequest;
 import com.throughline.taskmanagement.dto.request.UpdateTaskRequest;
@@ -19,8 +20,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/tasks")
 @RequiredArgsConstructor
@@ -31,6 +30,13 @@ public class TaskController {
     @PostMapping
     public ResponseEntity<TaskDetailResponse> createTask(@Valid @RequestBody CreateTaskRequest request) {
         return new ResponseEntity<>(taskService.createTask(request), HttpStatus.CREATED);
+    }
+
+    @PostMapping("/{parentTaskId}/subtasks")
+    public ResponseEntity<TaskDetailResponse> createSubtask(
+            @PathVariable Long parentTaskId,
+            @Valid @RequestBody CreateSubtaskRequest request) {
+        return new ResponseEntity<>(taskService.createSubtask(parentTaskId, request), HttpStatus.CREATED);
     }
 
     @GetMapping
@@ -51,8 +57,8 @@ public class TaskController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<TaskListResponse>> searchTasks(@RequestParam String q) {
-        return ResponseEntity.ok(taskService.searchTasks(q));
+    public ResponseEntity<Page<TaskListResponse>> searchTasks(@RequestParam String q, Pageable pageable) {
+        return ResponseEntity.ok(taskService.searchTasks(q, pageable));
     }
 
     @PutMapping("/{id}")
@@ -76,8 +82,8 @@ public class TaskController {
     }
 
     @GetMapping("/{id}/comments")
-    public ResponseEntity<List<CommentResponse>> getTaskComments(@PathVariable Long id) {
-        return ResponseEntity.ok(taskService.getTaskById(id).comments());
+    public ResponseEntity<Page<CommentResponse>> getTaskComments(@PathVariable Long id, Pageable pageable) {
+        return ResponseEntity.ok(taskService.getTaskComments(id, pageable));
     }
 
     @PostMapping("/{id}/reassign")
@@ -88,12 +94,12 @@ public class TaskController {
     }
 
     @GetMapping("/{id}/reassignments")
-    public ResponseEntity<List<ReassignmentResponse>> getTaskReassignments(@PathVariable Long id) {
-        return ResponseEntity.ok(taskService.getTaskById(id).reassignments());
+    public ResponseEntity<Page<ReassignmentResponse>> getTaskReassignments(@PathVariable Long id, Pageable pageable) {
+        return ResponseEntity.ok(taskService.getTaskReassignments(id, pageable));
     }
 
     @GetMapping("/{id}/progress-timeline")
-    public ResponseEntity<List<TaskTimelineResponse>> getTaskProgressTimeline(@PathVariable Long id) {
-        return ResponseEntity.ok(taskService.getTaskProgressTimeline(id));
+    public ResponseEntity<Page<TaskTimelineResponse>> getTaskProgressTimeline(@PathVariable Long id, Pageable pageable) {
+        return ResponseEntity.ok(taskService.getTaskProgressTimeline(id, pageable));
     }
 }

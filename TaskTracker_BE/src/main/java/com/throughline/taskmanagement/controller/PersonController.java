@@ -7,11 +7,11 @@ import com.throughline.taskmanagement.dto.response.PersonTaskHistoryResponse;
 import com.throughline.taskmanagement.service.PersonService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/people")
@@ -26,8 +26,8 @@ public class PersonController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PersonResponse>> getAllPeople() {
-        return ResponseEntity.ok(personService.getAllPeople());
+    public ResponseEntity<Page<PersonResponse>> getAllPeople(Pageable pageable) {
+        return ResponseEntity.ok(personService.getAllPeople(pageable));
     }
 
     @GetMapping("/{id}")
@@ -54,14 +54,12 @@ public class PersonController {
     }
 
     @GetMapping("/{id}/tasks")
-    public ResponseEntity<List<PersonTaskHistoryResponse>> getPersonTaskHistory(@PathVariable Long id) {
-        return ResponseEntity.ok(personService.getPersonTaskHistory(id));
+    public ResponseEntity<Page<PersonTaskHistoryResponse>> getPersonTaskHistory(@PathVariable Long id, Pageable pageable) {
+        return ResponseEntity.ok(personService.getPersonTaskHistory(id, pageable));
     }
 
-    @PutMapping("/{id}/team/{teamId}")
-    public ResponseEntity<PersonResponse> assignToTeam(
-            @PathVariable Long id, 
-            @PathVariable Long teamId) {
-        return ResponseEntity.ok(personService.assignToTeam(id, teamId));
-    }
+    // No PUT /{id}/team/{teamId} — a person can belong to multiple teams now, so "assign this
+    // person to a team" is no longer a single-target operation. Use
+    // POST /api/v1/teams/{teamId}/members instead (TeamController), which also carries the
+    // mandatory reason and enforces who's allowed to do it.
 }

@@ -10,7 +10,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "task_reassignments")
+@Table(name = "task_reassignments", indexes = {
+        @Index(name = "idx_task_reassignments_task_id", columnList = "task_id"),
+        @Index(name = "idx_task_reassignments_from_person_id", columnList = "from_person_id")
+})
 @Getter
 @Setter
 public class TaskReassignment {

@@ -1,6 +1,7 @@
 package com.throughline.taskmanagement.dto.response;
 
 import com.throughline.taskmanagement.enums.AssigneeType;
+import com.throughline.taskmanagement.enums.CreatedByRole;
 import com.throughline.taskmanagement.enums.TaskStatus;
 
 import java.time.LocalDate;
@@ -20,6 +21,10 @@ public record TaskDetailResponse(
     LocalDate dateAssigned,
     String assignedByName,
     Long assignedById,
+    Long parentTaskId,
+    String parentTaskCode,
+    CreatedByRole createdByRole,
+    List<SubtaskSummaryResponse> subtasks,
     List<CommentResponse> comments,
     List<ReassignmentResponse> reassignments,
     List<TaskTimelineResponse> progressTimeline,

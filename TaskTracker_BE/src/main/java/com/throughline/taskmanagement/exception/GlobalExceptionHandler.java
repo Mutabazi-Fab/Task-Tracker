@@ -8,7 +8,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,6 +22,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({InvalidAssignmentException.class, InvalidProgressException.class})
     public ResponseEntity<Map<String, Object>> handleBadRequest(RuntimeException ex, HttpServletRequest request) {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> handleUnauthorized(InvalidCredentialsException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(ForbiddenActionException.class)
+    public ResponseEntity<Map<String, Object>> handleForbidden(ForbiddenActionException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request, null);
     }
 
     @ExceptionHandler(DuplicateResourceException.class)
@@ -46,18 +55,7 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<Map<String, Object>> buildErrorResponse(
             HttpStatus status, String message, HttpServletRequest request, Map<String, String> fieldErrors) {
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", status.value());
-        response.put("error", status.getReasonPhrase());
-        response.put("message", message);
-        response.put("path", request.getRequestURI());
-        
-        if (fieldErrors != null && !fieldErrors.isEmpty()) {
-            response.put("fieldErrors", fieldErrors);
-        }
-        
-        return new ResponseEntity<>(response, status);
+        Map<String, Object> body = ErrorResponseFactory.build(status, message, request.getRequestURI(), fieldErrors);
+        return new ResponseEntity<>(body, status);
     }
 }

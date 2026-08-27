@@ -4,22 +4,16 @@
   gap: var(--space-6);
   width: 220px;
   flex-shrink: 0;
-  height: 100%;
+  height: 100vh;
   padding: var(--space-5);
   background: var(--panel);
   border-right: 1px solid var(--line);
-}
-
-.brand {
-  padding: var(--space-2) var(--space-3);
-}
-
-.brandMark {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  color: var(--accent-strong);
+  /* Pinned to the viewport — the page content scrolls (see AppShell's .content),
+     the Sidebar itself never does, so the user card/theme toggle in .footer stay
+     visible at the bottom without needing to scroll to reach them. */
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
 }
 
 .nav {
@@ -30,5 +24,64 @@
 
 .footer {
   margin-top: auto;
-  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-1);
+  border-top: 1px solid var(--line);
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.userName {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userRole {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.logoutButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.logoutButton:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.themeRow {
+  display: flex;
+  justify-content: center;
 }

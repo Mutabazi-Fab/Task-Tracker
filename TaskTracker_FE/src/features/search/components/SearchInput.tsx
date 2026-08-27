@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ROUTES } from '../../../app/routes'
+// From routePaths directly, not '../../../app/routes' — that file imports AppShell, which
+// renders this component, which would make ROUTES a circular import (see routePaths.ts).
+import { ROUTES } from '../../../app/routePaths'
 import { Icon } from '../../../components/ui/Icon'
 import styles from './SearchInput.module.css'
 

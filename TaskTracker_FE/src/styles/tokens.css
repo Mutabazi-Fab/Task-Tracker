@@ -22,10 +22,10 @@
   --track: #e5e9df;
   --hover: #eaefe4;
 
-  /* Chrome */
-  --accent: #20603d;
-  --accent-strong: #143a24;
-  --accent-soft: #e3ede5;
+  /* Chrome — the brand green from the Throughline logo mark. */
+  --accent: #3c9f40;
+  --accent-strong: #1d5f20;
+  --accent-soft: #e4f3e4;
   --khaki: #b8ae8a;
   --khaki-soft: #f0ece0;
 
@@ -65,9 +65,9 @@
   --track: #1e271f;
   --hover: #1c241d;
 
-  --accent: #4a9a68;
-  --accent-strong: #6fbb8a;
-  --accent-soft: #1a2a1f;
+  --accent: #57b85b;
+  --accent-strong: #8ed191;
+  --accent-soft: #1c2e1d;
   --khaki: #6e6850;
   --khaki-soft: #1f2118;
 

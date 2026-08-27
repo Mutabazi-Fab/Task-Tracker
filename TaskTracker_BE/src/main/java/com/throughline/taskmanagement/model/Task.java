@@ -1,6 +1,7 @@
 package com.throughline.taskmanagement.model;
 
 import com.throughline.taskmanagement.enums.AssigneeType;
+import com.throughline.taskmanagement.enums.CreatedByRole;
 import com.throughline.taskmanagement.enums.TaskStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -15,7 +16,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "tasks")
+@Table(name = "tasks", indexes = {
+        @Index(name = "idx_tasks_assigned_person_id", columnList = "assigned_person_id"),
+        @Index(name = "idx_tasks_assigned_team_id", columnList = "assigned_team_id"),
+        @Index(name = "idx_tasks_assigned_by_id", columnList = "assigned_by_id"),
+        @Index(name = "idx_tasks_parent_task_id", columnList = "parent_task_id"),
+        @Index(name = "idx_tasks_status", columnList = "status")
+})
 @Getter
 @Setter
 public class Task {
@@ -50,9 +57,36 @@ public class Task {
     @JoinColumn(name = "assigned_team_id")
     private Team assignedTeam;
 
+    /**
+     * Null = top-level (Director-only, always team-assigned). Non-null = a subtask
+     * (created by the Team Leader of the owning team, or the Director directly;
+     * always individual-assigned). Strictly two levels — the service layer rejects
+     * giving a subtask its own children.
+     */
+    @ManyToOne
+    @JoinColumn(name = "parent_task_id")
+    private Task parentTask;
+
+    @OneToMany(mappedBy = "parentTask", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt ASC")
+    private List<Task> subtasks = new ArrayList<>();
+
+    /** Who structured this piece of work — see {@link CreatedByRole}. Nullable only for
+     *  tasks created before the hierarchy existed. */
+    @Enumerated(EnumType.STRING)
+    private CreatedByRole createdByRole;
+
     @Column(nullable = false)
     private LocalDate dateAssigned;
 
+    /**
+     * For a subtask: set only via addProgressComment (the comment's percentage), exactly
+     * as before hierarchy existed. For a top-level task: NEVER set by a comment — it's the
+     * average of this task's subtasks' percentages (0 if it has none yet), recalculated by
+     * TaskServiceImpl.recalculateParentRollup whenever a subtask's percentage or existence
+     * changes. A comment can still be added directly to a top-level task, but it's a
+     * narrative record only and never moves this value.
+     */
     @Column(nullable = false)
     private int progressPercentage = 0;
 
