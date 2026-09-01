@@ -37,18 +37,20 @@ export interface CreatePersonRequest {
   role?: Role
 }
 
-/** Body for PUT /people/{id}/role. Super-Admin-only, enforced server-side. */
+/** Body for PUT /people/{id}/role. Super-Admin-only; reason is mandatory (both here and
+ *  server-side) — no promotion or demotion goes on record without one. */
 export interface ChangeRoleRequest {
   newRole: Role
   changedById: number
-  reason?: string
+  reason: string
 }
 
-/** Body for PUT /people/{id}/active. Super-Admin-only, enforced server-side. */
+/** Body for PUT /people/{id}/active. Super-Admin-only; reason is mandatory (both here and
+ *  server-side). */
 export interface SetAccountActiveRequest {
   active: boolean
   changedById: number
-  reason?: string
+  reason: string
 }
 
 /** One row of GET /people/role-changes — the org-wide role-change audit log. */

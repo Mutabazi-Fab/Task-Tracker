@@ -24,8 +24,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       {!isMobile && <Sidebar />}
       <div className={styles.content}>
         <header className={styles.topBar}>
-          <SearchInput />
           <NotificationBell />
+          <SearchInput />
         </header>
         <main className={isMobile ? styles.mainMobile : styles.main}>{children}</main>
       </div>

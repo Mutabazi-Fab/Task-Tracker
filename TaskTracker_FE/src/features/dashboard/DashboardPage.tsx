@@ -3,6 +3,7 @@ import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { useAuth } from '../auth/useAuth'
 import { DirectorInitiativesSection } from './components/DirectorInitiativesSection'
+import { MyDashboardSummary } from './components/MyDashboardSummary'
 import { KpiRow } from './components/KpiRow'
 import { ProgressOverTimeChart } from './components/ProgressOverTimeChart'
 import { ProgressChartLegend } from './components/ProgressChartLegend'
@@ -13,10 +14,24 @@ import { PeopleSummaryGrid } from './components/PeopleSummaryGrid'
 import { DashboardLayoutToggle, type DashboardLayout } from './components/DashboardLayoutToggle'
 import styles from './DashboardPage.module.css'
 
-/** Composes the sections below. No data-fetching or layout logic of its own. */
+/**
+ * Composes the sections below. A Member gets a completely different dashboard — just
+ * MyDashboardSummary (their own assigned tasks and progress) — not the org-wide
+ * KPIs/charts/leaderboard/people-summary a Director/Super Admin sees; those show what
+ * isn't theirs to see.
+ */
 export function DashboardPage() {
   const { isDirector } = useAuth()
   const [layout, setLayout] = useState<DashboardLayout>('split')
+
+  if (!isDirector) {
+    return (
+      <>
+        <PageHeader breadcrumb="Throughline" title="My Dashboard" />
+        <MyDashboardSummary />
+      </>
+    )
+  }
 
   return (
     <>
@@ -26,7 +41,7 @@ export function DashboardPage() {
         right={<DashboardLayoutToggle value={layout} onChange={setLayout} />}
       />
 
-      {isDirector && <DirectorInitiativesSection />}
+      <DirectorInitiativesSection />
 
       <KpiRow />
 

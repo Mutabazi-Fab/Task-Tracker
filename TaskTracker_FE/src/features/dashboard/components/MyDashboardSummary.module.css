@@ -1,5 +1,4 @@
 .sectionHeading {
-  display: block;
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 500;
@@ -7,9 +6,4 @@
   text-transform: uppercase;
   color: var(--muted);
   margin-bottom: var(--space-4);
-}
-
-.restrictedNote {
-  font-size: 13px;
-  color: var(--muted);
 }

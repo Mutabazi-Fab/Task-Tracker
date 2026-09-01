@@ -10,6 +10,12 @@
   gap: 2px;
 }
 
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .name {
   font-family: var(--font-sans);
   font-size: 19px;

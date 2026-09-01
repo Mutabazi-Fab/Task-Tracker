@@ -142,10 +142,11 @@ public class TeamServiceImpl implements TeamService {
     }
 
     @Override
-    public List<TeamMemberResponse> getTeamMembers(Long teamId) {
+    public List<TeamMemberResponse> getTeamMembers(Long teamId, Long viewerId) {
         if (!teamRepository.existsById(teamId)) {
             throw new ResourceNotFoundException("Team not found");
         }
+        requireCanViewTeam(teamId, viewerId);
         return teamMemberRepository.findByTeamId(teamId).stream()
                 .map(m -> new TeamMemberResponse(
                         m.getPerson().getId(),
@@ -211,24 +212,29 @@ public class TeamServiceImpl implements TeamService {
     }
 
     @Override
-    public Page<TeamMembershipChangeResponse> getMembershipHistory(Long teamId, Pageable pageable) {
+    public Page<TeamMembershipChangeResponse> getMembershipHistory(Long teamId, Long viewerId, Pageable pageable) {
         if (!teamRepository.existsById(teamId)) {
             throw new ResourceNotFoundException("Team not found");
         }
+        requireCanViewTeam(teamId, viewerId);
         return teamMembershipChangeRepository.findByTeamIdOrderByTimestampDesc(teamId, pageable)
                 .map(this::toChangeResponse);
     }
 
     @Override
-    public Page<TeamMembershipChangeResponse> getAllMembershipActivity(Pageable pageable) {
+    public Page<TeamMembershipChangeResponse> getAllMembershipActivity(Long viewerId, Pageable pageable) {
+        Person viewer = personRepository.findById(viewerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+        requireDirector(viewer, "Only a Director can view cross-team activity.");
         return teamMembershipChangeRepository.findAllByOrderByTimestampDesc(pageable)
                 .map(this::toChangeResponse);
     }
 
     @Override
-    public TeamStatisticsResponse getTeamStatistics(Long teamId) {
+    public TeamStatisticsResponse getTeamStatistics(Long teamId, Long viewerId) {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+        requireCanViewTeam(teamId, viewerId);
 
         Double teamAvgProgress = taskRepository.getAverageProgressByAssignedTeamId(teamId);
         long taskCount = taskRepository.findByAssignedTeamId(teamId).size();
@@ -255,10 +261,11 @@ public class TeamServiceImpl implements TeamService {
     }
 
     @Override
-    public List<TaskListResponse> getTeamTasks(Long teamId) {
+    public List<TaskListResponse> getTeamTasks(Long teamId, Long viewerId) {
         if (!teamRepository.existsById(teamId)) {
             throw new ResourceNotFoundException("Team not found");
         }
+        requireCanViewTeam(teamId, viewerId);
 
         List<Task> tasks = taskRepository.findByAssignedTeamId(teamId);
         return tasks.stream().map(t -> {
@@ -270,6 +277,18 @@ public class TeamServiceImpl implements TeamService {
     private void requireDirector(Person person, String message) {
         if (!Role.isAtLeastDirector(person.getRole())) {
             throw new ForbiddenActionException(message);
+        }
+    }
+
+    /** Director/Super Admin, or a member of THIS team — everyone else gets nothing beyond
+     *  the plain team list (name/leader/member count), which every authenticated person
+     *  already sees regardless. */
+    private void requireCanViewTeam(Long teamId, Long viewerId) {
+        Person viewer = personRepository.findById(viewerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+        boolean isMember = teamMemberRepository.existsByTeamIdAndPersonId(teamId, viewerId);
+        if (!Role.isAtLeastDirector(viewer.getRole()) && !isMember) {
+            throw new ForbiddenActionException("You're not a member of this team.");
         }
     }
 

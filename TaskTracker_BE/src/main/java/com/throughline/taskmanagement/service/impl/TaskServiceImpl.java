@@ -192,9 +192,13 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public Page<TaskListResponse> getAllTasks(TaskStatus status, Pageable pageable) {
+    public Page<TaskListResponse> getAllTasks(TaskStatus status, Long assignedPersonId, Pageable pageable) {
         Page<Task> tasks;
-        if (status != null) {
+        if (assignedPersonId != null && status != null) {
+            tasks = taskRepository.findVisibleToPersonAndStatus(assignedPersonId, status, pageable);
+        } else if (assignedPersonId != null) {
+            tasks = taskRepository.findVisibleToPerson(assignedPersonId, pageable);
+        } else if (status != null) {
             tasks = taskRepository.findByStatus(status, pageable);
         } else {
             tasks = taskRepository.findAll(pageable);
@@ -250,6 +254,7 @@ public class TaskServiceImpl implements TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
         Person reassignedBy = personRepository.findById(request.reassignedById())
                 .orElseThrow(() -> new ResourceNotFoundException("reassignedBy not found"));
+        requireCanReassign(reassignedBy, task);
 
         TaskReassignment reassignment = new TaskReassignment();
         reassignment.setTask(task);
@@ -268,6 +273,25 @@ public class TaskServiceImpl implements TaskService {
         task.getReassignments().add(reassignment);
 
         return taskMapper.toDetailResponse(taskRepository.save(task));
+    }
+
+    /** Only a Director/Super Admin, or the leader of the team that currently owns this task
+     *  (the task's own team for a top-level task, its parent's team for a subtask), may
+     *  reassign it — an ordinary team member cannot. */
+    private void requireCanReassign(Person actor, Task task) {
+        if (Role.isAtLeastDirector(actor.getRole())) {
+            return;
+        }
+        Team owningTeam = task.getParentTask() == null
+                ? task.getAssignedTeam()
+                : task.getParentTask().getAssignedTeam();
+        boolean isLeader = owningTeam != null
+                && teamMemberRepository.findByTeamIdAndIsLeaderTrue(owningTeam.getId())
+                        .map(tm -> tm.getPerson().getId().equals(actor.getId()))
+                        .orElse(false);
+        if (!isLeader) {
+            throw new ForbiddenActionException("Only a Director, Super Admin, or this team's leader can reassign this task.");
+        }
     }
 
     /** A top-level task can only move to a different TEAM — never to an individual. */
@@ -333,8 +357,11 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public Page<TaskListResponse> searchTasks(String q, Pageable pageable) {
-        return taskRepository.search(q, pageable).map(t -> {
+    public Page<TaskListResponse> searchTasks(String q, Long assignedPersonId, Pageable pageable) {
+        Page<Task> results = assignedPersonId != null
+                ? taskRepository.searchVisibleToPerson(q, assignedPersonId, pageable)
+                : taskRepository.search(q, pageable);
+        return results.map(t -> {
             TaskComment lastComment = taskCommentRepository.findFirstByTaskIdOrderByCreatedAtDesc(t.getId()).orElse(null);
             return taskMapper.toListResponse(t, lastComment);
         });

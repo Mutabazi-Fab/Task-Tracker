@@ -7,6 +7,7 @@ import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.dto.response.PersonStatisticsResponse;
 import com.throughline.taskmanagement.dto.response.PersonTaskHistoryResponse;
 import com.throughline.taskmanagement.dto.response.RoleChangeResponse;
+import com.throughline.taskmanagement.security.CurrentPersonResolver;
 import com.throughline.taskmanagement.service.PersonService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,23 +15,37 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Every "who's doing this" field (createdById/changedById/requesterId) is re-derived from
+ * the caller's actual login (CurrentPersonResolver), not trusted from the request — see
+ * TeamController for the same pattern. getAllPeople is likewise scoped to the caller's
+ * real role: a Director/Super Admin sees everyone, anyone else sees only their teammates.
+ */
 @RestController
 @RequestMapping("/api/v1/people")
 @RequiredArgsConstructor
 public class PersonController {
 
     private final PersonService personService;
+    private final CurrentPersonResolver currentPersonResolver;
 
     @PostMapping
-    public ResponseEntity<PersonResponse> createPerson(@Valid @RequestBody CreatePersonRequest request) {
-        return new ResponseEntity<>(personService.createPerson(request), HttpStatus.CREATED);
+    public ResponseEntity<PersonResponse> createPerson(@Valid @RequestBody CreatePersonRequest request, Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        CreatePersonRequest verified = new CreatePersonRequest(
+                request.fullName(), request.email(), request.jobTitle(), request.rank(), actorId, request.role());
+        return new ResponseEntity<>(personService.createPerson(verified), HttpStatus.CREATED);
     }
 
+    /** A Director/Super Admin gets everyone; anyone else gets only people who share at
+     *  least one team with them (empty if they belong to no team). */
     @GetMapping
-    public ResponseEntity<Page<PersonResponse>> getAllPeople(Pageable pageable) {
-        return ResponseEntity.ok(personService.getAllPeople(pageable));
+    public ResponseEntity<Page<PersonResponse>> getAllPeople(Pageable pageable, Authentication authentication) {
+        Long viewerId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(personService.getAllPeople(viewerId, pageable));
     }
 
     @GetMapping("/{id}")
@@ -40,7 +55,7 @@ public class PersonController {
 
     @PutMapping("/{id}")
     public ResponseEntity<PersonResponse> updatePerson(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @Valid @RequestBody CreatePersonRequest request) {
         return ResponseEntity.ok(personService.updatePerson(id, request));
     }
@@ -63,20 +78,26 @@ public class PersonController {
 
     /** Super-Admin-only — promotes/demotes between Member, Director, and Super Admin. */
     @PutMapping("/{id}/role")
-    public ResponseEntity<PersonResponse> changeRole(@PathVariable Long id, @Valid @RequestBody ChangeRoleRequest request) {
-        return ResponseEntity.ok(personService.changeRole(id, request));
+    public ResponseEntity<PersonResponse> changeRole(
+            @PathVariable Long id, @Valid @RequestBody ChangeRoleRequest request, Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        ChangeRoleRequest verified = new ChangeRoleRequest(request.newRole(), actorId, request.reason());
+        return ResponseEntity.ok(personService.changeRole(id, verified));
     }
 
     /** Super-Admin-only — locks/unlocks an account without deleting it. */
     @PutMapping("/{id}/active")
-    public ResponseEntity<PersonResponse> setActive(@PathVariable Long id, @Valid @RequestBody SetAccountActiveRequest request) {
-        return ResponseEntity.ok(personService.setActive(id, request));
+    public ResponseEntity<PersonResponse> setActive(
+            @PathVariable Long id, @Valid @RequestBody SetAccountActiveRequest request, Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        SetAccountActiveRequest verified = new SetAccountActiveRequest(request.active(), actorId, request.reason());
+        return ResponseEntity.ok(personService.setActive(id, verified));
     }
 
     /** Super-Admin-only — every role change ever made, org-wide, newest first. */
     @GetMapping("/role-changes")
-    public ResponseEntity<Page<RoleChangeResponse>> getRoleChangeActivity(
-            @RequestParam Long requesterId, Pageable pageable) {
+    public ResponseEntity<Page<RoleChangeResponse>> getRoleChangeActivity(Pageable pageable, Authentication authentication) {
+        Long requesterId = currentPersonResolver.resolveId(authentication);
         return ResponseEntity.ok(personService.getRoleChangeActivity(requesterId, pageable));
     }
 

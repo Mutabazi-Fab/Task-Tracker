@@ -21,13 +21,17 @@ public interface TaskService {
     TaskDetailResponse createSubtask(Long parentTaskId, CreateSubtaskRequest request);
     TaskDetailResponse getTaskById(Long id);
     TaskDetailResponse getTaskByCode(String taskCode);
-    Page<TaskListResponse> getAllTasks(TaskStatus status, Pageable pageable);
+    /** assignedPersonId is optional — a Director/Super Admin omits it to see everything; a
+     *  Member's frontend always passes their own id, since "all tasks" isn't theirs to see. */
+    Page<TaskListResponse> getAllTasks(TaskStatus status, Long assignedPersonId, Pageable pageable);
     TaskDetailResponse addProgressComment(Long taskId, AddCommentRequest request);
     TaskDetailResponse reassignTask(Long taskId, ReassignTaskRequest request);
     Page<TaskTimelineResponse> getTaskProgressTimeline(Long taskId, Pageable pageable);
     Page<CommentResponse> getTaskComments(Long taskId, Pageable pageable);
     Page<ReassignmentResponse> getTaskReassignments(Long taskId, Pageable pageable);
-    Page<TaskListResponse> searchTasks(String q, Pageable pageable);
+    /** assignedPersonId is optional — same "Director/Super Admin sees everything, a Member
+     *  is scoped to their own" rule as getAllTasks. */
+    Page<TaskListResponse> searchTasks(String q, Long assignedPersonId, Pageable pageable);
     TaskDetailResponse updateTask(Long id, UpdateTaskRequest request);
     void deleteTask(Long id);
 }

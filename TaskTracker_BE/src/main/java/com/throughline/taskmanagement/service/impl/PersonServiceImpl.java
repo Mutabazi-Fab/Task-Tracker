@@ -201,9 +201,15 @@ public class PersonServiceImpl implements PersonService {
     }
 
     @Override
-    public Page<PersonResponse> getAllPeople(Pageable pageable) {
-        return personRepository.findAll(pageable)
-                .map(p -> personMapper.toResponse(p, teamMemberRepository.findByPersonId(p.getId())));
+    public Page<PersonResponse> getAllPeople(Long viewerId, Pageable pageable) {
+        Person viewer = personRepository.findById(viewerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+
+        Page<Person> people = Role.isAtLeastDirector(viewer.getRole())
+                ? personRepository.findAll(pageable)
+                : personRepository.findTeammatesOf(viewerId, pageable);
+
+        return people.map(p -> personMapper.toResponse(p, teamMemberRepository.findByPersonId(p.getId())));
     }
 
     @Override

@@ -15,22 +15,25 @@
   min-width: 160px;
 }
 
-.statusBadge {
-  font-family: var(--font-mono);
-  font-size: 10px;
+/* Light red, matching TeamMemberChip's "Remove" button — the app's established danger-
+   action styling, not the "task status" red (this is a destructive account action, not a
+   status chip). */
+.dangerButton {
+  font-family: var(--font-sans);
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 4px var(--space-2);
-  border-radius: var(--radius-pill);
-}
-
-.statusActive {
-  color: var(--status-completed);
-  background: var(--status-completed-bg);
-}
-
-.statusInactive {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
   color: var(--status-pending);
   background: var(--status-pending-bg);
+}
+
+.dangerButton:hover:not(:disabled) {
+  background: var(--status-pending);
+  color: var(--panel);
+}
+
+.dangerButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

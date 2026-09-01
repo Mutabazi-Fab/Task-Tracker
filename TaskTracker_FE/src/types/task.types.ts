@@ -52,6 +52,11 @@ export interface TaskDetail {
   assigneeName: string
   assigneeId: number | null
   assigneeType: AssigneeType
+  // The team actually responsible for this task regardless of assigneeType: for a
+  // top-level task, same as assigneeId; for a subtask, its parent task's team. Used to
+  // decide whether the current viewer is this task's Team Leader (who, along with a
+  // Director/Super Admin, may reassign it) — see TaskDetailPage.
+  owningTeamId: number | null
   status: TaskStatus
   progressPercentage: number
   dateAssigned: string

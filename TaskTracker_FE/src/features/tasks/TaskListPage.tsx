@@ -16,25 +16,30 @@ import styles from './TaskListPage.module.css'
 const PAGE_SIZE = 10
 const LANES_SIZE = 200
 
+/** A Member only ever sees tasks assigned directly to them — this page never shows them
+ *  "all tasks" the way it does for a Director/Super Admin. assignedPersonId scopes every
+ *  query on this page (list, lanes, and search) the same way; there's no client-side
+ *  filtering of a wider result set, since that would still ship the wider set to them. */
 export function TaskListPage() {
-  const { isDirector } = useAuth()
+  const { currentUser, isDirector } = useAuth()
   const [status, setStatus] = useState<TaskStatusFilterValue>('ALL')
   const [layout, setLayout] = useState<TaskLayout>('table')
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
 
+  const scopeToPersonId = isDirector ? undefined : currentUser?.id
   const statusParam = status === 'ALL' ? undefined : status
-  const tableQuery = useTasks({ status: statusParam, page, size: PAGE_SIZE })
-  const lanesQuery = useTasks({ page: 0, size: LANES_SIZE })
-  const searchQuery = useTaskSearch(search)
+  const tableQuery = useTasks({ status: statusParam, assignedPersonId: scopeToPersonId, page, size: PAGE_SIZE })
+  const lanesQuery = useTasks({ assignedPersonId: scopeToPersonId, page: 0, size: LANES_SIZE })
+  const searchQuery = useTaskSearch(search, scopeToPersonId)
   const isSearching = search.trim().length > 0
 
   return (
     <>
       <PageHeader
         breadcrumb="Throughline"
-        title="Tasks"
+        title={isDirector ? 'Tasks' : 'My Tasks'}
         right={isDirector ? <Button onClick={() => setCreateOpen(true)}>New task</Button> : undefined}
       />
 
@@ -47,7 +52,12 @@ export function TaskListPage() {
           }}
         />
         <div className={styles.controlsRight}>
-          <TextField value={search} onChange={setSearch} placeholder="Search code or title…" aria-label="Search tasks" />
+          <TextField
+            value={search}
+            onChange={setSearch}
+            placeholder={isDirector ? 'Search code or title…' : 'Search your tasks…'}
+            aria-label="Search tasks"
+          />
           <TaskLayoutToggle value={layout} onChange={setLayout} />
         </div>
       </div>

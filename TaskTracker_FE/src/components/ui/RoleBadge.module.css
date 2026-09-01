@@ -1,0 +1,31 @@
+.badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.member {
+  color: var(--muted);
+  background: var(--track);
+}
+
+.teamLeader {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.director {
+  color: var(--signal-info);
+  background: var(--signal-info-bg);
+}
+
+.superAdmin {
+  color: var(--signal-admin);
+  background: var(--signal-admin-bg);
+}

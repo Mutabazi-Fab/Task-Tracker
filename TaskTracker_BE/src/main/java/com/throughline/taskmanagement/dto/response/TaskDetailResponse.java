@@ -16,6 +16,12 @@ public record TaskDetailResponse(
     String assigneeName,
     Long assigneeId,
     AssigneeType assigneeType,
+    // The team actually responsible for this task, regardless of assigneeType: for a
+    // top-level (TEAM-assigned) task, same as assigneeId; for a subtask (always
+    // INDIVIDUAL-assigned), its parent task's team. Lets the frontend decide "is the
+    // viewer this task's team leader" (who, along with a Director/Super Admin, is allowed
+    // to reassign it) without a second fetch for the parent.
+    Long owningTeamId,
     TaskStatus status,
     int progressPercentage,
     LocalDate dateAssigned,

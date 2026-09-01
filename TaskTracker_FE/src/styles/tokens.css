@@ -38,6 +38,14 @@
   --status-pending-bg: #f6e5df;
 
   --signal-info: #1f6f8b;
+  --signal-info-bg: #dcedf1;
+
+  /* Role badges (Sidebar, PersonAdminControls) — distinct from --status-* (task status only)
+     and from --accent (Team Leader reuses --accent-strong/--accent-soft, matching the
+     existing per-team "Leader" tag). Director and Super Admin get their own hues so the
+     four states (Member/Team Leader/Director/Super Admin) never look ambiguous at a glance. */
+  --signal-admin: #6b3fa0;
+  --signal-admin-bg: #ece2f5;
 
   /* Radii */
   --radius-sm: 4px;
@@ -77,4 +85,9 @@
   --status-ongoing-bg: #2a2413;
   --status-pending: #c96a4e;
   --status-pending-bg: #2c1d18;
+
+  --signal-info: #4fa8c4;
+  --signal-info-bg: #14262b;
+  --signal-admin: #b98fe0;
+  --signal-admin-bg: #241a2e;
 }

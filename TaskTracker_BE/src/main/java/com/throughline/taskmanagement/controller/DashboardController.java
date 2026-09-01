@@ -1,12 +1,14 @@
 package com.throughline.taskmanagement.controller;
 
 import com.throughline.taskmanagement.dto.response.*;
+import com.throughline.taskmanagement.security.CurrentPersonResolver;
 import com.throughline.taskmanagement.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -18,6 +20,7 @@ import java.util.List;
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final CurrentPersonResolver currentPersonResolver;
 
     @GetMapping("/overview")
     public ResponseEntity<DashboardOverviewResponse> getOverview() {
@@ -52,11 +55,12 @@ public class DashboardController {
     }
 
     /** The Director's Dashboard default view: only the top-level tasks THIS Director
-     *  created, not the whole org's tasks. directorId is passed explicitly (same pattern
-     *  as the rest of the app until Phase 7 wires a real "current user"). */
+     *  created, not the whole org's tasks. directorId is never accepted from the client —
+     *  it's always the caller's own real, logged-in identity, so a Member can't view a
+     *  Director's "my initiatives" list just by passing that Director's id. */
     @GetMapping("/director/tasks")
-    public ResponseEntity<Page<TaskListResponse>> getDirectorTasks(
-            @RequestParam Long directorId, Pageable pageable) {
+    public ResponseEntity<Page<TaskListResponse>> getDirectorTasks(Pageable pageable, Authentication authentication) {
+        Long directorId = currentPersonResolver.resolveId(authentication);
         return ResponseEntity.ok(dashboardService.getDirectorTasks(directorId, pageable));
     }
 }

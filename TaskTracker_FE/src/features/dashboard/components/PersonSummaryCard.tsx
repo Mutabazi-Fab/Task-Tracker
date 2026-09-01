@@ -11,7 +11,7 @@ export function PersonSummaryCard({ person }: { person: PersonSummary }) {
         <Avatar name={person.name} />
         <div className={styles.identity}>
           <span className={styles.name}>{person.name}</span>
-          <span className={styles.role}>{person.role}</span>
+          <span className={styles.role}>{person.jobTitle}</span>
         </div>
       </div>
       <div className={styles.stats}>

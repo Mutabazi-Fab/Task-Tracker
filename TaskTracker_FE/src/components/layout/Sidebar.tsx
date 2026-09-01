@@ -7,6 +7,7 @@ import { ThemeToggle } from '../../features/theme/ThemeToggle'
 import { useAuth } from '../../features/auth/useAuth'
 import { Avatar } from '../ui/Avatar'
 import { Icon } from '../ui/Icon'
+import { RoleBadge, resolveBadgeRole } from '../ui/RoleBadge'
 import type { IconName } from '../ui/Icon'
 import { SidebarLogo } from './SidebarLogo'
 import { SidebarNavItem } from './SidebarNavItem'
@@ -55,6 +56,14 @@ export function Sidebar() {
               <span className={styles.userRole}>
                 {currentUser.role && ROLE_LABEL[currentUser.role] ? ROLE_LABEL[currentUser.role] : currentUser.jobTitle}
               </span>
+              <div className={styles.badgeRow}>
+                <RoleBadge
+                  badgeRole={resolveBadgeRole(
+                    currentUser.role,
+                    currentUser.teams.some((t) => t.isLeader),
+                  )}
+                />
+              </div>
             </div>
             <button type="button" className={styles.logoutButton} onClick={logout} title="Log out" aria-label="Log out">
               <Icon name="logout" size={16} />

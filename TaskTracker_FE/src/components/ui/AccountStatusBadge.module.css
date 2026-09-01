@@ -1,0 +1,21 @@
+.badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.active {
+  color: var(--status-completed);
+  background: var(--status-completed-bg);
+}
+
+.inactive {
+  color: var(--status-pending);
+  background: var(--status-pending-bg);
+}

@@ -22,7 +22,11 @@ public interface PersonService {
     PersonResponse createPerson(CreatePersonRequest request);
 
     PersonResponse getPersonById(Long id);
-    Page<PersonResponse> getAllPeople(Pageable pageable);
+
+    /** A Director/Super Admin sees everyone; anyone else sees only people who share at
+     *  least one team with them (nothing at all if they belong to no team). */
+    Page<PersonResponse> getAllPeople(Long viewerId, Pageable pageable);
+
     PersonResponse updatePerson(Long id, CreatePersonRequest request);
     void deletePerson(Long id);
     PersonStatisticsResponse getPersonStatistics(Long personId);

@@ -23,7 +23,7 @@ import styles from './TaskDetailPage.module.css'
 export function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>()
   const query = useTaskDetail(Number(taskId))
-  const { isDirector } = useAuth()
+  const { isDirector, currentUser } = useAuth()
   const navigate = useNavigate()
   const [reassignOpen, setReassignOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -36,6 +36,13 @@ export function TaskDetailPage() {
         // Director/Super Admin only, the same authority that creates a top-level task.
         // A Team Leader deleting their own team's subtask isn't covered by this yet.
         const canDelete = isDirector
+        // Mirrors the backend check in TaskServiceImpl.requireCanReassign: only a
+        // Director/Super Admin, or the Team Leader of the team actually responsible for
+        // this task, may reassign it — an ordinary team member cannot.
+        const canReassign =
+          isDirector ||
+          (task.owningTeamId !== null &&
+            currentUser?.teams.some((t) => t.teamId === task.owningTeamId && t.isLeader))
 
         return (
           <>
@@ -44,9 +51,11 @@ export function TaskDetailPage() {
               title={task.taskCode}
               right={
                 <div className={styles.headerActions}>
-                  <Button variant="secondary" onClick={() => setReassignOpen(true)}>
-                    Reassign
-                  </Button>
+                  {canReassign && (
+                    <Button variant="secondary" onClick={() => setReassignOpen(true)}>
+                      Reassign
+                    </Button>
+                  )}
                   {canDelete && (
                     <Button variant="ghost" onClick={() => setDeleteOpen(true)}>
                       Delete

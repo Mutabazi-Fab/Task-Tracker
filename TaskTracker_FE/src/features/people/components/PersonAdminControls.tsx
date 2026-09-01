@@ -20,7 +20,8 @@ const ROLE_OPTIONS: { label: string; value: Role }[] = [
  * Super-Admin-only — not rendered at all otherwise (see PersonProfilePage). The backend
  * still enforces the real rules (can't remove the last Super Admin, can't deactivate
  * yourself) — this just surfaces whatever error that produces rather than duplicating
- * the logic client-side.
+ * the logic client-side. Reason is mandatory for both actions — enforced here (button
+ * stays disabled without one) and server-side (the request is rejected regardless).
  */
 export function PersonAdminControls({ person }: { person: Person }) {
   const { currentUser } = useAuth()
@@ -33,18 +34,21 @@ export function PersonAdminControls({ person }: { person: Person }) {
 
   if (!currentUser) return null
 
+  const canUpdateRole = newRole !== person.role && roleReason.trim() !== ''
+  const canToggleActive = activeReason.trim() !== ''
+
   function handleRoleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!currentUser || newRole === person.role) return
+    if (!currentUser || !canUpdateRole) return
     changeRole.mutate(
-      { newRole, changedById: currentUser.id, reason: roleReason.trim() || undefined },
+      { newRole, changedById: currentUser.id, reason: roleReason.trim() },
       { onSuccess: () => setRoleReason('') },
     )
   }
 
   function handleActiveToggle() {
-    if (!currentUser) return
-    setActive.mutate({ active: !person.active, changedById: currentUser.id, reason: activeReason.trim() || undefined })
+    if (!currentUser || !canToggleActive) return
+    setActive.mutate({ active: !person.active, changedById: currentUser.id, reason: activeReason.trim() })
   }
 
   return (
@@ -61,26 +65,34 @@ export function PersonAdminControls({ person }: { person: Person }) {
               options={ROLE_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
             />
           </div>
-          <TextField label="Reason (optional)" value={roleReason} onChange={setRoleReason} placeholder="Why this change" />
-          <Button type="submit" variant="secondary" disabled={newRole === person.role || changeRole.isPending}>
+          <TextField label="Reason" value={roleReason} onChange={setRoleReason} placeholder="Why this change" required />
+          <Button type="submit" variant="secondary" disabled={!canUpdateRole || changeRole.isPending}>
             {changeRole.isPending ? 'Updating…' : 'Update role'}
           </Button>
         </form>
         {changeRole.isError && <ErrorMessage message={changeRole.error.message} />}
 
         <div className={styles.row}>
-          <span className={`${styles.statusBadge} ${person.active ? styles.statusActive : styles.statusInactive}`}>
-            {person.active ? 'Active' : 'Deactivated'}
-          </span>
-          <TextField
-            label="Reason (optional)"
-            value={activeReason}
-            onChange={setActiveReason}
-            placeholder="Why this change"
-          />
-          <Button type="button" variant={person.active ? 'ghost' : 'secondary'} onClick={handleActiveToggle} disabled={setActive.isPending}>
-            {setActive.isPending ? 'Saving…' : person.active ? 'Deactivate account' : 'Reactivate account'}
-          </Button>
+          <TextField label="Reason" value={activeReason} onChange={setActiveReason} placeholder="Why this change" required />
+          {person.active ? (
+            <button
+              type="button"
+              className={styles.dangerButton}
+              onClick={handleActiveToggle}
+              disabled={!canToggleActive || setActive.isPending}
+            >
+              {setActive.isPending ? 'Saving…' : 'Deactivate account'}
+            </button>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleActiveToggle}
+              disabled={!canToggleActive || setActive.isPending}
+            >
+              {setActive.isPending ? 'Saving…' : 'Reactivate account'}
+            </Button>
+          )}
         </div>
         {setActive.isError && <ErrorMessage message={setActive.error.message} />}
       </div>

@@ -22,11 +22,23 @@ public interface TeamService {
     TeamResponse updateTeam(Long id, UpdateTeamRequest request);
     void deleteTeam(Long id);
     TeamResponse setTeamLeader(Long teamId, Long personId, SetTeamLeaderRequest request);
-    List<TeamMemberResponse> getTeamMembers(Long teamId);
+
+    /** viewerId must be a Director/Super Admin, or a member of this team — everyone else
+     *  is forbidden, not just shown less. */
+    List<TeamMemberResponse> getTeamMembers(Long teamId, Long viewerId);
+
     TeamResponse addMember(Long teamId, AddTeamMemberRequest request);
     TeamResponse removeMember(Long teamId, Long personId, RemoveTeamMemberRequest request);
-    Page<TeamMembershipChangeResponse> getMembershipHistory(Long teamId, Pageable pageable);
-    Page<TeamMembershipChangeResponse> getAllMembershipActivity(Pageable pageable);
-    TeamStatisticsResponse getTeamStatistics(Long teamId);
-    List<TaskListResponse> getTeamTasks(Long teamId);
+
+    /** Same viewer rule as getTeamMembers. */
+    Page<TeamMembershipChangeResponse> getMembershipHistory(Long teamId, Long viewerId, Pageable pageable);
+
+    /** Director/Super-Admin-only — the cross-team audit feed. */
+    Page<TeamMembershipChangeResponse> getAllMembershipActivity(Long viewerId, Pageable pageable);
+
+    /** Same viewer rule as getTeamMembers. */
+    TeamStatisticsResponse getTeamStatistics(Long teamId, Long viewerId);
+
+    /** Same viewer rule as getTeamMembers. */
+    List<TaskListResponse> getTeamTasks(Long teamId, Long viewerId);
 }

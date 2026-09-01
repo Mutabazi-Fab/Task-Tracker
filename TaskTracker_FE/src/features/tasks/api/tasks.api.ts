@@ -11,23 +11,26 @@ import type {
 
 export interface FetchTasksParams {
   status?: TaskStatus
+  /** A Member's task list always passes their own id here — "all tasks" isn't theirs to
+   *  see. Omitted for a Director/Super Admin, who see everything. */
+  assignedPersonId?: number
   page: number
   size: number
 }
 
-export async function fetchTasks({ status, page, size }: FetchTasksParams): Promise<Page<TaskListItem>> {
+export async function fetchTasks({ status, assignedPersonId, page, size }: FetchTasksParams): Promise<Page<TaskListItem>> {
   const { data } = await axiosClient.get<Page<TaskListItem>>(endpoints.tasks.list(), {
-    params: { status, page, size },
+    params: { status, assignedPersonId, page, size },
   })
   return data
 }
 
 // GET /tasks/search is a Page<TaskListResponse> now — flattened here for the same reason
 // as fetchPeople in people.api.ts (this is used for a live "as you type" results list, not
-// a paged view).
-export async function searchTasks(q: string): Promise<TaskListItem[]> {
+// a paged view). assignedPersonId scopes it the same way fetchTasks does, for a Member.
+export async function searchTasks(q: string, assignedPersonId?: number): Promise<TaskListItem[]> {
   const { data } = await axiosClient.get<Page<TaskListItem>>(endpoints.tasks.search(), {
-    params: { q, size: 50 },
+    params: { q, assignedPersonId, size: 50 },
   })
   return data.content
 }

@@ -1,4 +1,4 @@
-import type { Person } from './person.types'
+import type { Person, PersonTeamStatistics } from './person.types'
 import type { TaskListItem, TaskStatus } from './task.types'
 
 export interface DashboardOverview {
@@ -32,13 +32,20 @@ export interface TeamLeaderboardItem {
 
 export interface PersonSummary {
   name: string
-  role: string
+  jobTitle: string
   averageProgress: number | null
   assignedCount: number
   completedCount: number
 }
 
+/** One person match in a global search — profile plus a per-team stats breakdown, not one
+ *  blended number across every team they belong to (see PersonResultsSection). */
+export interface PersonSearchResult {
+  person: Person
+  teamBreakdown: PersonTeamStatistics[]
+}
+
 export interface GlobalSearchResult {
-  people: Person[]
+  people: PersonSearchResult[]
   tasks: TaskListItem[]
 }

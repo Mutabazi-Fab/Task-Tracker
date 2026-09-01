@@ -100,6 +100,10 @@ public class TaskMapper {
                 (task.getAssignedPerson() != null ? task.getAssignedPerson().getId() : null) :
                 (task.getAssignedTeam() != null ? task.getAssignedTeam().getId() : null);
 
+        Long owningTeamId = task.getParentTask() == null
+                ? (task.getAssignedTeam() != null ? task.getAssignedTeam().getId() : null)
+                : (task.getParentTask().getAssignedTeam() != null ? task.getParentTask().getAssignedTeam().getId() : null);
+
         List<CommentResponse> comments = task.getComments() != null ?
                 task.getComments().stream().map(this::toCommentResponse).toList() : List.of();
         List<ReassignmentResponse> reassignments = task.getReassignments() != null ?
@@ -117,6 +121,7 @@ public class TaskMapper {
                 assigneeNameOf(task),
                 assigneeId,
                 task.getAssigneeType(),
+                owningTeamId,
                 task.getStatus(),
                 task.getProgressPercentage(),
                 task.getDateAssigned(),

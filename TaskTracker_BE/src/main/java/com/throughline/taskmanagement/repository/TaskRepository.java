@@ -17,9 +17,22 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     Optional<Task> findByTaskCode(String taskCode);
     
     Page<Task> findByStatus(TaskStatus status, Pageable pageable);
-    
+
     List<Task> findByAssignedPersonId(Long personId);
-    
+
+    // Backs "my tasks" — a Member's scoped view of GET /tasks: everything they're currently
+    // responsible for, either assigned to them directly (individual tasks/subtasks) or as a
+    // top-level task assigned to a team they belong to (not the org's whole task list, and
+    // not just their individual work in isolation from their team's).
+    @Query("SELECT t FROM Task t WHERE t.assignedPerson.id = :personId "
+            + "OR t.assignedTeam.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.person.id = :personId)")
+    Page<Task> findVisibleToPerson(@Param("personId") Long personId, Pageable pageable);
+
+    @Query("SELECT t FROM Task t WHERE (t.assignedPerson.id = :personId "
+            + "OR t.assignedTeam.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.person.id = :personId)) "
+            + "AND t.status = :status")
+    Page<Task> findVisibleToPersonAndStatus(@Param("personId") Long personId, @Param("status") TaskStatus status, Pageable pageable);
+
     List<Task> findByAssignedTeamId(Long teamId);
     
     List<Task> findByAssignedById(Long personId);
@@ -45,6 +58,17 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     @Query(value = "SELECT t FROM Task t WHERE LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%'))",
            countQuery = "SELECT COUNT(t) FROM Task t WHERE LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%'))")
     Page<Task> search(@Param("q") String q, Pageable pageable);
+
+    // Same search, scoped to what's visible to this person (see findVisibleToPerson) — a
+    // Member's search shouldn't surface tasks that aren't theirs or their team's any more
+    // than the plain list should.
+    @Query(value = "SELECT t FROM Task t WHERE (t.assignedPerson.id = :personId "
+                  + "OR t.assignedTeam.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.person.id = :personId)) AND "
+                  + "(LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%')))",
+           countQuery = "SELECT COUNT(t) FROM Task t WHERE (t.assignedPerson.id = :personId "
+                  + "OR t.assignedTeam.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.person.id = :personId)) AND "
+                  + "(LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<Task> searchVisibleToPerson(@Param("q") String q, @Param("personId") Long personId, Pageable pageable);
 
     // List-returning: used internally by PersonService.getPersonStatistics for an aggregate
     // (tasksHandedOff) over ALL connected tasks — pagination would silently under-count there.

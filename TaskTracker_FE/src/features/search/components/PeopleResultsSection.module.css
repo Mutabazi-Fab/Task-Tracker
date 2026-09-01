@@ -34,3 +34,19 @@
   font-size: 12px;
   color: var(--muted);
 }
+
+.breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.breakdownItem {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--track);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+}
