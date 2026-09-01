@@ -259,7 +259,7 @@ Split across the two gitignored files from step 2 above.
   change in `SecurityConfig`, and nothing else in the auth code needs to change either
   way.
 
-> **⚠️ Already-exposed secret, at the time of writing.** `application.properties` was
+> ** Already-exposed secret, at the time of writing.** `application.properties` was
 > tracked in git from the very first commit, carrying the real JWT signing secret and
 > database password in plain text — and this repository has already been pushed to a
 > public GitHub remote. It's since been untracked (`git rm --cached`, alongside adding it
