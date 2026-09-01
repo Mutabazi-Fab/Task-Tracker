@@ -8,5 +8,7 @@ package com.throughline.taskmanagement.enums;
  */
 public enum NotificationType {
     TEAM_MEMBER_ADDED,
-    TEAM_MEMBER_REMOVED
+    TEAM_MEMBER_REMOVED,
+    ROLE_CHANGED,
+    ACCOUNT_STATUS_CHANGED
 }

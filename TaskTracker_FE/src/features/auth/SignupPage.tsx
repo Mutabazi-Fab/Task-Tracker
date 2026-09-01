@@ -34,14 +34,21 @@ export function SignupPage() {
     setSubmitting(true)
     setError(null)
     try {
-      await signup({
+      const auth = await signup({
         fullName: fullName.trim(),
         email: email.trim(),
         password,
         jobTitle: jobTitle.trim(),
         rank: rank.trim() || undefined,
       })
-      navigate(ROUTES.dashboard, { replace: true })
+      if (auth.emailVerified) {
+        navigate(ROUTES.dashboard, { replace: true })
+      } else {
+        // Brand new account — needs to verify the code just emailed to it before it can
+        // log in. A pre-existing/seeded record being claimed here would already be
+        // exempt (emailVerified true), so this branch only fires for genuinely new signups.
+        navigate(ROUTES.verifyEmail, { state: { email: auth.email } })
+      }
     } catch (err) {
       setError((err as ApiError).message)
     } finally {

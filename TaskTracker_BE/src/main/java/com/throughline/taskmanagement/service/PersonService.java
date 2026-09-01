@@ -1,10 +1,13 @@
 package com.throughline.taskmanagement.service;
 
+import com.throughline.taskmanagement.dto.request.ChangeRoleRequest;
 import com.throughline.taskmanagement.dto.request.CreatePersonRequest;
+import com.throughline.taskmanagement.dto.request.SetAccountActiveRequest;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.dto.response.PersonStatisticsResponse;
 import com.throughline.taskmanagement.dto.response.PersonTaskHistoryResponse;
 import com.throughline.taskmanagement.dto.response.PersonTeamStatisticsResponse;
+import com.throughline.taskmanagement.dto.response.RoleChangeResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -13,7 +16,11 @@ import java.util.List;
 /** No assignToTeam here — team membership is exclusively managed through TeamService
  *  (addMember/removeMember), since a person can now belong to multiple teams at once. */
 public interface PersonService {
+    /** createdById must be a Director or Super Admin; only a Super Admin may set role to
+     *  anything other than Member (null defaults to Member). Sends a best-effort invite
+     *  email. */
     PersonResponse createPerson(CreatePersonRequest request);
+
     PersonResponse getPersonById(Long id);
     Page<PersonResponse> getAllPeople(Pageable pageable);
     PersonResponse updatePerson(Long id, CreatePersonRequest request);
@@ -24,4 +31,14 @@ public interface PersonService {
     /** This person's stats broken down per team they belong to, rather than one blended
      *  number — reused by getPersonStatistics and by DashboardService.globalSearch. */
     List<PersonTeamStatisticsResponse> getPersonTeamBreakdown(Long personId);
+
+    /** Super-Admin-only. Guards against removing the last Super Admin. */
+    PersonResponse changeRole(Long personId, ChangeRoleRequest request);
+
+    /** Super-Admin-only, and not on your own account if you're deactivating it. Guards
+     *  against deactivating the last Super Admin. */
+    PersonResponse setActive(Long personId, SetAccountActiveRequest request);
+
+    /** Super-Admin-only — every role change ever made, org-wide, newest first. */
+    Page<RoleChangeResponse> getRoleChangeActivity(Long requesterId, Pageable pageable);
 }

@@ -1,0 +1,28 @@
+.emailNotice {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.resendNotice {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--accent-strong);
+}
+
+.resendButton {
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.resendButton:hover {
+  color: var(--ink);
+}
+
+.resendButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

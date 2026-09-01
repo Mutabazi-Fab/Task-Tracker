@@ -57,7 +57,7 @@ public class TaskServiceImpl implements TaskService {
     public TaskDetailResponse createTask(CreateTaskRequest request) {
         Person createdBy = personRepository.findById(request.createdById())
                 .orElseThrow(() -> new ResourceNotFoundException("createdById not found"));
-        if (createdBy.getRole() != Role.DIRECTOR) {
+        if (!Role.isAtLeastDirector(createdBy.getRole())) {
             throw new ForbiddenActionException("Only a Director can create a top-level task.");
         }
 
@@ -99,7 +99,10 @@ public class TaskServiceImpl implements TaskService {
         Person createdBy = personRepository.findById(request.createdById())
                 .orElseThrow(() -> new ResourceNotFoundException("createdById not found"));
 
-        boolean isDirector = createdBy.getRole() == Role.DIRECTOR;
+        // isDirector here also covers Super Admin (see Role.isAtLeastDirector) — a
+        // Super-Admin-created subtask is recorded as CreatedByRole.DIRECTOR below, same as
+        // a Director's, rather than adding a third audit value just for this.
+        boolean isDirector = Role.isAtLeastDirector(createdBy.getRole());
         boolean isThisTeamsLeader = teamMemberRepository.findByTeamIdAndPersonId(teamId, createdBy.getId())
                 .map(TeamMember::isLeader)
                 .orElse(false);

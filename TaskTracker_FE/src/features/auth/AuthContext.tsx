@@ -1,22 +1,44 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AUTH_TOKEN_STORAGE_KEY, UNAUTHORIZED_EVENT } from '../../api/axiosClient'
-import type { LoginRequest, SignupRequest } from '../../types/auth.types'
+import type { AuthResponse, LoginRequest, ResendOtpRequest, SignupRequest, VerifyEmailRequest } from '../../types/auth.types'
 import type { Person } from '../../types/person.types'
-import { fetchCurrentPerson, login as loginRequest, logout as logoutRequest, signup as signupRequest } from './api/auth.api'
+import {
+  fetchCurrentPerson,
+  login as loginRequest,
+  logout as logoutRequest,
+  resendOtp as resendOtpRequest,
+  signup as signupRequest,
+  verifyEmail as verifyEmailRequest,
+} from './api/auth.api'
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 
 export interface AuthContextValue {
   status: AuthStatus
   currentUser: Person | null
+  /** Director or Super Admin — every "Director-only" check in the UI should read this,
+   *  not currentUser.role === 'DIRECTOR' directly, so Super Admin never loses access to
+   *  something a Director can do. */
   isDirector: boolean
+  /** Super Admin only — the handful of things exclusively theirs (granting roles,
+   *  deactivating accounts, the role-change audit log). */
+  isSuperAdmin: boolean
   /** remember=true persists the token in localStorage (survives closing the browser);
    *  false keeps it in sessionStorage only (gone once the tab closes) — the "Remember me"
    *  checkbox on LoginPage. */
   login: (request: LoginRequest, remember: boolean) => Promise<void>
-  /** Always remembered — there's no checkbox on signup, and someone who just created an
-   *  account has no reason to expect it to sign them out the moment they close the tab. */
-  signup: (request: SignupRequest) => Promise<void>
+  /**
+   * Returns the raw AuthResponse rather than resolving to void — a brand-new signup comes
+   * back with emailVerified=false and no token (still needs OTP verification), and the
+   * caller (SignupPage) needs to see that to route to the verify-email screen instead of
+   * the dashboard. Only stores a token and hydrates when one actually comes back. Always
+   * remembered (no checkbox on signup) once it does.
+   */
+  signup: (request: SignupRequest) => Promise<AuthResponse>
+  /** Same "may still need verification" shape as signup — checking a code doesn't always
+   *  succeed. On success this also logs the person in. */
+  verifyEmail: (request: VerifyEmailRequest) => Promise<AuthResponse>
+  resendOtp: (request: ResendOtpRequest) => Promise<void>
   logout: () => void
 }
 
@@ -58,9 +80,10 @@ function clearStoredToken() {
  * backend still takes explicitly (assignedById, changedById, authorId, ...) is filled in
  * from currentUser here rather than a picker, now that we actually know who's logged in.
  *
- * AuthResponse (from login/signup) only carries {token, personId, fullName, email, role} —
- * not jobTitle/rank/teams — so right after either one succeeds, this fetches the full
- * profile from GET /auth/me before considering the user "authenticated".
+ * AuthResponse (from login/signup/verify-email) only carries {token, personId, fullName,
+ * email, role, emailVerified} — not jobTitle/rank/teams — so right after any of them
+ * yields a real token, this fetches the full profile from GET /auth/me before considering
+ * the user "authenticated".
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading')
@@ -98,15 +121,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (request: LoginRequest, remember: boolean) => {
     const auth = await loginRequest(request)
-    storeToken(auth.token, remember)
-    await hydrate()
+    // Login never comes back without a token — an unverified account is rejected with a
+    // distinct error instead (see LoginPage) — but guard anyway rather than assume.
+    if (auth.token) {
+      storeToken(auth.token, remember)
+      await hydrate()
+    }
   }, [hydrate])
 
-  const signup = useCallback(async (request: SignupRequest) => {
+  const signup = useCallback(async (request: SignupRequest): Promise<AuthResponse> => {
     const auth = await signupRequest(request)
-    storeToken(auth.token, true)
-    await hydrate()
+    if (auth.token) {
+      storeToken(auth.token, true)
+      await hydrate()
+    }
+    return auth
   }, [hydrate])
+
+  const verifyEmail = useCallback(async (request: VerifyEmailRequest): Promise<AuthResponse> => {
+    const auth = await verifyEmailRequest(request)
+    if (auth.token) {
+      storeToken(auth.token, true)
+      await hydrate()
+    }
+    return auth
+  }, [hydrate])
+
+  const resendOtp = useCallback(async (request: ResendOtpRequest) => {
+    await resendOtpRequest(request)
+  }, [])
 
   const logout = useCallback(() => {
     // Best-effort — JWT is stateless, so there's nothing server-side to wait on.
@@ -122,12 +165,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       status,
       currentUser,
-      isDirector: currentUser?.role === 'DIRECTOR',
+      isDirector: currentUser?.role === 'DIRECTOR' || currentUser?.role === 'SUPER_ADMIN',
+      isSuperAdmin: currentUser?.role === 'SUPER_ADMIN',
       login,
       signup,
+      verifyEmail,
+      resendOtp,
       logout,
     }),
-    [status, currentUser, login, signup, logout],
+    [status, currentUser, login, signup, verifyEmail, resendOtp, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

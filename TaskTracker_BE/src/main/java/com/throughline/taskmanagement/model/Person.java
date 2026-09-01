@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -58,6 +59,37 @@ public class Person {
      * creating a duplicate.
      */
     private String password;
+
+    /**
+     * Whether this person has proven control of their email via the OTP sent at signup.
+     * @ColumnDefault backfills every EXISTING row to true when this column is first added
+     * (they predate this feature, exempted per the "leave old accounts alone" decision) —
+     * but that's purely a migration default; Hibernate still writes the Java field's
+     * actual value (false) for every brand-new signup going forward, so new accounts do
+     * require verification. Only self-signup ever sets this false — a Director/Super Admin
+     * creating a person here starts them at false too, since they haven't proven anything
+     * about the email yet either.
+     */
+    @ColumnDefault("true")
+    @Column(nullable = false)
+    private boolean emailVerified = false;
+
+    /** One-time verification code, null once verified (or not applicable). */
+    private String otpCode;
+
+    /** When otpCode expires — also doubles as the basis for the resend cooldown in
+     *  AuthServiceImpl (no separate "last sent" column needed). */
+    private LocalDateTime otpExpiresAt;
+
+    /**
+     * Whether this account can log in at all. A Super Admin can deactivate an account
+     * without deleting it — their historical tasks/comments/reassignments stay intact,
+     * login just stops working. Defaults true for everyone, old and new — nobody starts
+     * out deactivated.
+     */
+    @ColumnDefault("true")
+    @Column(nullable = false)
+    private boolean active = true;
 
     @CreationTimestamp
     @Column(updatable = false)

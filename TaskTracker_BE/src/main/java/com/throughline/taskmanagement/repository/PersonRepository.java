@@ -1,5 +1,6 @@
 package com.throughline.taskmanagement.repository;
 
+import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.model.Person;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -10,8 +11,12 @@ import java.util.Optional;
 
 public interface PersonRepository extends JpaRepository<Person, Long> {
     Optional<Person> findByEmail(String email);
-    
+
     boolean existsByEmail(String email);
+
+    // Used for the "last Super Admin" guard — you can't demote/deactivate the only one
+    // left, since nobody would then be able to ever grant that role again.
+    long countByRoleAndActiveTrue(Role role);
 
     // No findByTeamId — a person can belong to multiple teams now, so "which team is this
     // person in" is no longer a single-valued question. Look up via TeamMemberRepository instead.

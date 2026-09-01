@@ -7,6 +7,7 @@ import type {
   StatusMix,
   TeamLeaderboardItem,
 } from '../../../types/dashboard.types'
+import type { Page, TaskListItem } from '../../../types/task.types'
 
 export async function fetchDashboardOverview(): Promise<DashboardOverview> {
   const { data } = await axiosClient.get<DashboardOverview>(endpoints.dashboard.overview())
@@ -32,5 +33,14 @@ export async function fetchTeamLeaderboard(): Promise<TeamLeaderboardItem[]> {
 
 export async function fetchPeopleSummary(): Promise<PersonSummary[]> {
   const { data } = await axiosClient.get<PersonSummary[]>(endpoints.dashboard.peopleSummary())
+  return data
+}
+
+/** Only the top-level tasks THIS Director created — not the whole org's. Director/Super
+ *  Admin only; the backend rejects anyone else. */
+export async function fetchDirectorTasks(directorId: number): Promise<Page<TaskListItem>> {
+  const { data } = await axiosClient.get<Page<TaskListItem>>(endpoints.dashboard.directorTasks(), {
+    params: { directorId, size: 12 },
+  })
   return data
 }

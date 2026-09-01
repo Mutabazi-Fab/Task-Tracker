@@ -36,7 +36,15 @@ export function LoginPage() {
       const redirectTo = (location.state as { from?: string } | null)?.from ?? ROUTES.dashboard
       navigate(redirectTo, { replace: true })
     } catch (err) {
-      setError((err as ApiError).message)
+      const message = (err as ApiError).message
+      // Matched by text, not a structured code — the backend distinguishes this from a
+      // generic bad-credentials rejection with a specific message precisely so the
+      // frontend can route to verification instead of just showing an error.
+      if (message === 'Please verify your email before logging in.') {
+        navigate(ROUTES.verifyEmail, { state: { email: email.trim() } })
+        return
+      }
+      setError(message)
     } finally {
       setSubmitting(false)
     }

@@ -2,6 +2,7 @@ package com.throughline.taskmanagement.service.impl;
 
 import com.throughline.taskmanagement.dto.response.NotificationResponse;
 import com.throughline.taskmanagement.enums.NotificationType;
+import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.enums.TeamMembershipChangeAction;
 import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
@@ -53,6 +54,33 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setType(type);
         notification.setMessage(message);
         notification.setRelatedEntityId(change.getId());
+        notificationRepository.save(notification);
+    }
+
+    @Override
+    public void notifyRoleChange(Person person, Role oldRole, Role newRole, Person changedBy) {
+        String message = String.format("Your role was changed from %s to %s by %s.",
+                oldRole == null ? "none" : oldRole.name(), newRole.name(), changedBy.getFullName());
+
+        Notification notification = new Notification();
+        notification.setRecipient(person);
+        notification.setType(NotificationType.ROLE_CHANGED);
+        notification.setMessage(message);
+        notification.setRelatedEntityId(person.getId());
+        notificationRepository.save(notification);
+    }
+
+    @Override
+    public void notifyAccountStatusChange(Person person, boolean active, Person changedBy) {
+        String message = active
+                ? String.format("Your account was reactivated by %s.", changedBy.getFullName())
+                : String.format("Your account was deactivated by %s.", changedBy.getFullName());
+
+        Notification notification = new Notification();
+        notification.setRecipient(person);
+        notification.setType(NotificationType.ACCOUNT_STATUS_CHANGED);
+        notification.setMessage(message);
+        notification.setRelatedEntityId(person.getId());
         notificationRepository.save(notification);
     }
 

@@ -11,5 +11,7 @@ public record PersonResponse(
     String jobTitle,
     String rank,
     Role role,
+    boolean emailVerified,
+    boolean active,
     List<PersonTeamMembershipResponse> teams
 ) {}

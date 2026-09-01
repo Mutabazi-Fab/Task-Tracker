@@ -170,7 +170,7 @@ public class DashboardServiceImpl implements DashboardService {
     public Page<TaskListResponse> getDirectorTasks(Long directorId, Pageable pageable) {
         Person director = personRepository.findById(directorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
-        if (director.getRole() != Role.DIRECTOR) {
+        if (!Role.isAtLeastDirector(director.getRole())) {
             throw new ForbiddenActionException("Only a Director has a Director's Dashboard.");
         }
 

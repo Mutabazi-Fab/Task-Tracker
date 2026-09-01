@@ -1,6 +1,13 @@
 import { axiosClient } from '../../../api/axiosClient'
 import { endpoints } from '../../../api/endpoints'
-import type { CreateTaskRequest, Page, TaskDetail, TaskListItem, TaskStatus } from '../../../types/task.types'
+import type {
+  CreateSubtaskRequest,
+  CreateTaskRequest,
+  Page,
+  TaskDetail,
+  TaskListItem,
+  TaskStatus,
+} from '../../../types/task.types'
 
 export interface FetchTasksParams {
   status?: TaskStatus
@@ -28,4 +35,17 @@ export async function searchTasks(q: string): Promise<TaskListItem[]> {
 export async function createTask(payload: CreateTaskRequest): Promise<TaskDetail> {
   const { data } = await axiosClient.post<TaskDetail>(endpoints.tasks.create(), payload)
   return data
+}
+
+export async function createSubtask(parentTaskId: number, payload: CreateSubtaskRequest): Promise<TaskDetail> {
+  const { data } = await axiosClient.post<TaskDetail>(endpoints.tasks.subtasks(parentTaskId), payload)
+  return data
+}
+
+// No actor/reason in the body — the backend doesn't take one for this endpoint (a real,
+// tracked gap: DELETE /tasks/{id} isn't role-gated server-side yet, unlike creation). The
+// button that calls this is still gated client-side to Director/Super Admin or the owning
+// team's leader, matching who can create a task, so this stays consistent in normal use.
+export async function deleteTask(id: number): Promise<void> {
+  await axiosClient.delete(endpoints.tasks.remove(id))
 }

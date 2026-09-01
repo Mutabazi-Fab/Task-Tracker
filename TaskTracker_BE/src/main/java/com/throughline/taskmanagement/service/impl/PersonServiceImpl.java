@@ -1,23 +1,34 @@
 package com.throughline.taskmanagement.service.impl;
 
+import com.throughline.taskmanagement.dto.request.ChangeRoleRequest;
 import com.throughline.taskmanagement.dto.request.CreatePersonRequest;
+import com.throughline.taskmanagement.dto.request.SetAccountActiveRequest;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.dto.response.PersonStatisticsResponse;
 import com.throughline.taskmanagement.dto.response.PersonTaskHistoryResponse;
 import com.throughline.taskmanagement.dto.response.PersonTeamStatisticsResponse;
+import com.throughline.taskmanagement.dto.response.RoleChangeResponse;
+import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.exception.DuplicateResourceException;
+import com.throughline.taskmanagement.exception.ForbiddenActionException;
+import com.throughline.taskmanagement.exception.InvalidAssignmentException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.mapper.PersonMapper;
 import com.throughline.taskmanagement.model.Person;
+import com.throughline.taskmanagement.model.RoleChange;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.model.TeamMember;
 import com.throughline.taskmanagement.repository.PersonRepository;
+import com.throughline.taskmanagement.repository.RoleChangeRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
 import com.throughline.taskmanagement.repository.TeamMemberRepository;
+import com.throughline.taskmanagement.service.MailService;
+import com.throughline.taskmanagement.service.NotificationService;
 import com.throughline.taskmanagement.service.PersonService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -34,12 +45,30 @@ public class PersonServiceImpl implements PersonService {
     private final TeamMemberRepository teamMemberRepository;
     private final TaskRepository taskRepository;
     private final TaskCommentRepository taskCommentRepository;
+    private final RoleChangeRepository roleChangeRepository;
     private final PersonMapper personMapper;
+    private final NotificationService notificationService;
+    private final MailService mailService;
+
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
     @Override
     public PersonResponse createPerson(CreatePersonRequest request) {
         if (personRepository.existsByEmail(request.email())) {
             throw new DuplicateResourceException("Email already exists: " + request.email());
+        }
+        if (request.createdById() == null) {
+            throw new InvalidAssignmentException("createdById is required.");
+        }
+
+        Person createdBy = personRepository.findById(request.createdById())
+                .orElseThrow(() -> new ResourceNotFoundException("createdById not found"));
+        requireDirector(createdBy, "Only a Director or Super Admin can add a new person.");
+
+        Role targetRole = request.role() != null ? request.role() : Role.MEMBER;
+        if (targetRole != Role.MEMBER) {
+            requireSuperAdmin(createdBy, "Only a Super Admin can set a new person's role to Director or Super Admin.");
         }
 
         Person person = new Person();
@@ -47,9 +76,121 @@ public class PersonServiceImpl implements PersonService {
         person.setEmail(request.email());
         person.setJobTitle(request.jobTitle());
         person.setRank(request.rank());
+        person.setRole(targetRole);
+        // emailVerified defaults false (see Person.emailVerified) — new to the system,
+        // still has to prove they control this inbox once they sign up to activate login.
 
         Person saved = personRepository.save(person);
+
+        // Best-effort — the person record is created either way; a flaky mail send
+        // shouldn't block whoever's onboarding them from doing so, they can always be
+        // told directly instead.
+        try {
+            String roleWord = targetRole == Role.MEMBER ? "a team member" : "a " + targetRole.name().toLowerCase();
+            mailService.send(
+                    saved.getEmail(),
+                    "You've been added to Throughline",
+                    String.format(
+                            "%s added you to Throughline as %s. Sign up at %s/signup using this email address (%s) to activate your account.",
+                            createdBy.getFullName(), roleWord, frontendUrl, saved.getEmail()));
+        } catch (Exception e) {
+            // Ignored on purpose — see comment above.
+        }
+
         return personMapper.toResponse(saved, List.of());
+    }
+
+    @Override
+    public PersonResponse changeRole(Long personId, ChangeRoleRequest request) {
+        Person changedBy = personRepository.findById(request.changedById())
+                .orElseThrow(() -> new ResourceNotFoundException("changedById not found"));
+        requireSuperAdmin(changedBy, "Only a Super Admin can change someone's role.");
+
+        Person person = personRepository.findById(personId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+
+        Role oldRole = person.getRole();
+        Role newRole = request.newRole();
+
+        if (oldRole == Role.SUPER_ADMIN && newRole != Role.SUPER_ADMIN
+                && personRepository.countByRoleAndActiveTrue(Role.SUPER_ADMIN) <= 1) {
+            throw new InvalidAssignmentException("Cannot remove the last Super Admin.");
+        }
+
+        RoleChange change = new RoleChange();
+        change.setPerson(person);
+        change.setOldRole(oldRole);
+        change.setNewRole(newRole);
+        change.setChangedBy(changedBy);
+        change.setReason(request.reason());
+        roleChangeRepository.save(change);
+
+        person.setRole(newRole);
+        Person saved = personRepository.save(person);
+
+        notificationService.notifyRoleChange(saved, oldRole, newRole, changedBy);
+
+        return personMapper.toResponse(saved, teamMemberRepository.findByPersonId(personId));
+    }
+
+    @Override
+    public PersonResponse setActive(Long personId, SetAccountActiveRequest request) {
+        Person changedBy = personRepository.findById(request.changedById())
+                .orElseThrow(() -> new ResourceNotFoundException("changedById not found"));
+        requireSuperAdmin(changedBy, "Only a Super Admin can activate or deactivate an account.");
+
+        if (changedBy.getId().equals(personId) && !request.active()) {
+            throw new ForbiddenActionException("You cannot deactivate your own account.");
+        }
+
+        Person person = personRepository.findById(personId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+
+        if (!request.active() && person.getRole() == Role.SUPER_ADMIN
+                && personRepository.countByRoleAndActiveTrue(Role.SUPER_ADMIN) <= 1) {
+            throw new InvalidAssignmentException("Cannot deactivate the last Super Admin.");
+        }
+
+        person.setActive(request.active());
+        Person saved = personRepository.save(person);
+
+        notificationService.notifyAccountStatusChange(saved, request.active(), changedBy);
+
+        return personMapper.toResponse(saved, teamMemberRepository.findByPersonId(personId));
+    }
+
+    @Override
+    public Page<RoleChangeResponse> getRoleChangeActivity(Long requesterId, Pageable pageable) {
+        Person requester = personRepository.findById(requesterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+        requireSuperAdmin(requester, "Only a Super Admin can view role-change activity.");
+
+        return roleChangeRepository.findAllByOrderByTimestampDesc(pageable).map(this::toRoleChangeResponse);
+    }
+
+    private RoleChangeResponse toRoleChangeResponse(RoleChange c) {
+        return new RoleChangeResponse(
+                c.getId(),
+                c.getPerson().getId(),
+                c.getPerson().getFullName(),
+                c.getOldRole(),
+                c.getNewRole(),
+                c.getChangedBy().getFullName(),
+                c.getReason(),
+                c.getTimestamp()
+        );
+    }
+
+    private void requireDirector(Person person, String message) {
+        if (!Role.isAtLeastDirector(person.getRole())) {
+            throw new ForbiddenActionException(message);
+        }
+    }
+
+    private void requireSuperAdmin(Person person, String message) {
+        if (person.getRole() != Role.SUPER_ADMIN) {
+            throw new ForbiddenActionException(message);
+        }
     }
 
     @Override

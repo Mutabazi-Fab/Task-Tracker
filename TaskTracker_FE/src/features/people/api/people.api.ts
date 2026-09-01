@@ -1,7 +1,15 @@
 import { axiosClient } from '../../../api/axiosClient'
 import { endpoints } from '../../../api/endpoints'
 import type { Page } from '../../../types/task.types'
-import type { Person, PersonStatistics, PersonTaskHistoryItem } from '../../../types/person.types'
+import type {
+  ChangeRoleRequest,
+  CreatePersonRequest,
+  Person,
+  PersonStatistics,
+  PersonTaskHistoryItem,
+  RoleChangeActivity,
+  SetAccountActiveRequest,
+} from '../../../types/person.types'
 
 /**
  * GET /people now returns a Spring Data Page<PersonResponse>, not a bare array — a large
@@ -30,6 +38,32 @@ export async function fetchPersonStatistics(id: number): Promise<PersonStatistic
 export async function fetchPersonTaskHistory(id: number): Promise<PersonTaskHistoryItem[]> {
   const { data } = await axiosClient.get<Page<PersonTaskHistoryItem>>(endpoints.people.tasks(id), {
     params: { size: 200 },
+  })
+  return data.content
+}
+
+/** Director/Super-Admin-only, enforced server-side. Sends a best-effort invite email. */
+export async function createPerson(payload: CreatePersonRequest): Promise<Person> {
+  const { data } = await axiosClient.post<Person>(endpoints.people.create(), payload)
+  return data
+}
+
+/** Super-Admin-only, enforced server-side. */
+export async function changeRole(id: number, payload: ChangeRoleRequest): Promise<Person> {
+  const { data } = await axiosClient.put<Person>(endpoints.people.changeRole(id), payload)
+  return data
+}
+
+/** Super-Admin-only, enforced server-side. */
+export async function setPersonActive(id: number, payload: SetAccountActiveRequest): Promise<Person> {
+  const { data } = await axiosClient.put<Person>(endpoints.people.setActive(id), payload)
+  return data
+}
+
+/** Super-Admin-only — every role change ever made, org-wide, newest first. */
+export async function fetchRoleChangeActivity(requesterId: number): Promise<RoleChangeActivity[]> {
+  const { data } = await axiosClient.get<Page<RoleChangeActivity>>(endpoints.people.roleChanges(), {
+    params: { requesterId, size: 100, sort: 'timestamp,desc' },
   })
   return data.content
 }

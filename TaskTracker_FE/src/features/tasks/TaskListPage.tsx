@@ -3,6 +3,7 @@ import { PageHeader } from '../../components/layout/PageHeader'
 import { Button } from '../../components/ui/Button'
 import { TextField } from '../../components/ui/TextField'
 import { QueryBoundary } from '../../components/feedback/QueryBoundary'
+import { useAuth } from '../auth/useAuth'
 import { useTasks } from './hooks/useTasks'
 import { useTaskSearch } from './hooks/useTaskSearch'
 import { TaskStatusFilter, type TaskStatusFilterValue } from './components/TaskStatusFilter'
@@ -16,6 +17,7 @@ const PAGE_SIZE = 10
 const LANES_SIZE = 200
 
 export function TaskListPage() {
+  const { isDirector } = useAuth()
   const [status, setStatus] = useState<TaskStatusFilterValue>('ALL')
   const [layout, setLayout] = useState<TaskLayout>('table')
   const [page, setPage] = useState(0)
@@ -33,7 +35,7 @@ export function TaskListPage() {
       <PageHeader
         breadcrumb="Throughline"
         title="Tasks"
-        right={<Button onClick={() => setCreateOpen(true)}>New task</Button>}
+        right={isDirector ? <Button onClick={() => setCreateOpen(true)}>New task</Button> : undefined}
       />
 
       <div className={styles.controls}>
@@ -77,7 +79,7 @@ export function TaskListPage() {
         <QueryBoundary query={lanesQuery}>{(result) => <TaskLanesBoard tasks={result.content} />}</QueryBoundary>
       )}
 
-      <CreateTaskModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      {isDirector && <CreateTaskModal open={createOpen} onClose={() => setCreateOpen(false)} />}
     </>
   )
 }

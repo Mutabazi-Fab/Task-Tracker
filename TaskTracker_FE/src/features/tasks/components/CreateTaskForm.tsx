@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import { Button } from '../../../components/ui/Button'
-import { SegmentedControl } from '../../../components/ui/SegmentedControl'
 import { SelectField } from '../../../components/ui/SelectField'
 import { TextField } from '../../../components/ui/TextField'
-import type { AssigneeType } from '../../../types/task.types'
-import type { CreateTaskRequest } from '../../../types/task.types'
-import { usePeople } from '../../people/hooks/usePeople'
+import { useAuth } from '../../auth/useAuth'
 import { useTeams } from '../../teams/hooks/useTeams'
+import type { CreateTaskRequest } from '../../../types/task.types'
 import styles from './CreateTaskForm.module.css'
 
 interface CreateTaskFormProps {
@@ -15,39 +13,38 @@ interface CreateTaskFormProps {
   submitting: boolean
 }
 
-const ASSIGNEE_TYPE_OPTIONS: { label: string; value: AssigneeType }[] = [
-  { label: 'Individual', value: 'INDIVIDUAL' },
-  { label: 'Team', value: 'TEAM' },
-]
-
-/** The fields only — CreateTaskModal owns the mutation and the open/close state. */
+/**
+ * Top-level tasks only — always assigned to a team, never an individual (that's a
+ * structural rule now, not a free choice; see CreateSubtaskForm for assigning to a
+ * person under a top-level task). createdById is always the logged-in Director/Super
+ * Admin, not a picker.
+ */
 export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFormProps) {
+  const { currentUser } = useAuth()
+  const teamsQuery = useTeams()
+
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [assignedById, setAssignedById] = useState('')
-  const [assigneeType, setAssigneeType] = useState<AssigneeType>('INDIVIDUAL')
-  const [assignedPersonId, setAssignedPersonId] = useState('')
   const [assignedTeamId, setAssignedTeamId] = useState('')
   const [dateAssigned, setDateAssigned] = useState('')
   const [openingNote, setOpeningNote] = useState('')
 
-  const peopleQuery = usePeople()
-  const teamQuery = useTeams()
-
-  const hasAssignee = assigneeType === 'INDIVIDUAL' ? assignedPersonId !== '' : assignedTeamId !== ''
-  const isValid = title.trim() !== '' && assignedById !== '' && dateAssigned !== '' && openingNote.trim() !== '' && hasAssignee
+  const isValid =
+    title.trim() !== '' &&
+    assignedTeamId !== '' &&
+    dateAssigned !== '' &&
+    openingNote.trim() !== '' &&
+    currentUser !== null
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!isValid) return
+    if (!isValid || !currentUser) return
 
     onSubmit({
       title: title.trim(),
       description: description.trim() || undefined,
-      assignedById: Number(assignedById),
-      assigneeType,
-      assignedPersonId: assigneeType === 'INDIVIDUAL' ? Number(assignedPersonId) : undefined,
-      assignedTeamId: assigneeType === 'TEAM' ? Number(assignedTeamId) : undefined,
+      createdById: currentUser.id,
+      assignedTeamId: Number(assignedTeamId),
       dateAssigned,
       openingNote: openingNote.trim(),
     })
@@ -60,35 +57,12 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
       <TextField label="Description" value={description} onChange={setDescription} placeholder="Optional detail" />
 
       <SelectField
-        label="Assigned by"
-        value={assignedById}
-        onChange={setAssignedById}
-        placeholder={peopleQuery.isLoading ? 'Loading…' : 'Select a person'}
-        options={(peopleQuery.data ?? []).map((person) => ({ label: person.fullName, value: String(person.id) }))}
+        label="Assigned team"
+        value={assignedTeamId}
+        onChange={setAssignedTeamId}
+        placeholder={teamsQuery.isLoading ? 'Loading…' : 'Select a team'}
+        options={(teamsQuery.data ?? []).map((team) => ({ label: team.name, value: String(team.id) }))}
       />
-
-      <div className={styles.field}>
-        <span className={styles.label}>Assignee type</span>
-        <SegmentedControl options={ASSIGNEE_TYPE_OPTIONS} value={assigneeType} onChange={setAssigneeType} />
-      </div>
-
-      {assigneeType === 'INDIVIDUAL' ? (
-        <SelectField
-          label="Assigned to"
-          value={assignedPersonId}
-          onChange={setAssignedPersonId}
-          placeholder={peopleQuery.isLoading ? 'Loading…' : 'Select a person'}
-          options={(peopleQuery.data ?? []).map((person) => ({ label: person.fullName, value: String(person.id) }))}
-        />
-      ) : (
-        <SelectField
-          label="Assigned to"
-          value={assignedTeamId}
-          onChange={setAssignedTeamId}
-          placeholder={teamQuery.isLoading ? 'Loading…' : 'Select a team'}
-          options={(teamQuery.data ?? []).map((team) => ({ label: team.name, value: String(team.id) }))}
-        />
-      )}
 
       <TextField label="Date assigned" type="date" value={dateAssigned} onChange={setDateAssigned} required />
 

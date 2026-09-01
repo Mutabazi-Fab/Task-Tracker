@@ -34,6 +34,8 @@ public class PersonMapper {
                 person.getJobTitle(),
                 person.getRank(),
                 person.getRole(),
+                person.isEmailVerified(),
+                person.isActive(),
                 teams
         );
     }

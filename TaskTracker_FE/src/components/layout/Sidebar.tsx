@@ -12,22 +12,37 @@ import { SidebarLogo } from './SidebarLogo'
 import { SidebarNavItem } from './SidebarNavItem'
 import styles from './Sidebar.module.css'
 
-/** Shared with MobileTabBar so the two never drift out of sync. */
-export const NAV_ITEMS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
+type NavItem = { to: string; label: string; icon: IconName; end?: boolean }
+
+const BASE_NAV_ITEMS: NavItem[] = [
   { to: ROUTES.dashboard, label: 'Dashboard', icon: 'dashboard', end: true },
   { to: ROUTES.tasks, label: 'Tasks', icon: 'tasks' },
   { to: ROUTES.people, label: 'People', icon: 'people' },
   { to: ROUTES.teams, label: 'Teams', icon: 'teams' },
 ]
 
+/** Shared with MobileTabBar so the two never drift out of sync. A function, not a plain
+ *  constant, since the Role Changes item only appears for a Super Admin. */
+export function getNavItems(isSuperAdmin: boolean): NavItem[] {
+  return isSuperAdmin
+    ? [...BASE_NAV_ITEMS, { to: ROUTES.roleChanges, label: 'Role Changes', icon: 'shield' }]
+    : BASE_NAV_ITEMS
+}
+
+const ROLE_LABEL: Record<string, string> = {
+  DIRECTOR: 'Director',
+  SUPER_ADMIN: 'Super Admin',
+}
+
 export function Sidebar() {
-  const { currentUser, logout } = useAuth()
+  const { currentUser, isSuperAdmin, logout } = useAuth()
+  const navItems = getNavItems(isSuperAdmin)
 
   return (
     <aside className={styles.sidebar}>
       <SidebarLogo />
       <nav className={styles.nav}>
-        {NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <SidebarNavItem key={item.to} to={item.to} label={item.label} icon={item.icon} end={item.end ?? false} />
         ))}
       </nav>
@@ -38,7 +53,7 @@ export function Sidebar() {
             <div className={styles.userInfo}>
               <span className={styles.userName}>{currentUser.fullName}</span>
               <span className={styles.userRole}>
-                {currentUser.role === 'DIRECTOR' ? 'Director' : currentUser.jobTitle}
+                {currentUser.role && ROLE_LABEL[currentUser.role] ? ROLE_LABEL[currentUser.role] : currentUser.jobTitle}
               </span>
             </div>
             <button type="button" className={styles.logoutButton} onClick={logout} title="Log out" aria-label="Log out">

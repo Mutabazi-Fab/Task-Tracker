@@ -13,6 +13,7 @@
 export const ROUTES = {
   login: '/login',
   signup: '/signup',
+  verifyEmail: '/verify-email',
   dashboard: '/',
   tasks: '/tasks',
   taskDetail: (taskId: number | string) => `/tasks/${taskId}`,
@@ -21,4 +22,5 @@ export const ROUTES = {
   teams: '/teams',
   team: (teamId: number | string) => `/teams/${teamId}`,
   search: '/search',
+  roleChanges: '/admin/role-changes',
 } as const

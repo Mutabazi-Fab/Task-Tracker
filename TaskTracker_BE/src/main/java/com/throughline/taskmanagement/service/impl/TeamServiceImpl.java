@@ -268,13 +268,13 @@ public class TeamServiceImpl implements TeamService {
     }
 
     private void requireDirector(Person person, String message) {
-        if (person.getRole() != Role.DIRECTOR) {
+        if (!Role.isAtLeastDirector(person.getRole())) {
             throw new ForbiddenActionException(message);
         }
     }
 
     private void requireDirectorOrTeamLeader(Long teamId, Person changedBy) {
-        boolean isDirector = changedBy.getRole() == Role.DIRECTOR;
+        boolean isDirector = Role.isAtLeastDirector(changedBy.getRole());
         boolean isThisTeamsLeader = teamMemberRepository.findByTeamIdAndPersonId(teamId, changedBy.getId())
                 .map(TeamMember::isLeader)
                 .orElse(false);

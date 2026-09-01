@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { QueryBoundary } from '../../components/feedback/QueryBoundary'
+import { ROUTES } from '../../app/routes'
+import { useAuth } from '../auth/useAuth'
 import { useTaskDetail } from './hooks/useTaskDetail'
 import { TaskDetailHeader } from './components/TaskDetailHeader'
 import { TaskProgressPanel } from './components/TaskProgressPanel'
@@ -13,51 +15,96 @@ import { AddCommentForm } from './components/AddCommentForm'
 import { CommentTimeline } from './components/CommentTimeline'
 import { ReassignmentHistoryPanel } from './components/ReassignmentHistoryPanel'
 import { ReassignTaskModal } from './components/ReassignTaskModal'
+import { SubtasksPanel } from './components/SubtasksPanel'
+import { DeleteTaskModal } from './components/DeleteTaskModal'
 import styles from './TaskDetailPage.module.css'
 
 /** Composes the sections below. No data-fetching or layout logic of its own. */
 export function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>()
   const query = useTaskDetail(Number(taskId))
+  const { isDirector } = useAuth()
+  const navigate = useNavigate()
   const [reassignOpen, setReassignOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   return (
     <QueryBoundary query={query}>
-      {(task) => (
-        <>
-          <PageHeader
-            breadcrumb="Throughline / Tasks"
-            title={task.taskCode}
-            right={<Button variant="secondary" onClick={() => setReassignOpen(true)}>Reassign</Button>}
-          />
+      {(task) => {
+        const isTopLevel = task.parentTaskId === null
+        // Delete isn't role-gated server-side yet (a known backend gap) — gated here to
+        // Director/Super Admin only, the same authority that creates a top-level task.
+        // A Team Leader deleting their own team's subtask isn't covered by this yet.
+        const canDelete = isDirector
 
-          <TaskDetailHeader task={task} />
+        return (
+          <>
+            <PageHeader
+              breadcrumb="Throughline / Tasks"
+              title={task.taskCode}
+              right={
+                <div className={styles.headerActions}>
+                  <Button variant="secondary" onClick={() => setReassignOpen(true)}>
+                    Reassign
+                  </Button>
+                  {canDelete && (
+                    <Button variant="ghost" onClick={() => setDeleteOpen(true)}>
+                      Delete
+                    </Button>
+                  )}
+                </div>
+              }
+            />
 
-          <div className={styles.progressRow}>
-            <TaskProgressPanel percentage={task.progressPercentage} status={task.status} />
+            <TaskDetailHeader task={task} />
+
+            <div className={styles.progressRow}>
+              <TaskProgressPanel percentage={task.progressPercentage} status={task.status} />
+              <Card>
+                <span className={styles.sparklineLabel}>Trend</span>
+                <TaskProgressSparkline points={task.progressTimeline} />
+              </Card>
+            </div>
+
+            <AssignmentMetaPanel task={task} />
+
+            {isTopLevel && (
+              <Card>
+                <SubtasksPanel task={task} />
+              </Card>
+            )}
+
+            <AddCommentForm taskId={task.id} />
+
             <Card>
-              <span className={styles.sparklineLabel}>Trend</span>
-              <TaskProgressSparkline points={task.progressTimeline} />
+              <span className={styles.sectionHeading}>Comment history</span>
+              <CommentTimeline comments={task.comments} />
             </Card>
-          </div>
 
-          <AssignmentMetaPanel task={task} />
+            <Card>
+              <span className={styles.sectionHeading}>Reassignment history</span>
+              <ReassignmentHistoryPanel reassignments={task.reassignments} />
+            </Card>
 
-          <AddCommentForm taskId={task.id} />
+            <ReassignTaskModal task={task} open={reassignOpen} onClose={() => setReassignOpen(false)} />
 
-          <Card>
-            <span className={styles.sectionHeading}>Comment history</span>
-            <CommentTimeline comments={task.comments} />
-          </Card>
-
-          <Card>
-            <span className={styles.sectionHeading}>Reassignment history</span>
-            <ReassignmentHistoryPanel reassignments={task.reassignments} />
-          </Card>
-
-          <ReassignTaskModal task={task} open={reassignOpen} onClose={() => setReassignOpen(false)} />
-        </>
-      )}
+            {canDelete && (
+              <DeleteTaskModal
+                taskId={task.id}
+                taskCode={task.taskCode}
+                hasSubtasks={task.subtasks.length > 0}
+                open={deleteOpen}
+                onClose={() => setDeleteOpen(false)}
+                onDeleted={() =>
+                  navigate(task.parentTaskId !== null ? ROUTES.taskDetail(task.parentTaskId) : ROUTES.tasks, {
+                    replace: true,
+                  })
+                }
+              />
+            )}
+          </>
+        )
+      }}
     </QueryBoundary>
   )
 }

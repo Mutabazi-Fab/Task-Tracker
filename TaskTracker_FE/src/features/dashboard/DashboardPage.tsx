@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
+import { useAuth } from '../auth/useAuth'
+import { DirectorInitiativesSection } from './components/DirectorInitiativesSection'
 import { KpiRow } from './components/KpiRow'
 import { ProgressOverTimeChart } from './components/ProgressOverTimeChart'
 import { ProgressChartLegend } from './components/ProgressChartLegend'
@@ -13,6 +15,7 @@ import styles from './DashboardPage.module.css'
 
 /** Composes the sections below. No data-fetching or layout logic of its own. */
 export function DashboardPage() {
+  const { isDirector } = useAuth()
   const [layout, setLayout] = useState<DashboardLayout>('split')
 
   return (
@@ -22,6 +25,8 @@ export function DashboardPage() {
         title="Dashboard"
         right={<DashboardLayoutToggle value={layout} onChange={setLayout} />}
       />
+
+      {isDirector && <DirectorInitiativesSection />}
 
       <KpiRow />
 

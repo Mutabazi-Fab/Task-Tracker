@@ -34,3 +34,6 @@ build/
 
 ### Local seed data — never pushed ###
 /seed-data/
+
+### Local secrets — real credentials, never pushed ###
+application-secrets.properties

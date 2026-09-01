@@ -71,14 +71,27 @@ export interface TaskDetail {
   updatedAt: string
 }
 
-/** Body for POST /tasks. Must always carry the comment that explains 0%. */
+/** Body for POST /tasks — a TOP-LEVEL task only. Director/Super-Admin-only, always
+ *  team-assigned (no assigneeType choice — that's structural now, not a free pick). Must
+ *  always carry the opening comment that explains 0%. */
 export interface CreateTaskRequest {
   title: string
   description?: string
-  assignedById: number
-  assigneeType: AssigneeType
-  assignedPersonId?: number
-  assignedTeamId?: number
+  createdById: number
+  assignedTeamId: number
+  dateAssigned: string
+  openingNote: string
+}
+
+/** Body for POST /tasks/{parentTaskId}/subtasks. createdById must be either the parent
+ *  task's Team Leader or a Director/Super Admin (the Director/Super Admin bypassing the
+ *  Team Leader is explicitly allowed); assignedPersonId must be a member of the parent
+ *  task's team. */
+export interface CreateSubtaskRequest {
+  title: string
+  description?: string
+  createdById: number
+  assignedPersonId: number
   dateAssigned: string
   openingNote: string
 }

@@ -12,10 +12,13 @@ export const endpoints = {
     login: () => `${BASE}/auth/login`,
     logout: () => `${BASE}/auth/logout`,
     me: () => `${BASE}/auth/me`,
+    verifyEmail: () => `${BASE}/auth/verify-email`,
+    resendOtp: () => `${BASE}/auth/resend-otp`,
   },
   tasks: {
     list: () => `${BASE}/tasks`,
     create: () => `${BASE}/tasks`,
+    subtasks: (parentTaskId: number | string) => `${BASE}/tasks/${parentTaskId}/subtasks`,
     detail: (id: number | string) => `${BASE}/tasks/${id}`,
     byCode: (taskCode: string) => `${BASE}/tasks/code/${taskCode}`,
     search: () => `${BASE}/tasks/search`,
@@ -35,6 +38,9 @@ export const endpoints = {
     remove: (id: number | string) => `${BASE}/people/${id}`,
     statistics: (id: number | string) => `${BASE}/people/${id}/statistics`,
     tasks: (id: number | string) => `${BASE}/people/${id}/tasks`,
+    changeRole: (id: number | string) => `${BASE}/people/${id}/role`,
+    setActive: (id: number | string) => `${BASE}/people/${id}/active`,
+    roleChanges: () => `${BASE}/people/role-changes`,
     // No assignTeam — team membership is exclusively managed through the teams.* endpoints
     // below now, since a person can belong to multiple teams at once.
   },

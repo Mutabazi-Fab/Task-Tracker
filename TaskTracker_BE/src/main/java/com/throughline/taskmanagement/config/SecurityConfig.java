@@ -83,7 +83,10 @@ public class SecurityConfig {
                         .authenticationEntryPoint(restAuthenticationEntryPoint)
                         .accessDeniedHandler(restAccessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/logout").permitAll()
+                        .requestMatchers(
+                                "/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/logout",
+                                "/api/v1/auth/verify-email", "/api/v1/auth/resend-otp"
+                        ).permitAll()
                         // Phase 7: the frontend now sends a token on every request, so every
                         // other route requires one too. Role/ownership rules beyond "is this
                         // a real logged-in person" still live in each service method (the

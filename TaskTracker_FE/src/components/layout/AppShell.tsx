@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { SearchInput } from '../../features/search/components/SearchInput'
+import { NotificationBell } from '../../features/notifications/components/NotificationBell'
 import { Sidebar } from './Sidebar'
 import { MobileTabBar } from './MobileTabBar'
 import styles from './AppShell.module.css'
@@ -24,6 +25,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className={styles.content}>
         <header className={styles.topBar}>
           <SearchInput />
+          <NotificationBell />
         </header>
         <main className={isMobile ? styles.mainMobile : styles.main}>{children}</main>
       </div>

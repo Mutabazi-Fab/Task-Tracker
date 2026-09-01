@@ -4,11 +4,13 @@ import { TaskListPage } from '../features/tasks/TaskListPage'
 import { TaskDetailPage } from '../features/taskDetail/TaskDetailPage'
 import { PeopleListPage } from '../features/people/PeopleListPage'
 import { PersonProfilePage } from '../features/people/PersonProfilePage'
+import { RoleChangeActivityPage } from '../features/people/RoleChangeActivityPage'
 import { TeamsListPage } from '../features/teams/TeamsListPage'
 import { TeamPage } from '../features/teams/TeamPage'
 import { SearchResultsPage } from '../features/search/SearchResultsPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { SignupPage } from '../features/auth/SignupPage'
+import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
 import { ProtectedRoute } from '../features/auth/ProtectedRoute'
 import { PublicOnlyRoute } from '../features/auth/PublicOnlyRoute'
 import { AppShell } from '../components/layout/AppShell'
@@ -60,6 +62,14 @@ export function AppRoutes() {
           </PublicOnlyRoute>
         }
       />
+      <Route
+        path={ROUTES.verifyEmail}
+        element={
+          <PublicOnlyRoute>
+            <VerifyEmailPage />
+          </PublicOnlyRoute>
+        }
+      />
 
       <Route path={ROUTES.dashboard} element={protectedPage(<DashboardPage />)} />
       <Route path={ROUTES.tasks} element={protectedPage(<TaskListPage />)} />
@@ -69,6 +79,7 @@ export function AppRoutes() {
       <Route path={ROUTES.teams} element={protectedPage(<TeamsListPage />)} />
       <Route path="/teams/:teamId" element={protectedPage(<TeamPage />)} />
       <Route path={ROUTES.search} element={protectedPage(<SearchResultsPage />)} />
+      <Route path={ROUTES.roleChanges} element={protectedPage(<RoleChangeActivityPage />)} />
       <Route path="*" element={protectedPage(<NotFoundPage />)} />
     </Routes>
   )
