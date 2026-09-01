@@ -41,8 +41,6 @@ export function DashboardPage() {
         right={<DashboardLayoutToggle value={layout} onChange={setLayout} />}
       />
 
-      <DirectorInitiativesSection />
-
       <KpiRow />
 
       <div className={layout === 'split' ? styles.chartsSplit : styles.chartsTrendFocus}>
@@ -57,6 +55,8 @@ export function DashboardPage() {
           <StatusDonutLegend />
         </Card>
       </div>
+
+      <DirectorInitiativesSection />
 
       <Card>
         <div className={styles.sectionHeading}>Team leaderboard</div>

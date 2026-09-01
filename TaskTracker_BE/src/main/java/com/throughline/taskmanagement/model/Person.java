@@ -52,7 +52,8 @@ public class Person {
     private Role role;
 
     /**
-     * BCrypt hash, nullable. A null password means this account has never
+     * Stored in plaintext (see SecurityConfig's NoOpPasswordEncoder — a deliberate,
+     * explicit choice for this project). A null password means this account has never
      * been provisioned to log in (e.g. seeded before auth existed) — such
      * accounts exist in the system but simply can't authenticate until they
      * sign up with this same email, which claims the record instead of
@@ -80,6 +81,15 @@ public class Person {
     /** When otpCode expires — also doubles as the basis for the resend cooldown in
      *  AuthServiceImpl (no separate "last sent" column needed). */
     private LocalDateTime otpExpiresAt;
+
+    /** One-time "forgot password" code, null once used (or never requested). Kept separate
+     *  from otpCode/otpExpiresAt above — those verify a brand-new signup's email address, this
+     *  proves ownership of an already-claimed account well after that, and an in-flight
+     *  signup verification should never collide with an in-flight password reset. */
+    private String resetCode;
+
+    /** Same cooldown-without-an-extra-column trick as otpExpiresAt, applied to resetCode. */
+    private LocalDateTime resetCodeExpiresAt;
 
     /**
      * Whether this account can log in at all. A Super Admin can deactivate an account

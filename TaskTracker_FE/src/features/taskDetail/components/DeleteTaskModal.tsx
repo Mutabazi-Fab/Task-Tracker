@@ -36,7 +36,7 @@ export function DeleteTaskModal({ taskId, taskCode, hasSubtasks, open, onClose, 
         <Button type="button" variant="ghost" onClick={onClose} disabled={deleteTask.isPending}>
           Cancel
         </Button>
-        <Button type="button" variant="primary" onClick={handleConfirm} disabled={deleteTask.isPending}>
+        <Button type="button" variant="danger" onClick={handleConfirm} disabled={deleteTask.isPending}>
           {deleteTask.isPending ? 'Deleting…' : 'Delete task'}
         </Button>
       </div>

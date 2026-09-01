@@ -2,6 +2,7 @@ package com.throughline.taskmanagement.service;
 
 import com.throughline.taskmanagement.dto.request.ChangeRoleRequest;
 import com.throughline.taskmanagement.dto.request.CreatePersonRequest;
+import com.throughline.taskmanagement.dto.request.SendPasswordResetRequest;
 import com.throughline.taskmanagement.dto.request.SetAccountActiveRequest;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.dto.response.PersonStatisticsResponse;
@@ -45,4 +46,10 @@ public interface PersonService {
 
     /** Super-Admin-only — every role change ever made, org-wide, newest first. */
     Page<RoleChangeResponse> getRoleChangeActivity(Long requesterId, Pageable pageable);
+
+    /** Super-Admin-only. Sends the person a password reset code (same flow as the
+     *  self-service "forgot password") for when they've lost access and can't request it
+     *  themselves. Fails if this person has never signed up — there's no password yet to
+     *  reset. Notifies the affected person that this happened. */
+    void sendPasswordReset(Long personId, SendPasswordResetRequest request);
 }

@@ -21,6 +21,11 @@ public interface NotificationService {
      *  affected person. */
     void notifyAccountStatusChange(Person person, boolean active, Person changedBy);
 
+    /** Called by PersonServiceImpl right after a Super Admin sends someone a password reset
+     *  code on their behalf. Notifies the affected person — so if they didn't ask for it
+     *  themselves, they'd notice. */
+    void notifyPasswordResetRequested(Person person, Person changedBy);
+
     Page<NotificationResponse> getNotifications(Long recipientId, Pageable pageable);
 
     /** requesterId must match the notification's recipient — enforced here, not just trusted. */

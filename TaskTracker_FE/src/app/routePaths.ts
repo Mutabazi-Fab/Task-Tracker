@@ -14,6 +14,8 @@ export const ROUTES = {
   login: '/login',
   signup: '/signup',
   verifyEmail: '/verify-email',
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
   dashboard: '/',
   tasks: '/tasks',
   taskDetail: (taskId: number | string) => `/tasks/${taskId}`,

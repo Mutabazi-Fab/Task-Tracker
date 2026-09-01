@@ -1,7 +1,9 @@
 package com.throughline.taskmanagement.service.impl;
 
 import com.throughline.taskmanagement.dto.request.LoginRequest;
+import com.throughline.taskmanagement.dto.request.ForgotPasswordRequest;
 import com.throughline.taskmanagement.dto.request.ResendOtpRequest;
+import com.throughline.taskmanagement.dto.request.ResetPasswordRequest;
 import com.throughline.taskmanagement.dto.request.SignupRequest;
 import com.throughline.taskmanagement.dto.request.VerifyEmailRequest;
 import com.throughline.taskmanagement.dto.response.AuthResponse;
@@ -35,6 +37,8 @@ public class AuthServiceImpl implements AuthService {
 
     private static final int OTP_TTL_MINUTES = 10;
     private static final int OTP_RESEND_COOLDOWN_SECONDS = 60;
+    private static final int RESET_CODE_TTL_MINUTES = 10;
+    private static final int RESET_CODE_RESEND_COOLDOWN_SECONDS = 60;
     private static final SecureRandom OTP_RANDOM = new SecureRandom();
 
     private final PersonRepository personRepository;
@@ -156,6 +160,80 @@ public class AuthServiceImpl implements AuthService {
         }
 
         sendOtp(person);
+    }
+
+    @Override
+    public void forgotPassword(ForgotPasswordRequest request) {
+        Person person = personRepository.findByEmailIgnoreCase(request.email()).orElse(null);
+
+        // Deliberately silent for: unknown email, a never-claimed account (no password set
+        // yet — there's nothing to "forget"), or still within the resend cooldown. The
+        // caller sees the same generic outcome regardless (see AuthController), so this
+        // can't be used to probe which emails are registered or already claimed.
+        if (person == null || person.getPassword() == null) {
+            return;
+        }
+        if (person.getResetCodeExpiresAt() != null) {
+            LocalDateTime cooldownEndsAt = person.getResetCodeExpiresAt()
+                    .minusMinutes(RESET_CODE_TTL_MINUTES)
+                    .plusSeconds(RESET_CODE_RESEND_COOLDOWN_SECONDS);
+            if (cooldownEndsAt.isAfter(LocalDateTime.now())) {
+                return;
+            }
+        }
+
+        sendPasswordResetCode(person);
+    }
+
+    @Override
+    public AuthResponse resetPassword(ResetPasswordRequest request) {
+        Person person = personRepository.findByEmailIgnoreCase(request.email())
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or code."));
+
+        if (person.getResetCode() == null || person.getResetCodeExpiresAt() == null
+                || person.getResetCodeExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new InvalidCredentialsException("This code has expired. Request a new one.");
+        }
+        if (!person.getResetCode().equals(request.code())) {
+            throw new InvalidCredentialsException("Incorrect reset code.");
+        }
+
+        person.setPassword(passwordEncoder.encode(request.newPassword()));
+        person.setResetCode(null);
+        person.setResetCodeExpiresAt(null);
+        Person saved = personRepository.save(person);
+
+        // Best-effort — the password change itself already succeeded; a flaky confirmation
+        // email shouldn't undo that or block them from logging in with it.
+        try {
+            mailService.send(
+                    saved.getEmail(),
+                    "Your Throughline password was changed",
+                    "Your password was just changed. If this wasn't you, contact your administrator immediately.");
+        } catch (Exception e) {
+            // Ignored on purpose — see comment above.
+        }
+
+        String token = jwtService.generateToken(saved.getEmail());
+        return new AuthResponse(token, saved.getId(), saved.getFullName(), saved.getEmail(), saved.getRole(), saved.isEmailVerified());
+    }
+
+    @Override
+    public void sendPasswordResetCode(Person person) {
+        String code = String.format("%06d", OTP_RANDOM.nextInt(1_000_000));
+        person.setResetCode(code);
+        person.setResetCodeExpiresAt(LocalDateTime.now().plusMinutes(RESET_CODE_TTL_MINUTES));
+        personRepository.save(person);
+
+        try {
+            mailService.send(
+                    person.getEmail(),
+                    "Reset your Throughline password",
+                    "Your password reset code is " + code + ". It expires in " + RESET_CODE_TTL_MINUTES
+                            + " minutes. If you didn't request this, you can safely ignore this email.");
+        } catch (Exception e) {
+            throw new EmailDeliveryException("Could not send the password reset email. Please try again.");
+        }
     }
 
     @Override

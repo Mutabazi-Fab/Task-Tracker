@@ -2,6 +2,7 @@ package com.throughline.taskmanagement.service.impl;
 
 import com.throughline.taskmanagement.dto.request.ChangeRoleRequest;
 import com.throughline.taskmanagement.dto.request.CreatePersonRequest;
+import com.throughline.taskmanagement.dto.request.SendPasswordResetRequest;
 import com.throughline.taskmanagement.dto.request.SetAccountActiveRequest;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.dto.response.PersonStatisticsResponse;
@@ -24,6 +25,7 @@ import com.throughline.taskmanagement.repository.RoleChangeRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
 import com.throughline.taskmanagement.repository.TeamMemberRepository;
+import com.throughline.taskmanagement.service.AuthService;
 import com.throughline.taskmanagement.service.MailService;
 import com.throughline.taskmanagement.service.NotificationService;
 import com.throughline.taskmanagement.service.PersonService;
@@ -49,6 +51,7 @@ public class PersonServiceImpl implements PersonService {
     private final PersonMapper personMapper;
     private final NotificationService notificationService;
     private final MailService mailService;
+    private final AuthService authService;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -166,6 +169,22 @@ public class PersonServiceImpl implements PersonService {
         requireSuperAdmin(requester, "Only a Super Admin can view role-change activity.");
 
         return roleChangeRepository.findAllByOrderByTimestampDesc(pageable).map(this::toRoleChangeResponse);
+    }
+
+    @Override
+    public void sendPasswordReset(Long personId, SendPasswordResetRequest request) {
+        Person changedBy = personRepository.findById(request.changedById())
+                .orElseThrow(() -> new ResourceNotFoundException("changedById not found"));
+        requireSuperAdmin(changedBy, "Only a Super Admin can send someone a password reset.");
+
+        Person person = personRepository.findById(personId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+        if (person.getPassword() == null) {
+            throw new InvalidAssignmentException("This person hasn't signed up yet, so there's no password to reset.");
+        }
+
+        authService.sendPasswordResetCode(person);
+        notificationService.notifyPasswordResetRequested(person, changedBy);
     }
 
     private RoleChangeResponse toRoleChangeResponse(RoleChange c) {

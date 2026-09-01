@@ -85,6 +85,20 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    public void notifyPasswordResetRequested(Person person, Person changedBy) {
+        String message = String.format(
+                "%s sent you a password reset code — check your email to set a new password.",
+                changedBy.getFullName());
+
+        Notification notification = new Notification();
+        notification.setRecipient(person);
+        notification.setType(NotificationType.PASSWORD_RESET_REQUESTED);
+        notification.setMessage(message);
+        notification.setRelatedEntityId(person.getId());
+        notificationRepository.save(notification);
+    }
+
+    @Override
     public Page<NotificationResponse> getNotifications(Long recipientId, Pageable pageable) {
         if (!personRepository.existsById(recipientId)) {
             throw new ResourceNotFoundException("Person not found");

@@ -4,6 +4,33 @@
   gap: var(--space-4);
 }
 
+.heading {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* A thin rule between each action group (not before the first) — three otherwise-identical
+   "Reason + button" rows read as one undifferentiated block without it. */
+.section + .section {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.sectionLabel {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
 .row {
   display: flex;
   align-items: flex-end;
@@ -36,4 +63,10 @@
 .dangerButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.resetSentNotice {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--accent-strong);
 }

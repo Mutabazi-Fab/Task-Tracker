@@ -30,6 +30,21 @@ export interface ResendOtpRequest {
   email: string
 }
 
+/** Body for POST /auth/forgot-password. Always resolves — the backend responds the same
+ *  way whether or not the email is registered, so the frontend always shows the same
+ *  generic "if an account exists, a code was sent" message. */
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+/** Body for POST /auth/reset-password. On success, logs the person in the same way
+ *  verify-email does. */
+export interface ResetPasswordRequest {
+  email: string
+  code: string
+  newPassword: string
+}
+
 /**
  * What POST /auth/login, /auth/signup, and /auth/verify-email all return. token is null
  * when signup succeeds but the email still needs OTP verification — emailVerified tells

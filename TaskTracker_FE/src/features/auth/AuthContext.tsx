@@ -1,12 +1,22 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AUTH_TOKEN_STORAGE_KEY, UNAUTHORIZED_EVENT } from '../../api/axiosClient'
-import type { AuthResponse, LoginRequest, ResendOtpRequest, SignupRequest, VerifyEmailRequest } from '../../types/auth.types'
+import type {
+  AuthResponse,
+  ForgotPasswordRequest,
+  LoginRequest,
+  ResendOtpRequest,
+  ResetPasswordRequest,
+  SignupRequest,
+  VerifyEmailRequest,
+} from '../../types/auth.types'
 import type { Person } from '../../types/person.types'
 import {
   fetchCurrentPerson,
+  forgotPassword as forgotPasswordRequest,
   login as loginRequest,
   logout as logoutRequest,
   resendOtp as resendOtpRequest,
+  resetPassword as resetPasswordRequest,
   signup as signupRequest,
   verifyEmail as verifyEmailRequest,
 } from './api/auth.api'
@@ -39,6 +49,12 @@ export interface AuthContextValue {
    *  succeed. On success this also logs the person in. */
   verifyEmail: (request: VerifyEmailRequest) => Promise<AuthResponse>
   resendOtp: (request: ResendOtpRequest) => Promise<void>
+  /** Always resolves — see ForgotPasswordRequest. The caller always shows the same generic
+   *  "if an account exists, a code was sent" message regardless of what actually happened. */
+  forgotPassword: (request: ForgotPasswordRequest) => Promise<void>
+  /** Same "may still need to try again" shape as verifyEmail — a wrong/expired code
+   *  throws. On success this also logs the person in with their new password. */
+  resetPassword: (request: ResetPasswordRequest) => Promise<AuthResponse>
   logout: () => void
 }
 
@@ -151,6 +167,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await resendOtpRequest(request)
   }, [])
 
+  const forgotPassword = useCallback(async (request: ForgotPasswordRequest) => {
+    await forgotPasswordRequest(request)
+  }, [])
+
+  const resetPassword = useCallback(async (request: ResetPasswordRequest): Promise<AuthResponse> => {
+    const auth = await resetPasswordRequest(request)
+    if (auth.token) {
+      storeToken(auth.token, true)
+      await hydrate()
+    }
+    return auth
+  }, [hydrate])
+
   const logout = useCallback(() => {
     // Best-effort — JWT is stateless, so there's nothing server-side to wait on.
     void logoutRequest().catch(() => {
@@ -171,9 +200,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signup,
       verifyEmail,
       resendOtp,
+      forgotPassword,
+      resetPassword,
       logout,
     }),
-    [status, currentUser, login, signup, verifyEmail, resendOtp, logout],
+    [status, currentUser, login, signup, verifyEmail, resendOtp, forgotPassword, resetPassword, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -30,11 +30,6 @@ export function getNavItems(isSuperAdmin: boolean): NavItem[] {
     : BASE_NAV_ITEMS
 }
 
-const ROLE_LABEL: Record<string, string> = {
-  DIRECTOR: 'Director',
-  SUPER_ADMIN: 'Super Admin',
-}
-
 export function Sidebar() {
   const { currentUser, isSuperAdmin, logout } = useAuth()
   const navItems = getNavItems(isSuperAdmin)
@@ -53,9 +48,10 @@ export function Sidebar() {
             <Avatar name={currentUser.fullName} size="sm" />
             <div className={styles.userInfo}>
               <span className={styles.userName}>{currentUser.fullName}</span>
-              <span className={styles.userRole}>
-                {currentUser.role && ROLE_LABEL[currentUser.role] ? ROLE_LABEL[currentUser.role] : currentUser.jobTitle}
-              </span>
+              {/* Job title, always — role/leadership now lives solely in the RoleBadge below,
+                  which carries its own distinct colour per state instead of repeating the
+                  same info in plain text here too. */}
+              <span className={styles.userRole}>{currentUser.jobTitle}</span>
               <div className={styles.badgeRow}>
                 <RoleBadge
                   badgeRole={resolveBadgeRole(

@@ -2,8 +2,10 @@ import { axiosClient } from '../../../api/axiosClient'
 import { endpoints } from '../../../api/endpoints'
 import type {
   AuthResponse,
+  ForgotPasswordRequest,
   LoginRequest,
   ResendOtpRequest,
+  ResetPasswordRequest,
   SignupRequest,
   VerifyEmailRequest,
 } from '../../../types/auth.types'
@@ -29,6 +31,19 @@ export async function verifyEmail(request: VerifyEmailRequest): Promise<AuthResp
 /** Rate-limited server-side — a resend before the cooldown elapses is rejected. */
 export async function resendOtp(request: ResendOtpRequest): Promise<void> {
   await axiosClient.post(endpoints.auth.resendOtp(), request)
+}
+
+/** Always resolves regardless of whether the email is registered — see
+ *  ForgotPasswordRequest. Never throws for "unknown email". */
+export async function forgotPassword(request: ForgotPasswordRequest): Promise<void> {
+  await axiosClient.post(endpoints.auth.forgotPassword(), request)
+}
+
+/** Checks the reset code and, on success, logs the person in (issues a real token) in the
+ *  same step — same shape as verifyEmail. */
+export async function resetPassword(request: ResetPasswordRequest): Promise<AuthResponse> {
+  const { data } = await axiosClient.post<AuthResponse>(endpoints.auth.resetPassword(), request)
+  return data
 }
 
 /** Stateless JWT — nothing to invalidate server-side, this just exists for API symmetry. */

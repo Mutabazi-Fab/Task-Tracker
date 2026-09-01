@@ -2,6 +2,7 @@ package com.throughline.taskmanagement.controller;
 
 import com.throughline.taskmanagement.dto.request.ChangeRoleRequest;
 import com.throughline.taskmanagement.dto.request.CreatePersonRequest;
+import com.throughline.taskmanagement.dto.request.SendPasswordResetRequest;
 import com.throughline.taskmanagement.dto.request.SetAccountActiveRequest;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.dto.response.PersonStatisticsResponse;
@@ -99,6 +100,18 @@ public class PersonController {
     public ResponseEntity<Page<RoleChangeResponse>> getRoleChangeActivity(Pageable pageable, Authentication authentication) {
         Long requesterId = currentPersonResolver.resolveId(authentication);
         return ResponseEntity.ok(personService.getRoleChangeActivity(requesterId, pageable));
+    }
+
+    /** Super-Admin-only — sends this person a password reset code (same flow as the
+     *  self-service "forgot password"), for when they've lost access and can't request it
+     *  themselves. Fails if they've never signed up (no password yet to reset). */
+    @PostMapping("/{id}/send-password-reset")
+    public ResponseEntity<Void> sendPasswordReset(
+            @PathVariable Long id, @Valid @RequestBody SendPasswordResetRequest request, Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        SendPasswordResetRequest verified = new SendPasswordResetRequest(actorId, request.reason());
+        personService.sendPasswordReset(id, verified);
+        return ResponseEntity.ok().build();
     }
 
     // No PUT /{id}/team/{teamId} — a person can belong to multiple teams now, so "assign this

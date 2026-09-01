@@ -57,7 +57,7 @@ export function TaskDetailPage() {
                     </Button>
                   )}
                   {canDelete && (
-                    <Button variant="ghost" onClick={() => setDeleteOpen(true)}>
+                    <Button variant="danger" onClick={() => setDeleteOpen(true)}>
                       Delete
                     </Button>
                   )}

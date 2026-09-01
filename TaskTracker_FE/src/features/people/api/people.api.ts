@@ -8,6 +8,7 @@ import type {
   PersonStatistics,
   PersonTaskHistoryItem,
   RoleChangeActivity,
+  SendPasswordResetRequest,
   SetAccountActiveRequest,
 } from '../../../types/person.types'
 
@@ -66,4 +67,9 @@ export async function fetchRoleChangeActivity(requesterId: number): Promise<Role
     params: { requesterId, size: 100, sort: 'timestamp,desc' },
   })
   return data.content
+}
+
+/** Super-Admin-only, enforced server-side. Fails if this person has never signed up. */
+export async function sendPasswordReset(id: number, payload: SendPasswordResetRequest): Promise<void> {
+  await axiosClient.post(endpoints.people.sendPasswordReset(id), payload)
 }

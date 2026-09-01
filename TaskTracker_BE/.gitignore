@@ -36,4 +36,9 @@ build/
 /seed-data/
 
 ### Local secrets — real credentials, never pushed ###
-application-secrets.properties
+# Both files — application.properties itself (datasource password, JWT secret) and the
+# separate application-secrets.properties it imports (mail credentials). See the root
+# README's "Getting started" section for the template a fresh clone needs to recreate
+# both from scratch.
+src/main/resources/application.properties
+src/main/resources/application-secrets.properties

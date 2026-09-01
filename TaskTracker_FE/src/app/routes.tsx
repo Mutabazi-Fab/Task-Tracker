@@ -11,6 +11,8 @@ import { SearchResultsPage } from '../features/search/SearchResultsPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { SignupPage } from '../features/auth/SignupPage'
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
+import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
 import { ProtectedRoute } from '../features/auth/ProtectedRoute'
 import { PublicOnlyRoute } from '../features/auth/PublicOnlyRoute'
 import { AppShell } from '../components/layout/AppShell'
@@ -67,6 +69,22 @@ export function AppRoutes() {
         element={
           <PublicOnlyRoute>
             <VerifyEmailPage />
+          </PublicOnlyRoute>
+        }
+      />
+      <Route
+        path={ROUTES.forgotPassword}
+        element={
+          <PublicOnlyRoute>
+            <ForgotPasswordPage />
+          </PublicOnlyRoute>
+        }
+      />
+      <Route
+        path={ROUTES.resetPassword}
+        element={
+          <PublicOnlyRoute>
+            <ResetPasswordPage />
           </PublicOnlyRoute>
         }
       />

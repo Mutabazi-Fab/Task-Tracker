@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ErrorMessage } from '../../components/ui/ErrorMessage'
 import { Icon } from '../../components/ui/Icon'
@@ -90,10 +90,15 @@ export function LoginPage() {
           }
         />
 
-        <label className={loginStyles.rememberRow}>
-          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-          Remember me
-        </label>
+        <div className={loginStyles.rememberRow}>
+          <label className={loginStyles.rememberCheckbox}>
+            <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+            Remember me
+          </label>
+          <Link to={ROUTES.forgotPassword} className={loginStyles.forgotLink}>
+            Forgot password?
+          </Link>
+        </div>
 
         {error && <ErrorMessage message={error} />}
 

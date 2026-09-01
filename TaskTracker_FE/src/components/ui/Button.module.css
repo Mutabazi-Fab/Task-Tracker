@@ -44,3 +44,15 @@
 .ghost:hover:not(:disabled) {
   background: var(--hover);
 }
+
+/* Destructive actions — matches PersonAdminControls' "Deactivate account" styling, the
+   app's established danger colour (not a --status-* token, those are task-status only). */
+.danger {
+  background: var(--status-pending-bg);
+  color: var(--status-pending);
+}
+
+.danger:hover:not(:disabled) {
+  background: var(--status-pending);
+  color: var(--panel);
+}

@@ -1,7 +1,9 @@
 package com.throughline.taskmanagement.controller;
 
+import com.throughline.taskmanagement.dto.request.ForgotPasswordRequest;
 import com.throughline.taskmanagement.dto.request.LoginRequest;
 import com.throughline.taskmanagement.dto.request.ResendOtpRequest;
+import com.throughline.taskmanagement.dto.request.ResetPasswordRequest;
 import com.throughline.taskmanagement.dto.request.SignupRequest;
 import com.throughline.taskmanagement.dto.request.VerifyEmailRequest;
 import com.throughline.taskmanagement.dto.response.AuthResponse;
@@ -47,6 +49,20 @@ public class AuthController {
     public ResponseEntity<Void> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
         authService.resendOtp(request);
         return ResponseEntity.ok().build();
+    }
+
+    /** Always 200, regardless of whether the email is registered, already claimed, or still
+     *  cooling down — see AuthService.forgotPassword. The frontend shows the same generic
+     *  "if an account exists, a code was sent" message no matter what. */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<AuthResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        return ResponseEntity.ok(authService.resetPassword(request));
     }
 
     @PostMapping("/logout")

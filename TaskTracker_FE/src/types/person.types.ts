@@ -53,6 +53,13 @@ export interface SetAccountActiveRequest {
   reason: string
 }
 
+/** Body for POST /people/{id}/send-password-reset. Super-Admin-only; reason is mandatory
+ *  (both here and server-side). Fails server-side if this person has never signed up. */
+export interface SendPasswordResetRequest {
+  changedById: number
+  reason: string
+}
+
 /** One row of GET /people/role-changes — the org-wide role-change audit log. */
 export interface RoleChangeActivity {
   id: number
