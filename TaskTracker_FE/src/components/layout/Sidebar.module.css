@@ -61,6 +61,11 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
+  /* Same truncation as .userName — a long job title (e.g. "Head of Risk & Compliance")
+     wrapped to two lines otherwise, breaking the card's rhythm. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .badgeRow {

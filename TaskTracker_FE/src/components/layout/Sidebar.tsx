@@ -47,11 +47,16 @@ export function Sidebar() {
           <div className={styles.user}>
             <Avatar name={currentUser.fullName} size="sm" />
             <div className={styles.userInfo}>
-              <span className={styles.userName}>{currentUser.fullName}</span>
+              <span className={styles.userName} title={currentUser.fullName}>
+                {currentUser.fullName}
+              </span>
               {/* Job title, always — role/leadership now lives solely in the RoleBadge below,
                   which carries its own distinct colour per state instead of repeating the
-                  same info in plain text here too. */}
-              <span className={styles.userRole}>{currentUser.jobTitle}</span>
+                  same info in plain text here too. title= gives the full text back on hover,
+                  since both this and the name above truncate when they don't fit. */}
+              <span className={styles.userRole} title={currentUser.jobTitle}>
+                {currentUser.jobTitle}
+              </span>
               <div className={styles.badgeRow}>
                 <RoleBadge
                   badgeRole={resolveBadgeRole(
