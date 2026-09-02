@@ -212,8 +212,26 @@ public class PersonServiceImpl implements PersonService {
         }
     }
 
+    /** A Director/Super Admin can view anyone's profile/stats/task-history. Anyone else
+     *  can only view their own, or a teammate's (someone who shares at least one team
+     *  with them) — everyone else is forbidden, not just hidden by the frontend. */
+    private void requireCanViewPerson(Long viewerId, Long targetId) {
+        if (viewerId.equals(targetId)) {
+            return;
+        }
+        Person viewer = personRepository.findById(viewerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+        if (Role.isAtLeastDirector(viewer.getRole())) {
+            return;
+        }
+        if (!teamMemberRepository.existsSharedTeam(viewerId, targetId)) {
+            throw new ForbiddenActionException("You can only view your own profile or a teammate's.");
+        }
+    }
+
     @Override
-    public PersonResponse getPersonById(Long id) {
+    public PersonResponse getPersonById(Long id, Long viewerId) {
+        requireCanViewPerson(viewerId, id);
         Person person = personRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
         return personMapper.toResponse(person, teamMemberRepository.findByPersonId(id));
@@ -258,7 +276,8 @@ public class PersonServiceImpl implements PersonService {
     }
 
     @Override
-    public PersonStatisticsResponse getPersonStatistics(Long personId) {
+    public PersonStatisticsResponse getPersonStatistics(Long personId, Long viewerId) {
+        requireCanViewPerson(viewerId, personId);
         Person person = personRepository.findById(personId)
                 .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
 
@@ -311,7 +330,8 @@ public class PersonServiceImpl implements PersonService {
     }
 
     @Override
-    public Page<PersonTaskHistoryResponse> getPersonTaskHistory(Long personId, Pageable pageable) {
+    public Page<PersonTaskHistoryResponse> getPersonTaskHistory(Long personId, Long viewerId, Pageable pageable) {
+        requireCanViewPerson(viewerId, personId);
         if (!personRepository.existsById(personId)) {
             throw new ResourceNotFoundException("Person not found");
         }

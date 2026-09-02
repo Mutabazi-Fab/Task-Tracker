@@ -1,8 +1,8 @@
 import styles from './ErrorMessage.module.css'
 
 /**
- * Neutral failure callout. Deliberately does not reach for --status-pending —
- * that red is reserved for task status, not for "the request failed".
+ * Failure callout — light red (--status-pending), the same danger colour used for
+ * "Deactivate account" and the task Delete button, so a real error reads as one.
  */
 export function ErrorMessage({ message }: { message: string }) {
   return (

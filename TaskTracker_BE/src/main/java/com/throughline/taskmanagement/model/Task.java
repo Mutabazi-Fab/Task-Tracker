@@ -108,4 +108,14 @@ public class Task {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    /**
+     * When TaskStalenessJob last notified someone this task hadn't moved in a while — null
+     * if it's never been flagged, or if it moved since the last flag (see
+     * TaskServiceImpl.addProgressComment/recalculateParentRollup, which both clear this the
+     * moment progress genuinely changes). Prevents re-notifying every single day for the
+     * same stale stretch; a task that goes stale, gets nudged, moves, then stalls again
+     * later gets a fresh notification for that new stretch.
+     */
+    private LocalDateTime staleAlertSentAt;
 }

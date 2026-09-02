@@ -3,6 +3,7 @@ package com.throughline.taskmanagement.service;
 import com.throughline.taskmanagement.dto.response.NotificationResponse;
 import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.model.Person;
+import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.TeamMembershipChange;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +26,11 @@ public interface NotificationService {
      *  code on their behalf. Notifies the affected person — so if they didn't ask for it
      *  themselves, they'd notice. */
     void notifyPasswordResetRequested(Person person, Person changedBy);
+
+    /** Called by TaskStalenessJob when a task hasn't had a real progress update in a
+     *  while. Notifies whoever's actually responsible for it — the assignee for an
+     *  individual task/subtask, the team's Leader for a top-level team task. */
+    void notifyTaskStalled(Task task, Person recipient, long daysSinceUpdate);
 
     Page<NotificationResponse> getNotifications(Long recipientId, Pageable pageable);
 

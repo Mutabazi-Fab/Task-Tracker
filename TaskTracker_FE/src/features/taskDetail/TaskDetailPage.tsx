@@ -32,9 +32,9 @@ export function TaskDetailPage() {
     <QueryBoundary query={query}>
       {(task) => {
         const isTopLevel = task.parentTaskId === null
-        // Delete isn't role-gated server-side yet (a known backend gap) — gated here to
-        // Director/Super Admin only, the same authority that creates a top-level task.
-        // A Team Leader deleting their own team's subtask isn't covered by this yet.
+        // Mirrors the backend check in TaskServiceImpl.deleteTask: Director/Super Admin
+        // only, the same authority that creates a top-level task — a Team Leader can't
+        // delete even their own team's tasks (unlike reassign, just below).
         const canDelete = isDirector
         // Mirrors the backend check in TaskServiceImpl.requireCanReassign: only a
         // Director/Super Admin, or the Team Leader of the team actually responsible for

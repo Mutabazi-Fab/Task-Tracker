@@ -164,6 +164,7 @@ public class TaskServiceImpl implements TaskService {
                 : (int) Math.round(subtasks.stream().mapToInt(Task::getProgressPercentage).average().orElse(0.0));
         parent.setProgressPercentage(rollup);
         recalculateStatus(parent);
+        parent.setStaleAlertSentAt(null);
         taskRepository.save(parent);
     }
 
@@ -242,6 +243,7 @@ public class TaskServiceImpl implements TaskService {
         } else {
             task.setProgressPercentage(request.percentageAtComment());
             recalculateStatus(task);
+            task.setStaleAlertSentAt(null);
             recalculateParentRollup(task.getParentTask());
         }
 
@@ -380,7 +382,13 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public void deleteTask(Long id) {
+    public void deleteTask(Long id, Long actorId) {
+        Person actor = personRepository.findById(actorId)
+                .orElseThrow(() -> new ResourceNotFoundException("actorId not found"));
+        if (!Role.isAtLeastDirector(actor.getRole())) {
+            throw new ForbiddenActionException("Only a Director or Super Admin can delete a task.");
+        }
+
         Task task = taskRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
         Task parent = task.getParentTask();

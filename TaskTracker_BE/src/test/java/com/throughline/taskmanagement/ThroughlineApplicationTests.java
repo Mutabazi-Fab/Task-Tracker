@@ -1,10 +1,10 @@
-package com.example.TaskTracker;
+package com.throughline.taskmanagement;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class TaskTrackerApplicationTests {
+class ThroughlineApplicationTests {
 
 	@Test
 	void contextLoads() {

@@ -8,6 +8,7 @@ import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.model.Notification;
 import com.throughline.taskmanagement.model.Person;
+import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.model.TeamMembershipChange;
 import com.throughline.taskmanagement.repository.NotificationRepository;
@@ -95,6 +96,20 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setType(NotificationType.PASSWORD_RESET_REQUESTED);
         notification.setMessage(message);
         notification.setRelatedEntityId(person.getId());
+        notificationRepository.save(notification);
+    }
+
+    @Override
+    public void notifyTaskStalled(Task task, Person recipient, long daysSinceUpdate) {
+        String message = String.format("%s (%s) hasn't moved in %d day%s — still at %d%%.",
+                task.getTaskCode(), task.getTitle(), daysSinceUpdate, daysSinceUpdate == 1 ? "" : "s",
+                task.getProgressPercentage());
+
+        Notification notification = new Notification();
+        notification.setRecipient(recipient);
+        notification.setType(NotificationType.TASK_STALLED);
+        notification.setMessage(message);
+        notification.setRelatedEntityId(task.getId());
         notificationRepository.save(notification);
     }
 

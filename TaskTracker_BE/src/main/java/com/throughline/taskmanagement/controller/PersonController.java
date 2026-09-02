@@ -49,9 +49,12 @@ public class PersonController {
         return ResponseEntity.ok(personService.getAllPeople(viewerId, pageable));
     }
 
+    /** Director/Super Admin, or the caller viewing themself or a teammate — anyone else
+     *  gets a 403, not just a frontend that declines to link there. */
     @GetMapping("/{id}")
-    public ResponseEntity<PersonResponse> getPersonById(@PathVariable Long id) {
-        return ResponseEntity.ok(personService.getPersonById(id));
+    public ResponseEntity<PersonResponse> getPersonById(@PathVariable Long id, Authentication authentication) {
+        Long viewerId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(personService.getPersonById(id, viewerId));
     }
 
     @PutMapping("/{id}")
@@ -68,13 +71,16 @@ public class PersonController {
     }
 
     @GetMapping("/{id}/statistics")
-    public ResponseEntity<PersonStatisticsResponse> getPersonStatistics(@PathVariable Long id) {
-        return ResponseEntity.ok(personService.getPersonStatistics(id));
+    public ResponseEntity<PersonStatisticsResponse> getPersonStatistics(@PathVariable Long id, Authentication authentication) {
+        Long viewerId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(personService.getPersonStatistics(id, viewerId));
     }
 
     @GetMapping("/{id}/tasks")
-    public ResponseEntity<Page<PersonTaskHistoryResponse>> getPersonTaskHistory(@PathVariable Long id, Pageable pageable) {
-        return ResponseEntity.ok(personService.getPersonTaskHistory(id, pageable));
+    public ResponseEntity<Page<PersonTaskHistoryResponse>> getPersonTaskHistory(
+            @PathVariable Long id, Pageable pageable, Authentication authentication) {
+        Long viewerId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(personService.getPersonTaskHistory(id, viewerId, pageable));
     }
 
     /** Super-Admin-only — promotes/demotes between Member, Director, and Super Admin. */

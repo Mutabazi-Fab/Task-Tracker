@@ -1,10 +1,13 @@
+/* Light red — the same danger colour already used for "Deactivate account" and the task
+   Delete button (--status-pending), reused here rather than the app's neutral khaki so a
+   failure actually reads as one at a glance. */
 .wrap {
   display: flex;
   align-items: baseline;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: var(--khaki-soft);
-  border-left: 3px solid var(--ink);
+  background: var(--status-pending-bg);
+  border-left: 3px solid var(--status-pending);
   border-radius: var(--radius-sm);
 }
 
@@ -14,11 +17,11 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--ink);
+  color: var(--status-pending);
   flex-shrink: 0;
 }
 
 .message {
   font-size: 13px;
-  color: var(--ink);
+  color: var(--status-pending);
 }

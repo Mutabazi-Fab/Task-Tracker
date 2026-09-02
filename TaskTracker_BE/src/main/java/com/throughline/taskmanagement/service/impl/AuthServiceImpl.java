@@ -20,6 +20,7 @@ import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.TeamMemberRepository;
 import com.throughline.taskmanagement.security.JwtService;
+import com.throughline.taskmanagement.security.LoginRateLimiter;
 import com.throughline.taskmanagement.service.AuthService;
 import com.throughline.taskmanagement.service.MailService;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final MailService mailService;
+    private final LoginRateLimiter rateLimiter;
 
     @Override
     public AuthResponse signup(SignupRequest request) {
@@ -90,10 +92,17 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        Person person = personRepository.findByEmailIgnoreCase(request.email())
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password."));
+        // Checked before anything else — a locked-out email can't be used to keep
+        // grinding through passwords no matter what else is true about the account.
+        rateLimiter.checkAllowed(request.email());
 
-        if (person.getPassword() == null || !passwordEncoder.matches(request.password(), person.getPassword())) {
+        Person person = personRepository.findByEmailIgnoreCase(request.email()).orElse(null);
+        if (person == null || person.getPassword() == null
+                || !passwordEncoder.matches(request.password(), person.getPassword())) {
+            // Only a genuine wrong-email/wrong-password guess counts against the limit —
+            // an existing account correctly identified but deactivated/unverified below
+            // isn't "guessing," so those paths don't record a failure.
+            rateLimiter.recordFailure(request.email());
             throw new InvalidCredentialsException("Invalid email or password.");
         }
 
@@ -109,12 +118,15 @@ public class AuthServiceImpl implements AuthService {
             throw new ForbiddenActionException("Please verify your email before logging in.");
         }
 
+        rateLimiter.recordSuccess(request.email());
         String token = jwtService.generateToken(person.getEmail());
         return new AuthResponse(token, person.getId(), person.getFullName(), person.getEmail(), person.getRole(), true);
     }
 
     @Override
     public AuthResponse verifyEmail(VerifyEmailRequest request) {
+        rateLimiter.checkAllowed(request.email());
+
         Person person = personRepository.findByEmailIgnoreCase(request.email())
                 .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
 
@@ -123,9 +135,11 @@ public class AuthServiceImpl implements AuthService {
         }
         if (person.getOtpCode() == null || person.getOtpExpiresAt() == null
                 || person.getOtpExpiresAt().isBefore(LocalDateTime.now())) {
+            rateLimiter.recordFailure(request.email());
             throw new InvalidCredentialsException("This code has expired. Request a new one.");
         }
         if (!person.getOtpCode().equals(request.otp())) {
+            rateLimiter.recordFailure(request.email());
             throw new InvalidCredentialsException("Incorrect verification code.");
         }
 
@@ -134,6 +148,7 @@ public class AuthServiceImpl implements AuthService {
         person.setOtpExpiresAt(null);
         Person saved = personRepository.save(person);
 
+        rateLimiter.recordSuccess(request.email());
         String token = jwtService.generateToken(saved.getEmail());
         return new AuthResponse(token, saved.getId(), saved.getFullName(), saved.getEmail(), saved.getRole(), true);
     }
@@ -187,17 +202,27 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse resetPassword(ResetPasswordRequest request) {
-        Person person = personRepository.findByEmailIgnoreCase(request.email())
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or code."));
+        // Same brute-force shape as verifyEmail — a 6-digit code an attacker could grind
+        // through given enough attempts — so it gets the same guard.
+        rateLimiter.checkAllowed(request.email());
+
+        Person person = personRepository.findByEmailIgnoreCase(request.email()).orElse(null);
+        if (person == null) {
+            rateLimiter.recordFailure(request.email());
+            throw new InvalidCredentialsException("Invalid email or code.");
+        }
 
         if (person.getResetCode() == null || person.getResetCodeExpiresAt() == null
                 || person.getResetCodeExpiresAt().isBefore(LocalDateTime.now())) {
+            rateLimiter.recordFailure(request.email());
             throw new InvalidCredentialsException("This code has expired. Request a new one.");
         }
         if (!person.getResetCode().equals(request.code())) {
+            rateLimiter.recordFailure(request.email());
             throw new InvalidCredentialsException("Incorrect reset code.");
         }
 
+        rateLimiter.recordSuccess(request.email());
         person.setPassword(passwordEncoder.encode(request.newPassword()));
         person.setResetCode(null);
         person.setResetCodeExpiresAt(null);

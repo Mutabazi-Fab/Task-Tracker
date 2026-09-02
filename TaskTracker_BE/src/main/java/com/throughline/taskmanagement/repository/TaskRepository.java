@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -133,4 +134,13 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     // surviving one (COUNT(*)-based generation shrinks on delete; MAX(suffix) does not).
     @Query(value = "SELECT COALESCE(MAX(CAST(SUBSTRING(task_code FROM 5) AS INTEGER)), 0) FROM tasks", nativeQuery = true)
     int findMaxTaskCodeSequence();
+
+    // Backs TaskStalenessJob: not finished, hasn't had a real progress update since
+    // :threshold, and hasn't already been flagged for this particular stale stretch
+    // (staleAlertSentAt is cleared the moment progress genuinely moves again — see
+    // TaskServiceImpl.addProgressComment/recalculateParentRollup).
+    @Query("SELECT t FROM Task t WHERE t.status <> :completedStatus AND t.updatedAt < :threshold "
+            + "AND t.staleAlertSentAt IS NULL")
+    List<Task> findStalledCandidates(@Param("completedStatus") TaskStatus completedStatus,
+                                      @Param("threshold") LocalDateTime threshold);
 }

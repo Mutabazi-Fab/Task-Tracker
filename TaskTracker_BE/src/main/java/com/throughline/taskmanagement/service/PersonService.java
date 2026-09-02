@@ -22,7 +22,11 @@ public interface PersonService {
      *  email. */
     PersonResponse createPerson(CreatePersonRequest request);
 
-    PersonResponse getPersonById(Long id);
+    /** A Director/Super Admin can view anyone; anyone else can only view themself or a
+     *  teammate (someone who shares at least one team with them) — forbidden otherwise,
+     *  not just hidden by the frontend. Same rule for getPersonStatistics and
+     *  getPersonTaskHistory below. */
+    PersonResponse getPersonById(Long id, Long viewerId);
 
     /** A Director/Super Admin sees everyone; anyone else sees only people who share at
      *  least one team with them (nothing at all if they belong to no team). */
@@ -30,8 +34,8 @@ public interface PersonService {
 
     PersonResponse updatePerson(Long id, CreatePersonRequest request);
     void deletePerson(Long id);
-    PersonStatisticsResponse getPersonStatistics(Long personId);
-    Page<PersonTaskHistoryResponse> getPersonTaskHistory(Long personId, Pageable pageable);
+    PersonStatisticsResponse getPersonStatistics(Long personId, Long viewerId);
+    Page<PersonTaskHistoryResponse> getPersonTaskHistory(Long personId, Long viewerId, Pageable pageable);
 
     /** This person's stats broken down per team they belong to, rather than one blended
      *  number — reused by getPersonStatistics and by DashboardService.globalSearch. */

@@ -33,5 +33,7 @@ public interface TaskService {
      *  is scoped to their own" rule as getAllTasks. */
     Page<TaskListResponse> searchTasks(String q, Long assignedPersonId, Pageable pageable);
     TaskDetailResponse updateTask(Long id, UpdateTaskRequest request);
-    void deleteTask(Long id);
+    /** Director/Super-Admin-only, enforced here (not just by the frontend hiding the
+     *  button). actorId is the caller's real, JWT-resolved identity. */
+    void deleteTask(Long id, Long actorId);
 }
