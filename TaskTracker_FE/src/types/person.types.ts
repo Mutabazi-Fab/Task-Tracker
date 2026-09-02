@@ -72,6 +72,18 @@ export interface RoleChangeActivity {
   timestamp: string
 }
 
+/** One row of GET /people/account-status-changes — the org-wide (de)activation audit log.
+ *  active is the status this change moved the account TO. */
+export interface AccountStatusChangeActivity {
+  id: number
+  personId: number
+  personName: string
+  active: boolean
+  changedByName: string
+  reason: string
+  timestamp: string
+}
+
 /** This person's stats scoped to one team they belong to — not one blended
  *  number across every team. */
 export interface PersonTeamStatistics {

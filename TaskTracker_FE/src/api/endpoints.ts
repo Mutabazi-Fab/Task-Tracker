@@ -43,6 +43,7 @@ export const endpoints = {
     changeRole: (id: number | string) => `${BASE}/people/${id}/role`,
     setActive: (id: number | string) => `${BASE}/people/${id}/active`,
     roleChanges: () => `${BASE}/people/role-changes`,
+    accountStatusChanges: () => `${BASE}/people/account-status-changes`,
     sendPasswordReset: (id: number | string) => `${BASE}/people/${id}/send-password-reset`,
     // No assignTeam — team membership is exclusively managed through the teams.* endpoints
     // below now, since a person can belong to multiple teams at once.

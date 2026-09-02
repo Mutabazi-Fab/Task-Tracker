@@ -23,10 +23,12 @@ const BASE_NAV_ITEMS: NavItem[] = [
 ]
 
 /** Shared with MobileTabBar so the two never drift out of sync. A function, not a plain
- *  constant, since the Role Changes item only appears for a Super Admin. */
+ *  constant, since the Account Activity item only appears for a Super Admin. Route path
+ *  (roleChanges) kept as-is — renaming it would just churn URLs for no benefit — even
+ *  though the page and label now also cover account activation/deactivation. */
 export function getNavItems(isSuperAdmin: boolean): NavItem[] {
   return isSuperAdmin
-    ? [...BASE_NAV_ITEMS, { to: ROUTES.roleChanges, label: 'Role Changes', icon: 'shield' }]
+    ? [...BASE_NAV_ITEMS, { to: ROUTES.roleChanges, label: 'Account Activity', icon: 'shield' }]
     : BASE_NAV_ITEMS
 }
 
