@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Button } from '../../components/ui/Button'
+import { Pagination } from '../../components/ui/Pagination'
 import { TextField } from '../../components/ui/TextField'
 import { QueryBoundary } from '../../components/feedback/QueryBoundary'
 import { useAuth } from '../auth/useAuth'
@@ -9,12 +10,12 @@ import { useTaskSearch } from './hooks/useTaskSearch'
 import { TaskStatusFilter, type TaskStatusFilterValue } from './components/TaskStatusFilter'
 import { TaskLayoutToggle, type TaskLayout } from './components/TaskLayoutToggle'
 import { TaskTable } from './components/TaskTable'
+import { TaskStatusSummary } from './components/TaskStatusSummary'
 import { TaskLanesBoard } from './components/TaskLanesBoard'
 import { CreateTaskModal } from './components/CreateTaskModal'
 import styles from './TaskListPage.module.css'
 
 const PAGE_SIZE = 10
-const LANES_SIZE = 200
 
 /** A Member only ever sees tasks assigned directly to them — this page never shows them
  *  "all tasks" the way it does for a Director/Super Admin. assignedPersonId scopes every
@@ -31,9 +32,11 @@ export function TaskListPage() {
   const scopeToPersonId = isDirector ? undefined : currentUser?.id
   const statusParam = status === 'ALL' ? undefined : status
   const tableQuery = useTasks({ status: statusParam, assignedPersonId: scopeToPersonId, page, size: PAGE_SIZE })
-  const lanesQuery = useTasks({ assignedPersonId: scopeToPersonId, page: 0, size: LANES_SIZE })
-  const searchQuery = useTaskSearch(search, scopeToPersonId)
-  const isSearching = search.trim().length > 0
+  const { searchQuery, debouncedQuery } = useTaskSearch(search, scopeToPersonId)
+  // Keyed off the SAME debounced value the query itself is enabled/disabled on — see
+  // useTaskSearch's doc comment for why using the raw `search` state here crashed
+  // TaskTable during the ~300ms window before the debounce catches up.
+  const isSearching = debouncedQuery.length > 0
 
   return (
     <>
@@ -66,27 +69,16 @@ export function TaskListPage() {
         <QueryBoundary query={searchQuery}>{(results) => <TaskTable tasks={results} />}</QueryBoundary>
       ) : layout === 'table' ? (
         <>
+          <TaskStatusSummary assignedPersonId={scopeToPersonId} />
           <QueryBoundary query={tableQuery}>{(result) => <TaskTable tasks={result.content} />}</QueryBoundary>
-          {tableQuery.data && tableQuery.data.totalPages > 1 && (
+          {tableQuery.data && (
             <div className={styles.pagination}>
-              <Button variant="secondary" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-                Previous
-              </Button>
-              <span className={styles.pageIndicator}>
-                Page {page + 1} of {tableQuery.data.totalPages}
-              </span>
-              <Button
-                variant="secondary"
-                disabled={page + 1 >= tableQuery.data.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </Button>
+              <Pagination page={page} totalPages={tableQuery.data.totalPages} onChange={setPage} />
             </div>
           )}
         </>
       ) : (
-        <QueryBoundary query={lanesQuery}>{(result) => <TaskLanesBoard tasks={result.content} />}</QueryBoundary>
+        <TaskLanesBoard assignedPersonId={scopeToPersonId} status={status} />
       )}
 
       {isDirector && <CreateTaskModal open={createOpen} onClose={() => setCreateOpen(false)} />}

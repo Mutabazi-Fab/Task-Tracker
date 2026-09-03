@@ -7,6 +7,11 @@ import { formatPercentage } from '../../../lib/formatPercentage'
 import type { PersonSearchResult } from '../../../types/dashboard.types'
 import styles from './PeopleResultsSection.module.css'
 
+/** Capped so a person on many teams doesn't blow up their card's height past everyone
+ *  else's — the rest (and every task, not just team averages) is one click away on their
+ *  actual profile page, which already shows the full breakdown. */
+const MAX_VISIBLE_TEAMS = 2
+
 /**
  * Each match shows its per-team stats breakdown — e.g. "Digital Banking 60% · Payments
  * 20%" — not one blended number across every team the person belongs to. That's the
@@ -20,28 +25,34 @@ export function PeopleResultsSection({ people }: { people: PersonSearchResult[] 
 
   return (
     <div className={styles.grid}>
-      {people.map(({ person, teamBreakdown }) => (
-        <Link key={person.id} to={ROUTES.personProfile(person.id)} className={styles.link}>
-          <Card padding="sm">
-            <div className={styles.row}>
-              <Avatar name={person.fullName} />
-              <div className={styles.identity}>
-                <span className={styles.name}>{person.fullName}</span>
-                <span className={styles.role}>{person.jobTitle}</span>
+      {people.map(({ person, teamBreakdown }) => {
+        const visibleTeams = teamBreakdown.slice(0, MAX_VISIBLE_TEAMS)
+        const hiddenCount = teamBreakdown.length - visibleTeams.length
+
+        return (
+          <Link key={person.id} to={ROUTES.personProfile(person.id)} className={styles.link}>
+            <Card padding="sm" className={styles.card}>
+              <div className={styles.row}>
+                <Avatar name={person.fullName} />
+                <div className={styles.identity}>
+                  <span className={styles.name}>{person.fullName}</span>
+                  <span className={styles.role}>{person.jobTitle}</span>
+                </div>
               </div>
-            </div>
-            {teamBreakdown.length > 0 && (
-              <div className={styles.breakdown}>
-                {teamBreakdown.map((t) => (
-                  <span key={t.teamId} className={styles.breakdownItem}>
-                    {t.teamName} {formatPercentage(t.averageProgress)}
-                  </span>
-                ))}
-              </div>
-            )}
-          </Card>
-        </Link>
-      ))}
+              {visibleTeams.length > 0 && (
+                <div className={styles.breakdown}>
+                  {visibleTeams.map((t) => (
+                    <span key={t.teamId} className={styles.breakdownItem}>
+                      {t.teamName} {formatPercentage(t.averageProgress)}
+                    </span>
+                  ))}
+                  {hiddenCount > 0 && <span className={styles.breakdownMore}>+{hiddenCount} more</span>}
+                </div>
+              )}
+            </Card>
+          </Link>
+        )
+      })}
     </div>
   )
 }

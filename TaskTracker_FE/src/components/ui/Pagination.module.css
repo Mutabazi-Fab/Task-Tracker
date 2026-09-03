@@ -1,0 +1,44 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.arrow,
+.page,
+.pageActive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.arrow {
+  color: var(--muted);
+}
+
+.arrow:hover:not(:disabled),
+.page:hover {
+  background: var(--hover);
+}
+
+.arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pageActive {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: var(--panel);
+}

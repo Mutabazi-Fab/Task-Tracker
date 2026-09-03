@@ -24,3 +24,12 @@
   flex-direction: column;
   gap: var(--space-3);
 }
+
+/* Used instead of .cards when this is the only visible lane (a status filter narrowed the
+   board down to one column) — spreads cards across the full width in a wrapping grid
+   instead of one cramped vertical list with empty space on either side. */
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-3);
+}

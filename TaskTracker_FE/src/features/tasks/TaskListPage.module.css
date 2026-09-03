@@ -16,11 +16,4 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-4);
-}
-
-.pageIndicator {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--muted);
 }

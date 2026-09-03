@@ -6,6 +6,14 @@
 
 .link {
   display: block;
+  /* Grid stretches each row's items to the tallest one by default, but that only reaches
+     as far as this direct child — height: 100% has to be threaded down through it and
+     into the Card itself for every card in a row to actually end up the same height. */
+  height: 100%;
+}
+
+.card {
+  height: 100%;
 }
 
 .row {
@@ -47,6 +55,18 @@
   font-size: 10px;
   color: var(--muted);
   background: var(--track);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+}
+
+/* The rest of this person's teams are one click away on their profile, not lost — this
+   just says so, in the same pill shape as the real team badges next to it. */
+.breakdownMore {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
   padding: 2px var(--space-2);
   border-radius: var(--radius-pill);
 }

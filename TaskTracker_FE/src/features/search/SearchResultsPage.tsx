@@ -11,7 +11,7 @@ import styles from './SearchResultsPage.module.css'
 export function SearchResultsPage() {
   const [params] = useSearchParams()
   const q = params.get('q')?.trim() ?? ''
-  const query = useGlobalSearch(q)
+  const { searchQuery: query } = useGlobalSearch(q)
 
   return (
     <>

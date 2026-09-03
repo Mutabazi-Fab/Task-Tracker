@@ -4,6 +4,13 @@
   gap: var(--space-5);
 }
 
+/* A single filtered-down lane fills the full width — TaskLaneColumn switches its own
+   cards to a wrapping grid (layout="grid") in this case, so the space actually gets used
+   instead of sitting empty next to one cramped narrow column. */
+.boardSingle {
+  display: block;
+}
+
 @media (max-width: 768px) {
   .board {
     grid-template-columns: 1fr;
