@@ -7,6 +7,7 @@ import com.throughline.taskmanagement.dto.request.SetAccountActiveRequest;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.dto.response.PersonStatisticsResponse;
 import com.throughline.taskmanagement.dto.response.PersonTaskHistoryResponse;
+import com.throughline.taskmanagement.dto.response.AccountStatusChangeResponse;
 import com.throughline.taskmanagement.dto.response.PersonTeamStatisticsResponse;
 import com.throughline.taskmanagement.dto.response.RoleChangeResponse;
 import com.throughline.taskmanagement.enums.Role;
@@ -15,11 +16,13 @@ import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.InvalidAssignmentException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.mapper.PersonMapper;
+import com.throughline.taskmanagement.model.AccountStatusChange;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.RoleChange;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.model.TeamMember;
+import com.throughline.taskmanagement.repository.AccountStatusChangeRepository;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.RoleChangeRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
@@ -48,6 +51,7 @@ public class PersonServiceImpl implements PersonService {
     private final TaskRepository taskRepository;
     private final TaskCommentRepository taskCommentRepository;
     private final RoleChangeRepository roleChangeRepository;
+    private final AccountStatusChangeRepository accountStatusChangeRepository;
     private final PersonMapper personMapper;
     private final NotificationService notificationService;
     private final MailService mailService;
@@ -157,7 +161,14 @@ public class PersonServiceImpl implements PersonService {
         person.setActive(request.active());
         Person saved = personRepository.save(person);
 
-        notificationService.notifyAccountStatusChange(saved, request.active(), changedBy);
+        AccountStatusChange change = new AccountStatusChange();
+        change.setPerson(saved);
+        change.setActive(request.active());
+        change.setChangedBy(changedBy);
+        change.setReason(request.reason());
+        accountStatusChangeRepository.save(change);
+
+        notificationService.notifyAccountStatusChange(saved, request.active(), changedBy, request.reason());
 
         return personMapper.toResponse(saved, teamMemberRepository.findByPersonId(personId));
     }
@@ -169,6 +180,16 @@ public class PersonServiceImpl implements PersonService {
         requireSuperAdmin(requester, "Only a Super Admin can view role-change activity.");
 
         return roleChangeRepository.findAllByOrderByTimestampDesc(pageable).map(this::toRoleChangeResponse);
+    }
+
+    @Override
+    public Page<AccountStatusChangeResponse> getAccountStatusChangeActivity(Long requesterId, Pageable pageable) {
+        Person requester = personRepository.findById(requesterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+        requireSuperAdmin(requester, "Only a Super Admin can view account-status activity.");
+
+        return accountStatusChangeRepository.findAllByOrderByTimestampDesc(pageable)
+                .map(this::toAccountStatusChangeResponse);
     }
 
     @Override
@@ -194,6 +215,18 @@ public class PersonServiceImpl implements PersonService {
                 c.getPerson().getFullName(),
                 c.getOldRole(),
                 c.getNewRole(),
+                c.getChangedBy().getFullName(),
+                c.getReason(),
+                c.getTimestamp()
+        );
+    }
+
+    private AccountStatusChangeResponse toAccountStatusChangeResponse(AccountStatusChange c) {
+        return new AccountStatusChangeResponse(
+                c.getId(),
+                c.getPerson().getId(),
+                c.getPerson().getFullName(),
+                c.isActive(),
                 c.getChangedBy().getFullName(),
                 c.getReason(),
                 c.getTimestamp()

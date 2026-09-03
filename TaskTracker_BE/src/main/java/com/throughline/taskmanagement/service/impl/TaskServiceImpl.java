@@ -237,14 +237,23 @@ public class TaskServiceImpl implements TaskService {
         taskCommentRepository.save(comment);
         task.getComments().add(comment);
 
-        if (task.getParentTask() == null) {
-            // Top-level task: this comment is a narrative record only. Its percentage is
+        if (task.getAssigneeType() == AssigneeType.TEAM) {
+            // A team-assigned task's comment is a narrative record only. Its percentage is
             // always the subtask average (or 0 with none) — never set by a comment directly.
         } else {
+            // Individually-assigned: a normal subtask (parentTask != null), or a task from
+            // before the hierarchy rework that's individually-assigned at the top level
+            // (parentTask == null but never got migrated to a real subtask) — either way,
+            // the comment's percentage IS this task's real progress. Checking assigneeType
+            // here rather than "parentTask == null" is what makes that legacy case work:
+            // the old check treated any parentless task as team-only/narrative-only, so a
+            // legacy individual task's comments silently never moved its percentage.
             task.setProgressPercentage(request.percentageAtComment());
             recalculateStatus(task);
             task.setStaleAlertSentAt(null);
-            recalculateParentRollup(task.getParentTask());
+            if (task.getParentTask() != null) {
+                recalculateParentRollup(task.getParentTask());
+            }
         }
 
         return taskMapper.toDetailResponse(taskRepository.save(task));

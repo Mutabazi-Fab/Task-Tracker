@@ -19,8 +19,9 @@ public interface NotificationService {
     void notifyRoleChange(Person person, Role oldRole, Role newRole, Person changedBy);
 
     /** Called by PersonServiceImpl right after an account is (de)activated. Notifies the
-     *  affected person. */
-    void notifyAccountStatusChange(Person person, boolean active, Person changedBy);
+     *  affected person, including why — this used to be silently dropped even though the
+     *  reason is mandatory on the request. */
+    void notifyAccountStatusChange(Person person, boolean active, Person changedBy, String reason);
 
     /** Called by PersonServiceImpl right after a Super Admin sends someone a password reset
      *  code on their behalf. Notifies the affected person — so if they didn't ask for it

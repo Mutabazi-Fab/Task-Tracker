@@ -72,10 +72,10 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void notifyAccountStatusChange(Person person, boolean active, Person changedBy) {
+    public void notifyAccountStatusChange(Person person, boolean active, Person changedBy, String reason) {
         String message = active
-                ? String.format("Your account was reactivated by %s.", changedBy.getFullName())
-                : String.format("Your account was deactivated by %s.", changedBy.getFullName());
+                ? String.format("Your account was reactivated by %s: %s", changedBy.getFullName(), reason)
+                : String.format("Your account was deactivated by %s: %s", changedBy.getFullName(), reason);
 
         Notification notification = new Notification();
         notification.setRecipient(person);

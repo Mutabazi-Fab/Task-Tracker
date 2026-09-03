@@ -4,6 +4,7 @@ import com.throughline.taskmanagement.dto.request.ChangeRoleRequest;
 import com.throughline.taskmanagement.dto.request.CreatePersonRequest;
 import com.throughline.taskmanagement.dto.request.SendPasswordResetRequest;
 import com.throughline.taskmanagement.dto.request.SetAccountActiveRequest;
+import com.throughline.taskmanagement.dto.response.AccountStatusChangeResponse;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.dto.response.PersonStatisticsResponse;
 import com.throughline.taskmanagement.dto.response.PersonTaskHistoryResponse;
@@ -106,6 +107,15 @@ public class PersonController {
     public ResponseEntity<Page<RoleChangeResponse>> getRoleChangeActivity(Pageable pageable, Authentication authentication) {
         Long requesterId = currentPersonResolver.resolveId(authentication);
         return ResponseEntity.ok(personService.getRoleChangeActivity(requesterId, pageable));
+    }
+
+    /** Super-Admin-only — every account activation/deactivation ever made, org-wide,
+     *  newest first. */
+    @GetMapping("/account-status-changes")
+    public ResponseEntity<Page<AccountStatusChangeResponse>> getAccountStatusChangeActivity(
+            Pageable pageable, Authentication authentication) {
+        Long requesterId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(personService.getAccountStatusChangeActivity(requesterId, pageable));
     }
 
     /** Super-Admin-only — sends this person a password reset code (same flow as the
