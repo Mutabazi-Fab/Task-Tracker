@@ -38,12 +38,12 @@ export function DashboardPage() {
 
       <div className={styles.charts}>
         <Card>
-          <div className={styles.sectionHeading}>Progress over time</div>
+          <div className={styles.sectionHeadingLg}>Progress over time</div>
           <ProgressOverTimeChart />
           <ProgressChartLegend />
         </Card>
         <Card>
-          <div className={styles.sectionHeading}>Status mix</div>
+          <div className={styles.sectionHeadingLg}>Status mix</div>
           <StatusDonut />
           <StatusDonutLegend />
         </Card>
@@ -52,12 +52,12 @@ export function DashboardPage() {
       <DirectorInitiativesSection />
 
       <Card>
-        <div className={styles.sectionHeading}>Team leaderboard</div>
+        <div className={styles.sectionHeadingLg}>Team leaderboard</div>
         <TeamLeaderboardTable />
       </Card>
 
       <div className={styles.peopleSection}>
-        <div className={styles.sectionHeading}>People summary</div>
+        <div className={styles.sectionHeadingLg}>People summary</div>
         <PeopleSummaryGrid />
       </div>
     </>

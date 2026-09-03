@@ -4,13 +4,15 @@
   gap: var(--space-4);
 }
 
-.sectionHeading {
+/* Every section heading on the dashboard (also used by DirectorInitiativesSection.module.css
+   for My Initiatives, to match). */
+.sectionHeadingLg {
   font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--ink);
   margin-bottom: var(--space-4);
 }
 
