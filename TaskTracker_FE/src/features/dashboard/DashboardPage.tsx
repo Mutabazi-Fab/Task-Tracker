@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { useAuth } from '../auth/useAuth'
@@ -11,7 +10,6 @@ import { StatusDonut } from './components/StatusDonut'
 import { StatusDonutLegend } from './components/StatusDonutLegend'
 import { TeamLeaderboardTable } from './components/TeamLeaderboardTable'
 import { PeopleSummaryGrid } from './components/PeopleSummaryGrid'
-import { DashboardLayoutToggle, type DashboardLayout } from './components/DashboardLayoutToggle'
 import styles from './DashboardPage.module.css'
 
 /**
@@ -22,7 +20,6 @@ import styles from './DashboardPage.module.css'
  */
 export function DashboardPage() {
   const { isDirector } = useAuth()
-  const [layout, setLayout] = useState<DashboardLayout>('split')
 
   if (!isDirector) {
     return (
@@ -35,15 +32,11 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageHeader
-        breadcrumb="Throughline"
-        title="Dashboard"
-        right={<DashboardLayoutToggle value={layout} onChange={setLayout} />}
-      />
+      <PageHeader breadcrumb="Throughline" title="Dashboard" />
 
       <KpiRow />
 
-      <div className={layout === 'split' ? styles.chartsSplit : styles.chartsTrendFocus}>
+      <div className={styles.charts}>
         <Card>
           <div className={styles.sectionHeading}>Progress over time</div>
           <ProgressOverTimeChart />

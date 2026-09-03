@@ -38,9 +38,9 @@ export async function fetchPeopleSummary(): Promise<PersonSummary[]> {
 
 /** Only the top-level tasks THIS Director created — not the whole org's. Director/Super
  *  Admin only; the backend rejects anyone else. */
-export async function fetchDirectorTasks(directorId: number): Promise<Page<TaskListItem>> {
+export async function fetchDirectorTasks(directorId: number, page: number, size: number): Promise<Page<TaskListItem>> {
   const { data } = await axiosClient.get<Page<TaskListItem>>(endpoints.dashboard.directorTasks(), {
-    params: { directorId, size: 12 },
+    params: { directorId, page, size },
   })
   return data
 }

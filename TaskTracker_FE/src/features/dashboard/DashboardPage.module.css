@@ -1,12 +1,6 @@
-.chartsSplit {
+.charts {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
-}
-
-.chartsTrendFocus {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 65fr 35fr;
   gap: var(--space-4);
 }
 
@@ -27,8 +21,7 @@
 }
 
 @media (max-width: 768px) {
-  .chartsSplit,
-  .chartsTrendFocus {
+  .charts {
     grid-template-columns: 1fr;
   }
 }
