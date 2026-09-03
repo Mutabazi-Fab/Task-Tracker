@@ -50,6 +50,10 @@ export function StatusDonut() {
                 />
               </PieChart>
             </ResponsiveContainer>
+            <div className={styles.center}>
+              <span className={styles.centerValue}>{mix.reduce((sum, slice) => sum + slice.count, 0)}</span>
+              <span className={styles.centerLabel}>Total</span>
+            </div>
           </div>
         )
       }
