@@ -87,7 +87,7 @@ export function TaskDetailPage() {
               </Card>
             )}
 
-            <AddCommentForm taskId={task.id} />
+            <AddCommentForm taskId={task.id} isTeamAssigned={task.assigneeType === 'TEAM'} />
 
             <Card>
               <span className={styles.sectionHeading}>Comment history</span>

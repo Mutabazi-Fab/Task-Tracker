@@ -58,7 +58,7 @@ export function TeamPage() {
 
               <Card>
                 <span className={styles.sectionHeading}>Members</span>
-                <TeamMemberChips teamId={id} canManage={canManage} />
+                <TeamMemberChips teamId={id} teamName={team.name} canManage={canManage} />
               </Card>
 
               <Card>

@@ -34,6 +34,12 @@
   margin-bottom: var(--space-3);
 }
 
+.subtaskTag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
 .comment {
   margin-top: var(--space-3);
   padding-top: var(--space-3);

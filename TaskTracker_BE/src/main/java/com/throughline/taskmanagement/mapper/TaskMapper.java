@@ -88,6 +88,7 @@ public class TaskMapper {
                 task.getReassignments() != null ? task.getReassignments().size() : 0,
                 toCommentResponse(lastComment),
                 task.getParentTask() != null ? task.getParentTask().getId() : null,
+                task.getParentTask() != null ? task.getParentTask().getTaskCode() : null,
                 task.getCreatedByRole(),
                 subtasks
         );

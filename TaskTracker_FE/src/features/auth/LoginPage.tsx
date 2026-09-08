@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ErrorMessage } from '../../components/ui/ErrorMessage'
 import { Icon } from '../../components/ui/Icon'
@@ -14,7 +14,6 @@ import loginStyles from './LoginPage.module.css'
 export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -33,8 +32,12 @@ export function LoginPage() {
     setError(null)
     try {
       await login({ email: email.trim(), password }, remember)
-      const redirectTo = (location.state as { from?: string } | null)?.from ?? ROUTES.dashboard
-      navigate(redirectTo, { replace: true })
+      // Always the dashboard — never location.state?.from. That state is left over from
+      // ProtectedRoute bouncing whoever was previously on this browser tab to /login when
+      // they logged out; blindly reusing it here would send the NEXT person who logs in
+      // (a different person entirely) straight to wherever the last person happened to be,
+      // rather than a clean landing page.
+      navigate(ROUTES.dashboard, { replace: true })
     } catch (err) {
       const message = (err as ApiError).message
       // Matched by text, not a structured code — the backend distinguishes this from a

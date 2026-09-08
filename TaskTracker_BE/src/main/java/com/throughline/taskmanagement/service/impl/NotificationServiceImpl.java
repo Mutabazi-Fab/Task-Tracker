@@ -47,13 +47,29 @@ public class NotificationServiceImpl implements NotificationService {
             return;
         }
 
-        NotificationType type = change.getAction() == TeamMembershipChangeAction.ADDED
-                ? NotificationType.TEAM_MEMBER_ADDED
-                : NotificationType.TEAM_MEMBER_REMOVED;
-        String actionWord = change.getAction() == TeamMembershipChangeAction.ADDED ? "added to" : "removed from";
-        String message = String.format("%s was %s %s by %s: %s",
-                change.getPerson().getFullName(), actionWord, team.getName(),
-                change.getChangedBy().getFullName(), change.getReason());
+        NotificationType type;
+        String message;
+        switch (change.getAction()) {
+            case ADDED -> {
+                type = NotificationType.TEAM_MEMBER_ADDED;
+                message = String.format("%s was added to %s by %s: %s",
+                        change.getPerson().getFullName(), team.getName(),
+                        change.getChangedBy().getFullName(), change.getReason());
+            }
+            case REMOVED -> {
+                type = NotificationType.TEAM_MEMBER_REMOVED;
+                message = String.format("%s was removed from %s by %s: %s",
+                        change.getPerson().getFullName(), team.getName(),
+                        change.getChangedBy().getFullName(), change.getReason());
+            }
+            case LEADER_CHANGED -> {
+                type = NotificationType.TEAM_LEADER_CHANGED;
+                message = String.format("%s was made %s's leader by %s: %s",
+                        change.getPerson().getFullName(), team.getName(),
+                        change.getChangedBy().getFullName(), change.getReason());
+            }
+            default -> throw new IllegalStateException("Unhandled TeamMembershipChangeAction: " + change.getAction());
+        }
 
         Notification notification = new Notification();
         notification.setRecipient(director);

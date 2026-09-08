@@ -254,20 +254,26 @@ public class TaskServiceImpl implements TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("Author not found"));
 
         long commentCount = taskCommentRepository.countByTaskId(taskId);
+        boolean isTeamAssigned = task.getAssigneeType() == AssigneeType.TEAM;
 
         TaskComment comment = new TaskComment();
         comment.setTask(task);
         comment.setAuthor(author);
-        comment.setPercentageAtComment(request.percentageAtComment());
+        // A team-assigned task's comment is a narrative record only — whatever percentage
+        // the request carries is never trusted for it. The comment still needs SOME
+        // percentage on record for the trend/timeline chart, so it gets the task's own
+        // current progress (the subtask rollup) instead of an arbitrary number the
+        // commenter picked, which could otherwise show a value the task never actually had.
+        comment.setPercentageAtComment(isTeamAssigned ? task.getProgressPercentage() : request.percentageAtComment());
         comment.setBody(request.body());
         comment.setSequenceNumber((int) commentCount + 1);
 
         taskCommentRepository.save(comment);
         task.getComments().add(comment);
 
-        if (task.getAssigneeType() == AssigneeType.TEAM) {
-            // A team-assigned task's comment is a narrative record only. Its percentage is
-            // always the subtask average (or 0 with none) — never set by a comment directly.
+        if (isTeamAssigned) {
+            // Narrative only — the task's percentage is always the subtask average (or 0
+            // with none), never set by a comment directly.
         } else {
             // Individually-assigned: a normal subtask (parentTask != null), or a task from
             // before the hierarchy rework that's individually-assigned at the top level

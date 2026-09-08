@@ -2,5 +2,6 @@ package com.throughline.taskmanagement.enums;
 
 public enum TeamMembershipChangeAction {
     ADDED,
-    REMOVED
+    REMOVED,
+    LEADER_CHANGED
 }

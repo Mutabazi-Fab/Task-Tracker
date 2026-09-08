@@ -33,6 +33,11 @@
   color: var(--status-pending);
 }
 
+.actionLeader {
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+
 .reason {
   font-size: 12px;
   color: var(--muted);

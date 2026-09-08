@@ -19,7 +19,12 @@ export function TaskTableRow({ task }: { task: TaskListItem }) {
       </div>
       <div className={styles.assignee}>
         <span className={styles.assigneeName}>{task.assigneeName}</span>
-        <span className={styles.assigneeType}>{task.assigneeType}</span>
+        {/* A subtask and a standalone individual task both carry assigneeType
+            INDIVIDUAL — parentTaskCode is the only thing that actually tells them
+            apart, so it takes over this line instead of just repeating "INDIVIDUAL". */}
+        <span className={styles.assigneeType}>
+          {task.parentTaskCode ? `SUBTASK · under ${task.parentTaskCode}` : task.assigneeType}
+        </span>
       </div>
       <div className={styles.progress}>
         <ProgressBar percentage={task.progressPercentage} status={task.status} />

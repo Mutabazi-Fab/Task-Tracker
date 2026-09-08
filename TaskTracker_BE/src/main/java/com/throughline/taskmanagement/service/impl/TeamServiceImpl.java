@@ -38,6 +38,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -134,9 +135,20 @@ public class TeamServiceImpl implements TeamService {
         TeamMember target = teamMemberRepository.findByTeamIdAndPersonId(teamId, personId)
                 .orElseThrow(() -> new InvalidAssignmentException("Leader must already be a member of the team."));
 
-        teamMemberRepository.findByTeamIdAndIsLeaderTrue(teamId)
-                .ifPresent(current -> current.setLeader(false));
+        String previousLeaderName = teamMemberRepository.findByTeamIdAndIsLeaderTrue(teamId)
+                .map(current -> {
+                    current.setLeader(false);
+                    return current.getPerson().getFullName();
+                })
+                .orElse("no one");
         target.setLeader(true);
+
+        // Logged the same way an add/remove is — who changed it, to whom, and when — so
+        // this is answerable later without trusting anyone's memory of it. No reason is
+        // collected from the caller (this is a quick confirm, not a form), so one is
+        // generated from what actually changed instead of being left blank.
+        String reason = String.format("Team leadership reassigned from %s to %s.", previousLeaderName, target.getPerson().getFullName());
+        logMembershipChange(team, target.getPerson(), TeamMembershipChangeAction.LEADER_CHANGED, changedBy, reason);
 
         return teamMapper.toResponse(teamRepository.findById(teamId).orElseThrow());
     }
@@ -148,6 +160,10 @@ public class TeamServiceImpl implements TeamService {
         }
         requireCanViewTeam(teamId, viewerId);
         return teamMemberRepository.findByTeamId(teamId).stream()
+                // Leader first, everyone else after in whatever order the query already
+                // returns them — shared by both the Team page's roster and a task's
+                // "Assigned team" panel, so this puts the leader first everywhere at once.
+                .sorted(Comparator.comparing(TeamMember::isLeader).reversed())
                 .map(m -> new TeamMemberResponse(
                         m.getPerson().getId(),
                         m.getPerson().getFullName(),

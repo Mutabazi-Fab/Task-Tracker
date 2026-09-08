@@ -17,7 +17,12 @@ export function TaskCard({ task }: { task: TaskListItem }) {
           <span className={styles.percentage}>{formatPercentage(task.progressPercentage)}</span>
         </div>
         <p className={styles.title}>{task.title}</p>
-        <p className={styles.assignee}>{task.assigneeName}</p>
+        <p className={styles.assignee}>
+          {task.assigneeName}
+          {/* Same distinction as the Table view — without this, a subtask and a
+              standalone individual task are visually identical here. */}
+          {task.parentTaskCode && <span className={styles.subtaskTag}> · under {task.parentTaskCode}</span>}
+        </p>
         <ProgressBar percentage={task.progressPercentage} status={task.status} />
         <div className={styles.comment}>
           <TaskLastCommentCell comment={task.lastComment} />

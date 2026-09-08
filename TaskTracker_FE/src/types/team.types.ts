@@ -55,7 +55,7 @@ export interface SetTeamLeaderRequest {
   changedById: number
 }
 
-export type TeamMembershipChangeAction = 'ADDED' | 'REMOVED'
+export type TeamMembershipChangeAction = 'ADDED' | 'REMOVED' | 'LEADER_CHANGED'
 
 /** One row of a team's (append-only, never-updated) membership audit log. */
 export interface TeamMembershipChange {

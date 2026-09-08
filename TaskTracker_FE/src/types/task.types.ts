@@ -54,6 +54,11 @@ export interface TaskListItem {
   assignedByName: string
   reassignmentCount: number
   lastComment: TaskComment | null
+  // Null for a top-level task (team- or individually-assigned) — set only for a real
+  // subtask. Both a subtask and a standalone individual task share assigneeType
+  // 'INDIVIDUAL' with nothing else to tell them apart, so this is what actually
+  // distinguishes "assigned to one person directly" from "a subtask of something".
+  parentTaskCode: string | null
 }
 
 /** Full detail — complete comment + reassignment history, oldest first. */

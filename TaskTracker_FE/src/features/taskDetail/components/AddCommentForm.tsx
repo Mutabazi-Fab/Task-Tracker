@@ -8,27 +8,36 @@ import { useAddComment } from '../hooks/useAddComment'
 import { ProgressStepButtons } from './ProgressStepButtons'
 import styles from './AddCommentForm.module.css'
 
-/**
- * Percentage + body, both required. This is the only place progress can
- * change — there is no path that submits a percentage without the text
- * that explains it. The author is always the logged-in person now — no
- * picker, since we actually know who's logging this.
- */
-export function AddCommentForm({ taskId }: { taskId: number }) {
+interface AddCommentFormProps {
+  taskId: number
+  /** A team-assigned task's percentage is always the average of its subtasks — never
+   *  something typed here. When true, this drops the percentage picker entirely and
+   *  becomes a plain narrative note; showing a picker that silently does nothing to the
+   *  task's actual progress would just be misleading. The backend independently ignores
+   *  whatever percentage is sent for a team-assigned task too — this isn't the only guard,
+   *  just what keeps the form honest about what it's actually doing. */
+  isTeamAssigned: boolean
+}
+
+export function AddCommentForm({ taskId, isTeamAssigned }: AddCommentFormProps) {
   const [percentage, setPercentage] = useState<number | null>(null)
   const [body, setBody] = useState('')
 
   const { currentUser } = useAuth()
   const addComment = useAddComment(taskId)
 
-  const isValid = percentage !== null && body.trim() !== '' && currentUser !== null
+  const isValid = (isTeamAssigned || percentage !== null) && body.trim() !== '' && currentUser !== null
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!isValid || percentage === null || !currentUser) return
+    if (!isValid || !currentUser) return
+    if (!isTeamAssigned && percentage === null) return
 
     addComment.mutate(
-      { authorId: currentUser.id, percentageAtComment: percentage, body: body.trim() },
+      // 0 for a team-assigned task is a placeholder only — the backend stamps the
+      // comment's real percentage from the task's own current rollup instead of trusting
+      // this field, precisely because there's no meaningful number to send here.
+      { authorId: currentUser.id, percentageAtComment: isTeamAssigned ? 0 : (percentage as number), body: body.trim() },
       {
         onSuccess: () => {
           setBody('')
@@ -41,24 +50,33 @@ export function AddCommentForm({ taskId }: { taskId: number }) {
   return (
     <Card>
       <form className={styles.form} onSubmit={handleSubmit}>
-        <span className={styles.label}>Log progress</span>
+        <span className={styles.label}>{isTeamAssigned ? 'Add a note' : 'Log progress'}</span>
 
-        <ProgressStepButtons value={percentage} onChange={setPercentage} />
+        {isTeamAssigned ? (
+          <p className={styles.hint}>
+            This task's progress is the average of its subtasks — a note here explains what changed, it doesn't set a
+            percentage.
+          </p>
+        ) : (
+          <>
+            <ProgressStepButtons value={percentage} onChange={setPercentage} />
 
-        <TextField
-          label="Exact percentage"
-          type="number"
-          min={0}
-          max={100}
-          value={percentage === null ? '' : String(percentage)}
-          onChange={(value) => setPercentage(value === '' ? null : Math.min(100, Math.max(0, Number(value))))}
-        />
+            <TextField
+              label="Exact percentage"
+              type="number"
+              min={0}
+              max={100}
+              value={percentage === null ? '' : String(percentage)}
+              onChange={(value) => setPercentage(value === '' ? null : Math.min(100, Math.max(0, Number(value))))}
+            />
+          </>
+        )}
 
         <TextField
           label="Body"
           value={body}
           onChange={setBody}
-          placeholder="Why this percentage — this becomes permanent record"
+          placeholder={isTeamAssigned ? "What's changed" : 'Why this percentage — this becomes permanent record'}
           required
         />
 
@@ -66,7 +84,7 @@ export function AddCommentForm({ taskId }: { taskId: number }) {
 
         <div className={styles.actions}>
           <Button type="submit" disabled={!isValid || addComment.isPending}>
-            {addComment.isPending ? 'Logging…' : 'Log progress'}
+            {addComment.isPending ? 'Logging…' : isTeamAssigned ? 'Add note' : 'Log progress'}
           </Button>
         </div>
       </form>
