@@ -11,25 +11,27 @@ import type { TaskDetail } from '../../../types/task.types'
 import styles from './SubtasksPanel.module.css'
 
 /**
- * Only rendered for a top-level task (task.parentTaskId === null) — a subtask can't have
- * subtasks of its own. "Add subtask" is shown to a Director/Super Admin, or to whoever
- * leads the team this task is assigned to (task.assigneeId is that team's id for a
- * top-level task) — the same two roles the backend itself allows to create one.
+ * Only rendered for a team-assigned top-level task (task.parentTaskId === null AND
+ * task.assigneeType === 'TEAM') — a subtask can't have subtasks of its own, and neither can
+ * a top-level task assigned directly to one person (see CreateTaskForm): with no team
+ * behind it, there's no one to break it down further, so it's structurally a dead end just
+ * like a subtask is. "Add subtask" is shown to a Director/Super Admin, or to whoever leads
+ * the team this task is assigned to (task.assigneeId is that team's id here, since
+ * assigneeType is already confirmed TEAM) — the same two roles the backend itself allows.
  */
 export function SubtasksPanel({ task }: { task: TaskDetail }) {
   const { currentUser, isDirector } = useAuth()
   const [createOpen, setCreateOpen] = useState(false)
 
-  const isThisTeamsLeader =
-    task.assigneeId != null && currentUser?.teams.some((t) => t.teamId === task.assigneeId && t.isLeader)
+  const isThisTeamsLeader = currentUser?.teams.some((t) => t.teamId === task.assigneeId && t.isLeader)
   const canCreate = isDirector || isThisTeamsLeader
 
   return (
     <>
       <div className={styles.header}>
         <span>Subtasks</span>
-        {canCreate && task.assigneeId != null && (
-          <Button variant="secondary" onClick={() => setCreateOpen(true)}>
+        {canCreate && (
+          <Button variant="primary" onClick={() => setCreateOpen(true)}>
             Add subtask
           </Button>
         )}
@@ -57,7 +59,7 @@ export function SubtasksPanel({ task }: { task: TaskDetail }) {
         </div>
       )}
 
-      {canCreate && task.assigneeId != null && (
+      {canCreate && (
         <CreateSubtaskModal
           parentTaskId={task.id}
           teamId={task.assigneeId}

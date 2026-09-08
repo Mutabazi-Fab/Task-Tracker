@@ -26,6 +26,13 @@
   color: var(--ink);
 }
 
+/* Who's actually accountable stands out from the rest of these at-a-glance facts. */
+.leaderValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
 .type {
   font-family: var(--font-mono);
   font-size: 11px;

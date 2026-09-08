@@ -1,6 +1,7 @@
 package com.throughline.taskmanagement.service.impl;
 
 import com.throughline.taskmanagement.dto.request.ReassignTaskRequest;
+import com.throughline.taskmanagement.enums.AssigneeType;
 import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.enums.TaskStatus;
 import com.throughline.taskmanagement.exception.ForbiddenActionException;
@@ -15,6 +16,7 @@ import com.throughline.taskmanagement.repository.TaskReassignmentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
 import com.throughline.taskmanagement.repository.TeamMemberRepository;
 import com.throughline.taskmanagement.repository.TeamRepository;
+import com.throughline.taskmanagement.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,6 +51,7 @@ class TaskServiceImplAuthorizationTest {
     @Mock private TaskCommentRepository taskCommentRepository;
     @Mock private TaskReassignmentRepository taskReassignmentRepository;
     @Mock private TaskMapper taskMapper;
+    @Mock private NotificationService notificationService;
 
     private TaskServiceImpl taskService;
 
@@ -59,7 +62,8 @@ class TaskServiceImplAuthorizationTest {
     @BeforeEach
     void setUp() {
         taskService = new TaskServiceImpl(taskRepository, personRepository, teamRepository,
-                teamMemberRepository, taskCommentRepository, taskReassignmentRepository, taskMapper);
+                teamMemberRepository, taskCommentRepository, taskReassignmentRepository, taskMapper,
+                notificationService);
 
         owningTeam = new Team();
         owningTeam.setId(5L);
@@ -72,6 +76,7 @@ class TaskServiceImplAuthorizationTest {
         topLevelTask = new Task();
         topLevelTask.setId(13L);
         topLevelTask.setParentTask(null);
+        topLevelTask.setAssigneeType(AssigneeType.TEAM);
         topLevelTask.setAssignedTeam(owningTeam);
         topLevelTask.setStatus(TaskStatus.ONGOING);
     }

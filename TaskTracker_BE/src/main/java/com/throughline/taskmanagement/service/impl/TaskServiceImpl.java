@@ -31,6 +31,7 @@ import com.throughline.taskmanagement.repository.TaskReassignmentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
 import com.throughline.taskmanagement.repository.TeamMemberRepository;
 import com.throughline.taskmanagement.repository.TeamRepository;
+import com.throughline.taskmanagement.service.NotificationService;
 import com.throughline.taskmanagement.service.TaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -52,6 +53,7 @@ public class TaskServiceImpl implements TaskService {
     private final TaskCommentRepository taskCommentRepository;
     private final TaskReassignmentRepository taskReassignmentRepository;
     private final TaskMapper taskMapper;
+    private final NotificationService notificationService;
 
     @Override
     public TaskDetailResponse createTask(CreateTaskRequest request) {
@@ -61,8 +63,11 @@ public class TaskServiceImpl implements TaskService {
             throw new ForbiddenActionException("Only a Director can create a top-level task.");
         }
 
-        Team assignedTeam = teamRepository.findById(request.assignedTeamId())
-                .orElseThrow(() -> new ResourceNotFoundException("assignedTeamId not found"));
+        boolean hasTeam = request.assignedTeamId() != null;
+        boolean hasPerson = request.assignedPersonId() != null;
+        if (hasTeam == hasPerson) {
+            throw new InvalidAssignmentException("Provide exactly one of assignedTeamId or assignedPersonId.");
+        }
 
         Task task = new Task();
         task.setTaskCode(nextTaskCode());
@@ -70,15 +75,26 @@ public class TaskServiceImpl implements TaskService {
         task.setDescription(request.description());
         task.setDateAssigned(request.dateAssigned());
         task.setAssignedBy(createdBy);
-        task.setAssigneeType(AssigneeType.TEAM);
-        task.setAssignedTeam(assignedTeam);
         task.setParentTask(null);
         task.setCreatedByRole(CreatedByRole.DIRECTOR);
         task.setProgressPercentage(0);
         task.setStatus(TaskStatus.PENDING);
 
+        if (hasTeam) {
+            Team assignedTeam = teamRepository.findById(request.assignedTeamId())
+                    .orElseThrow(() -> new ResourceNotFoundException("assignedTeamId not found"));
+            task.setAssigneeType(AssigneeType.TEAM);
+            task.setAssignedTeam(assignedTeam);
+        } else {
+            Person assignedPerson = personRepository.findById(request.assignedPersonId())
+                    .orElseThrow(() -> new ResourceNotFoundException("assignedPersonId not found"));
+            task.setAssigneeType(AssigneeType.INDIVIDUAL);
+            task.setAssignedPerson(assignedPerson);
+        }
+
         Task savedTask = taskRepository.save(task);
         addOpeningComment(savedTask, createdBy, request.openingNote());
+        notificationService.notifyTaskAssigned(savedTask, createdBy);
 
         return taskMapper.toDetailResponse(savedTask);
     }
@@ -134,6 +150,7 @@ public class TaskServiceImpl implements TaskService {
 
         parent.getSubtasks().add(savedSubtask);
         recalculateParentRollup(parent);
+        notificationService.notifySubtaskAssigned(savedSubtask, createdBy);
 
         return taskMapper.toDetailResponse(savedSubtask);
     }
@@ -283,7 +300,14 @@ public class TaskServiceImpl implements TaskService {
         reassignment.setReason(request.reason());
         task.getReassignments().add(reassignment);
 
-        return taskMapper.toDetailResponse(taskRepository.save(task));
+        Task savedTask = taskRepository.save(task);
+        if (task.getParentTask() == null) {
+            notificationService.notifyTaskReassigned(savedTask, reassignment);
+        } else {
+            notificationService.notifySubtaskReassigned(savedTask, reassignment);
+        }
+
+        return taskMapper.toDetailResponse(savedTask);
     }
 
     /** Only a Director/Super Admin, or the leader of the team that currently owns this task
@@ -305,23 +329,44 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    /** A top-level task can only move to a different TEAM — never to an individual. */
+    /** A team-assigned top-level task can only move to a different TEAM; an
+     *  individually-assigned top-level task (see CreateTaskRequest) can only move to a
+     *  different PERSON — either way, reassignment never changes which of the two a task
+     *  is, only who within that lane owns it. */
     private void reassignTopLevelTask(Task task, ReassignTaskRequest request, TaskReassignment reassignment) {
-        if (request.newTeamId() == null) {
-            throw new InvalidAssignmentException("newTeamId is required to reassign a top-level task.");
-        }
-        if (task.getAssignedTeam() != null && task.getAssignedTeam().getId().equals(request.newTeamId())) {
-            throw new InvalidAssignmentException("Task is already assigned to this team.");
-        }
+        if (task.getAssigneeType() == AssigneeType.TEAM) {
+            if (request.newTeamId() == null) {
+                throw new InvalidAssignmentException("newTeamId is required to reassign a team-assigned top-level task.");
+            }
+            if (task.getAssignedTeam() != null && task.getAssignedTeam().getId().equals(request.newTeamId())) {
+                throw new InvalidAssignmentException("Task is already assigned to this team.");
+            }
 
-        Team newTeam = teamRepository.findById(request.newTeamId())
-                .orElseThrow(() -> new ResourceNotFoundException("newTeamId not found"));
+            Team newTeam = teamRepository.findById(request.newTeamId())
+                    .orElseThrow(() -> new ResourceNotFoundException("newTeamId not found"));
 
-        reassignment.setToAssigneeType(AssigneeType.TEAM);
-        reassignment.setToTeam(newTeam);
-        task.setAssignedTeam(newTeam);
-        task.setAssignedPerson(null);
-        task.setAssigneeType(AssigneeType.TEAM);
+            reassignment.setToAssigneeType(AssigneeType.TEAM);
+            reassignment.setToTeam(newTeam);
+            task.setAssignedTeam(newTeam);
+            task.setAssignedPerson(null);
+            task.setAssigneeType(AssigneeType.TEAM);
+        } else {
+            if (request.newPersonId() == null) {
+                throw new InvalidAssignmentException("newPersonId is required to reassign an individually-assigned top-level task.");
+            }
+            if (task.getAssignedPerson() != null && task.getAssignedPerson().getId().equals(request.newPersonId())) {
+                throw new InvalidAssignmentException("Task is already assigned to this person.");
+            }
+
+            Person newPerson = personRepository.findById(request.newPersonId())
+                    .orElseThrow(() -> new ResourceNotFoundException("newPersonId not found"));
+
+            reassignment.setToAssigneeType(AssigneeType.INDIVIDUAL);
+            reassignment.setToPerson(newPerson);
+            task.setAssignedPerson(newPerson);
+            task.setAssignedTeam(null);
+            task.setAssigneeType(AssigneeType.INDIVIDUAL);
+        }
     }
 
     /** A subtask can only move to a different INDIVIDUAL who is a member of the SAME team

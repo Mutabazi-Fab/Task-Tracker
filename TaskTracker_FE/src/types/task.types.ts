@@ -76,14 +76,16 @@ export interface TaskDetail {
   updatedAt: string
 }
 
-/** Body for POST /tasks — a TOP-LEVEL task only. Director/Super-Admin-only, always
- *  team-assigned (no assigneeType choice — that's structural now, not a free pick). Must
- *  always carry the opening comment that explains 0%. */
+/** Body for POST /tasks — a TOP-LEVEL task only. Director/Super-Admin-only. Assigned to
+ *  either a team OR a single individual directly — exactly one of assignedTeamId/
+ *  assignedPersonId must be set (the backend rejects both or neither). Must always carry
+ *  the opening comment that explains 0%. */
 export interface CreateTaskRequest {
   title: string
   description?: string
   createdById: number
-  assignedTeamId: number
+  assignedTeamId?: number
+  assignedPersonId?: number
   dateAssigned: string
   openingNote: string
 }

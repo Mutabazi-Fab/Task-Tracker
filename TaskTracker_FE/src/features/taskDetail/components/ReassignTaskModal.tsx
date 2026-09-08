@@ -5,6 +5,7 @@ import { TextField } from '../../../components/ui/TextField'
 import { Button } from '../../../components/ui/Button'
 import { ErrorMessage } from '../../../components/ui/ErrorMessage'
 import { useAuth } from '../../auth/useAuth'
+import { usePeople } from '../../people/hooks/usePeople'
 import { useTeams } from '../../teams/hooks/useTeams'
 import { useTeamMembers } from '../../teams/hooks/useTeamMembers'
 import { useReassignTask } from '../hooks/useReassignTask'
@@ -21,12 +22,15 @@ interface ReassignTaskModalProps {
 /**
  * Reassignment requires a reason and can never target the current owner. Which kind of
  * target applies is structural, not a free choice, so there's no "assignee type" picker
- * here anymore: a top-level task (no parent) can only move to a different TEAM; a subtask
- * can only move to a different PERSON who's a member of the team that owns its parent
- * task. "Reassigned by" is always the logged-in person, not a picker — the backend takes
- * it as an explicit field, but there's no reason to ask when we already know who's here.
+ * here anymore: a team-assigned task (always top-level) can only move to a different TEAM;
+ * an individually-assigned one can only move to a different PERSON — scoped to the parent
+ * task's team if this is a subtask, or the whole org if this is a top-level task assigned
+ * straight to one person (see CreateTaskForm). "Reassigned by" is always the logged-in
+ * person, not a picker — the backend takes it as an explicit field, but there's no reason
+ * to ask when we already know who's here.
  */
 export function ReassignTaskModal({ task, open, onClose }: ReassignTaskModalProps) {
+  const isTeamAssigned = task.assigneeType === 'TEAM'
   const isSubtask = task.parentTaskId !== null
 
   const [newTeamId, setNewTeamId] = useState('')
@@ -37,18 +41,26 @@ export function ReassignTaskModal({ task, open, onClose }: ReassignTaskModalProp
   const teamsQuery = useTeams()
   const reassign = useReassignTask(task.id)
 
-  // Only relevant for a subtask: its owning team isn't on TaskDetail directly, so its
-  // parent (always a team-assigned top-level task) is fetched to read that team's id off
-  // the parent's assigneeId. NaN when not applicable keeps both queries disabled.
+  // A subtask's owning team isn't on TaskDetail directly, so its parent (always a
+  // team-assigned top-level task) is fetched to read that team's id off the parent's
+  // assigneeId. NaN when not applicable keeps both queries disabled. A top-level task
+  // assigned straight to one person has no team to scope to at all, so it picks a new
+  // owner from the whole org instead.
   const parentQuery = useTaskDetail(isSubtask ? task.parentTaskId ?? NaN : NaN)
   const parentTeamId = parentQuery.data?.assigneeId ?? NaN
-  const membersQuery = useTeamMembers(parentTeamId)
+  const membersQuery = useTeamMembers(isSubtask ? parentTeamId : NaN)
+  const peopleQuery = usePeople(!isTeamAssigned && !isSubtask)
 
-  const isSameOwner = isSubtask
-    ? newPersonId !== '' && Number(newPersonId) === task.assigneeId
-    : newTeamId !== '' && Number(newTeamId) === task.assigneeId
+  const personOptions = isSubtask
+    ? (membersQuery.data ?? []).map((member) => ({ id: member.personId, name: member.fullName }))
+    : (peopleQuery.data ?? []).map((person) => ({ id: person.id, name: person.fullName }))
+  const personOptionsLoading = isSubtask ? membersQuery.isLoading : peopleQuery.isLoading
 
-  const hasTarget = isSubtask ? newPersonId !== '' : newTeamId !== ''
+  const isSameOwner = isTeamAssigned
+    ? newTeamId !== '' && Number(newTeamId) === task.assigneeId
+    : newPersonId !== '' && Number(newPersonId) === task.assigneeId
+
+  const hasTarget = isTeamAssigned ? newTeamId !== '' : newPersonId !== ''
   const isValid = hasTarget && !isSameOwner && reason.trim() !== '' && currentUser !== null
 
   function handleClose() {
@@ -64,8 +76,8 @@ export function ReassignTaskModal({ task, open, onClose }: ReassignTaskModalProp
 
     reassign.mutate(
       {
-        newTeamId: isSubtask ? undefined : Number(newTeamId),
-        newPersonId: isSubtask ? Number(newPersonId) : undefined,
+        newTeamId: isTeamAssigned ? Number(newTeamId) : undefined,
+        newPersonId: isTeamAssigned ? undefined : Number(newPersonId),
         reassignedById: currentUser.id,
         reason: reason.trim(),
       },
@@ -76,17 +88,7 @@ export function ReassignTaskModal({ task, open, onClose }: ReassignTaskModalProp
   return (
     <Modal open={open} onClose={handleClose} title="Reassign task">
       <form className={styles.form} onSubmit={handleSubmit}>
-        {isSubtask ? (
-          <SelectField
-            label="New owner"
-            value={newPersonId}
-            onChange={setNewPersonId}
-            placeholder={membersQuery.isLoading ? 'Loading…' : 'Select a person'}
-            options={(membersQuery.data ?? [])
-              .filter((member) => member.personId !== task.assigneeId)
-              .map((member) => ({ label: member.fullName, value: String(member.personId) }))}
-          />
-        ) : (
+        {isTeamAssigned ? (
           <SelectField
             label="New team"
             value={newTeamId}
@@ -95,6 +97,16 @@ export function ReassignTaskModal({ task, open, onClose }: ReassignTaskModalProp
             options={(teamsQuery.data ?? [])
               .filter((team) => team.id !== task.assigneeId)
               .map((team) => ({ label: team.name, value: String(team.id) }))}
+          />
+        ) : (
+          <SelectField
+            label="New owner"
+            value={newPersonId}
+            onChange={setNewPersonId}
+            placeholder={personOptionsLoading ? 'Loading…' : 'Select a person'}
+            options={personOptions
+              .filter((person) => person.id !== task.assigneeId)
+              .map((person) => ({ label: person.name, value: String(person.id) }))}
           />
         )}
 

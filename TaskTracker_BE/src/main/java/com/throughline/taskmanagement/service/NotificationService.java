@@ -4,6 +4,7 @@ import com.throughline.taskmanagement.dto.response.NotificationResponse;
 import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
+import com.throughline.taskmanagement.model.TaskReassignment;
 import com.throughline.taskmanagement.model.TeamMembershipChange;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +33,30 @@ public interface NotificationService {
      *  while. Notifies whoever's actually responsible for it — the assignee for an
      *  individual task/subtask, the team's Leader for a top-level team task. */
     void notifyTaskStalled(Task task, Person recipient, long daysSinceUpdate);
+
+    /** Called by TaskServiceImpl right after a top-level task is created. There's no
+     *  single "assignee" for a team-assigned task, so the team's Leader stands in as the
+     *  accountable person; an individually-assigned task notifies that person directly.
+     *  Never notifies whoever created the task, even if a Team Leader created it for their
+     *  own team and happens to lead it (there's no self-assignment case here — creation is
+     *  Director/Super-Admin-only). */
+    void notifyTaskAssigned(Task task, Person assignedBy);
+
+    /** Called by TaskServiceImpl right after a subtask is created. Notifies the assigned
+     *  person directly, plus every other member of the team that owns the parent task —
+     *  team visibility, so teammates can see who's responsible for what without having to
+     *  ask. Never notifies whoever created the subtask. */
+    void notifySubtaskAssigned(Task subtask, Person assignedBy);
+
+    /** Called by TaskServiceImpl right after a top-level task is reassigned. Notifies the
+     *  new accountable person: the new team's Leader for a team-assigned task, or the new
+     *  individual assignee otherwise. */
+    void notifyTaskReassigned(Task task, TaskReassignment reassignment);
+
+    /** Called by TaskServiceImpl right after a subtask is reassigned. Notifies the new
+     *  assignee directly, plus every other member of the (unchanged) owning team — team
+     *  visibility, same reasoning as notifySubtaskAssigned. */
+    void notifySubtaskReassigned(Task subtask, TaskReassignment reassignment);
 
     Page<NotificationResponse> getNotifications(Long recipientId, Pageable pageable);
 

@@ -32,6 +32,10 @@ export function TaskDetailPage() {
     <QueryBoundary query={query}>
       {(task) => {
         const isTopLevel = task.parentTaskId === null
+        // A top-level task assigned straight to one person has no team behind it to break
+        // work down further — it's a dead end just like a subtask, so it gets no
+        // Subtasks panel at all (see SubtasksPanel/CreateTaskForm for the full picture).
+        const canHaveSubtasks = isTopLevel && task.assigneeType === 'TEAM'
         // Mirrors the backend check in TaskServiceImpl.deleteTask: Director/Super Admin
         // only, the same authority that creates a top-level task — a Team Leader can't
         // delete even their own team's tasks (unlike reassign, just below).
@@ -77,7 +81,7 @@ export function TaskDetailPage() {
 
             <AssignmentMetaPanel task={task} />
 
-            {isTopLevel && (
+            {canHaveSubtasks && (
               <Card>
                 <SubtasksPanel task={task} />
               </Card>

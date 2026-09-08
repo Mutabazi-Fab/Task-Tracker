@@ -46,7 +46,7 @@ public class TaskController {
         Long actorId = currentPersonResolver.resolveId(authentication);
         CreateTaskRequest verified = new CreateTaskRequest(
                 request.title(), request.description(), actorId, request.assignedTeamId(),
-                request.dateAssigned(), request.openingNote());
+                request.assignedPersonId(), request.dateAssigned(), request.openingNote());
         return new ResponseEntity<>(taskService.createTask(verified), HttpStatus.CREATED);
     }
 
