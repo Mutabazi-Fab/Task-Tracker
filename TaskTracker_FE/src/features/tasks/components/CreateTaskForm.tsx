@@ -6,6 +6,7 @@ import { TextField } from '../../../components/ui/TextField'
 import { useAuth } from '../../auth/useAuth'
 import { usePeople } from '../../people/hooks/usePeople'
 import { useTeams } from '../../teams/hooks/useTeams'
+import { maxAssignableDate } from '../../../lib/dateLimits'
 import type { CreateTaskRequest } from '../../../types/task.types'
 import styles from './CreateTaskForm.module.css'
 
@@ -95,7 +96,14 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
         />
       )}
 
-      <TextField label="Date assigned" type="date" value={dateAssigned} onChange={setDateAssigned} required />
+      <TextField
+        label="Date assigned"
+        type="date"
+        value={dateAssigned}
+        onChange={setDateAssigned}
+        max={maxAssignableDate()}
+        required
+      />
 
       <TextField
         label="Opening note"

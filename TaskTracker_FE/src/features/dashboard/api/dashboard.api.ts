@@ -7,7 +7,7 @@ import type {
   StatusMix,
   TeamLeaderboardItem,
 } from '../../../types/dashboard.types'
-import type { Page, TaskListItem } from '../../../types/task.types'
+import type { Page, TaskListItem, TaskSortValue } from '../../../types/task.types'
 
 export async function fetchDashboardOverview(): Promise<DashboardOverview> {
   const { data } = await axiosClient.get<DashboardOverview>(endpoints.dashboard.overview())
@@ -38,9 +38,15 @@ export async function fetchPeopleSummary(): Promise<PersonSummary[]> {
 
 /** Only the top-level tasks THIS Director created — not the whole org's. Director/Super
  *  Admin only; the backend rejects anyone else. */
-export async function fetchDirectorTasks(directorId: number, page: number, size: number): Promise<Page<TaskListItem>> {
+export async function fetchDirectorTasks(
+  directorId: number,
+  page: number,
+  size: number,
+  sort: TaskSortValue,
+): Promise<Page<TaskListItem>> {
   const { data } = await axiosClient.get<Page<TaskListItem>>(endpoints.dashboard.directorTasks(), {
-    params: { directorId, page, size },
+    // 'none' means "don't sort" — omitted entirely, same as fetchTasks.
+    params: { directorId, page, size, sort: sort === 'none' ? undefined : sort },
   })
   return data
 }

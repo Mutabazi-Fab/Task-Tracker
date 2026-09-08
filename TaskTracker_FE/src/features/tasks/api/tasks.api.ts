@@ -4,8 +4,10 @@ import type {
   CreateSubtaskRequest,
   CreateTaskRequest,
   Page,
+  TaskActivity,
   TaskDetail,
   TaskListItem,
+  TaskSortValue,
   TaskStatus,
 } from '../../../types/task.types'
 
@@ -16,11 +18,14 @@ export interface FetchTasksParams {
   assignedPersonId?: number
   page: number
   size: number
+  sort?: TaskSortValue
 }
 
-export async function fetchTasks({ status, assignedPersonId, page, size }: FetchTasksParams): Promise<Page<TaskListItem>> {
+export async function fetchTasks({ status, assignedPersonId, page, size, sort }: FetchTasksParams): Promise<Page<TaskListItem>> {
   const { data } = await axiosClient.get<Page<TaskListItem>>(endpoints.tasks.list(), {
-    params: { status, assignedPersonId, page, size },
+    // 'none' means "don't sort" — omitted entirely rather than sent as a literal value the
+    // backend wouldn't know how to parse as a Spring Sort expression.
+    params: { status, assignedPersonId, page, size, sort: sort === 'none' ? undefined : sort },
   })
   return data
 }
@@ -45,10 +50,21 @@ export async function createSubtask(parentTaskId: number, payload: CreateSubtask
   return data
 }
 
-// No actor/reason in the body — the backend doesn't take one for this endpoint (a real,
-// tracked gap: DELETE /tasks/{id} isn't role-gated server-side yet, unlike creation). The
-// button that calls this is still gated client-side to Director/Super Admin or the owning
-// team's leader, matching who can create a task, so this stays consistent in normal use.
+// No body — the actor is derived from the JWT server-side (CurrentPersonResolver), same as
+// every other mutating endpoint, and the backend independently re-checks Director/Super
+// Admin there (TaskServiceImpl.deleteTask) rather than trusting the button being hidden
+// from anyone else. Every deletion is also recorded in the task activity log — see
+// fetchTaskActivity below.
 export async function deleteTask(id: number): Promise<void> {
   await axiosClient.delete(endpoints.tasks.remove(id))
+}
+
+/** Director or Super Admin only — every task/subtask created or deleted, org-wide, newest
+ *  first. The backend independently re-checks that tier, same as every other admin-facing
+ *  read in this app. */
+export async function fetchTaskActivity(page: number, size: number): Promise<Page<TaskActivity>> {
+  const { data } = await axiosClient.get<Page<TaskActivity>>(endpoints.tasks.activity(), {
+    params: { page, size, sort: 'timestamp,desc' },
+  })
+  return data
 }

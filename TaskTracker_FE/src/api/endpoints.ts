@@ -31,6 +31,7 @@ export const endpoints = {
     reassign: (id: number | string) => `${BASE}/tasks/${id}/reassign`,
     reassignments: (id: number | string) => `${BASE}/tasks/${id}/reassignments`,
     progressTimeline: (id: number | string) => `${BASE}/tasks/${id}/progress-timeline`,
+    activity: () => `${BASE}/tasks/activity`,
   },
   people: {
     list: () => `${BASE}/people`,

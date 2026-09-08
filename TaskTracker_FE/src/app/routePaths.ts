@@ -19,10 +19,13 @@ export const ROUTES = {
   dashboard: '/',
   tasks: '/tasks',
   taskDetail: (taskId: number | string) => `/tasks/${taskId}`,
+  // Deliberately NOT nested under /tasks — besides the content itself likely growing
+  // beyond just tasks, NavLink's prefix match would light up the Tasks item too, the same
+  // way it already correctly does for /tasks/:taskId.
+  activity: '/activity',
   people: '/people',
   personProfile: (personId: number | string) => `/people/${personId}`,
   teams: '/teams',
   team: (teamId: number | string) => `/teams/${teamId}`,
   search: '/search',
-  roleChanges: '/admin/role-changes',
 } as const

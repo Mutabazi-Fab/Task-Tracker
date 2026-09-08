@@ -7,6 +7,7 @@ import com.throughline.taskmanagement.dto.request.ReassignTaskRequest;
 import com.throughline.taskmanagement.dto.request.UpdateTaskRequest;
 import com.throughline.taskmanagement.dto.response.CommentResponse;
 import com.throughline.taskmanagement.dto.response.ReassignmentResponse;
+import com.throughline.taskmanagement.dto.response.TaskActivityResponse;
 import com.throughline.taskmanagement.dto.response.TaskDetailResponse;
 import com.throughline.taskmanagement.dto.response.TaskListResponse;
 import com.throughline.taskmanagement.dto.response.TaskTimelineResponse;
@@ -36,4 +37,9 @@ public interface TaskService {
     /** Director/Super-Admin-only, enforced here (not just by the frontend hiding the
      *  button). actorId is the caller's real, JWT-resolved identity. */
     void deleteTask(Long id, Long actorId);
+
+    /** Every task/subtask creation and deletion, org-wide, newest first — Director or
+     *  Super Admin only (broader than the role-change/account-status-change logs, which
+     *  are Super-Admin-only). requesterId is the caller's real, JWT-resolved identity. */
+    Page<TaskActivityResponse> getTaskActivity(Long requesterId, Pageable pageable);
 }

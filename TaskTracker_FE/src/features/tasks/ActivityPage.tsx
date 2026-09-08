@@ -1,0 +1,168 @@
+import { useMemo, useState } from 'react'
+import { Navigate } from 'react-router-dom'
+import { PageHeader } from '../../components/layout/PageHeader'
+import { Card } from '../../components/ui/Card'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { ErrorMessage } from '../../components/ui/ErrorMessage'
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
+import { Pagination } from '../../components/ui/Pagination'
+import { SegmentedControl } from '../../components/ui/SegmentedControl'
+import { ROUTES } from '../../app/routePaths'
+import { formatDateTime } from '../../lib/formatDate'
+import { useAuth } from '../auth/useAuth'
+import { useRoleChangeActivity } from '../people/hooks/useRoleChangeActivity'
+import { useAccountStatusChangeActivity } from '../people/hooks/useAccountStatusChangeActivity'
+import { useTaskActivity } from './hooks/useTaskActivity'
+import styles from './ActivityPage.module.css'
+
+type ActivityFilter = 'ALL' | 'TASK' | 'ROLE' | 'STATUS'
+
+const FILTER_OPTIONS: { label: string; value: ActivityFilter }[] = [
+  { label: 'All', value: 'ALL' },
+  { label: 'Tasks', value: 'TASK' },
+  { label: 'Roles', value: 'ROLE' },
+  { label: 'Account status', value: 'STATUS' },
+]
+
+const PAGE_SIZE = 15
+// Every source here is fetched as one bounded batch and merged client-side, same trade-off
+// already established for the role/status logs: an org's admin-action volume is bounded
+// by headcount, not transactional volume like tasks, so "fetch up to N and page through it
+// in the browser" holds up rather than needing a real server-side merged query across three
+// tables just for this.
+const FETCH_SIZE = 100
+
+type Row =
+  | { id: string; kind: 'TASK'; timestamp: string; taskCode: string; title: string; parentTaskCode: string | null; action: 'CREATED' | 'DELETED'; assigneeSummary: string; actorName: string }
+  | { id: string; kind: 'ROLE'; timestamp: string; personName: string; changeLabel: string; reason: string | null; actorName: string }
+  | { id: string; kind: 'STATUS'; timestamp: string; personName: string; changeLabel: string; reason: string | null; actorName: string }
+
+/**
+ * Director or Super Admin only — every notable admin action in the org, in one feed: task
+ * creation/deletion, role changes, and account activation/deactivation. Merges three
+ * separate audit tables client-side (see FETCH_SIZE) rather than one new backend query,
+ * matching how the two people-side logs already worked before this page existed. Not
+ * linked from the nav for a Member, and redirects away outright if landed on directly.
+ */
+export function ActivityPage() {
+  const { currentUser, isDirector } = useAuth()
+  const [filter, setFilter] = useState<ActivityFilter>('ALL')
+  const [page, setPage] = useState(0)
+
+  const taskQuery = useTaskActivity(0, FETCH_SIZE)
+  const roleQuery = useRoleChangeActivity(currentUser?.id ?? NaN)
+  const statusQuery = useAccountStatusChangeActivity(currentUser?.id ?? NaN)
+
+  const rows = useMemo<Row[] | undefined>(() => {
+    if (!taskQuery.data || !roleQuery.data || !statusQuery.data) return undefined
+
+    const taskRows: Row[] = taskQuery.data.content.map((entry) => ({
+      id: `task-${entry.id}`,
+      kind: 'TASK',
+      timestamp: entry.timestamp,
+      taskCode: entry.taskCode,
+      title: entry.title,
+      parentTaskCode: entry.parentTaskCode,
+      action: entry.action,
+      assigneeSummary: entry.assigneeSummary,
+      actorName: entry.performedByName,
+    }))
+
+    const roleRows: Row[] = roleQuery.data.map((entry) => ({
+      id: `role-${entry.id}`,
+      kind: 'ROLE',
+      timestamp: entry.timestamp,
+      personName: entry.personName,
+      changeLabel: `${entry.oldRole ?? 'none'} → ${entry.newRole}`,
+      reason: entry.reason,
+      actorName: entry.changedByName,
+    }))
+
+    const statusRows: Row[] = statusQuery.data.map((entry) => ({
+      id: `status-${entry.id}`,
+      kind: 'STATUS',
+      timestamp: entry.timestamp,
+      personName: entry.personName,
+      changeLabel: entry.active ? 'Reactivated' : 'Deactivated',
+      reason: entry.reason,
+      actorName: entry.changedByName,
+    }))
+
+    return [...taskRows, ...roleRows, ...statusRows].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    )
+  }, [taskQuery.data, roleQuery.data, statusQuery.data])
+
+  if (!isDirector) {
+    return <Navigate to={ROUTES.dashboard} replace />
+  }
+
+  const isLoading = taskQuery.isLoading || roleQuery.isLoading || statusQuery.isLoading
+  const error = taskQuery.error ?? roleQuery.error ?? statusQuery.error
+  const filteredRows = rows?.filter((row) => filter === 'ALL' || row.kind === filter)
+  const totalPages = filteredRows ? Math.ceil(filteredRows.length / PAGE_SIZE) : 0
+  const pageRows = filteredRows?.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
+
+  return (
+    <>
+      <PageHeader
+        breadcrumb="Throughline"
+        title="Activity"
+        right={
+          <SegmentedControl
+            options={FILTER_OPTIONS}
+            value={filter}
+            onChange={(next) => {
+              setFilter(next)
+              setPage(0)
+            }}
+            aria-label="Filter activity"
+          />
+        }
+      />
+      <Card>
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : error ? (
+          <ErrorMessage message={error.message} />
+        ) : !pageRows || pageRows.length === 0 ? (
+          <EmptyState title="No activity yet" />
+        ) : (
+          <div>
+            {pageRows.map((row) =>
+              row.kind === 'TASK' ? (
+                <div key={row.id} className={styles.row}>
+                  <div className={styles.titleCol}>
+                    <span className={styles.taskCode}>{row.taskCode}</span>
+                    <span className={styles.title}>{row.title}</span>
+                    {row.parentTaskCode && <span className={styles.subtext}>under {row.parentTaskCode}</span>}
+                  </div>
+                  <span className={row.action === 'CREATED' ? styles.created : styles.deleted}>{row.action}</span>
+                  <span className={styles.assignee}>{row.assigneeSummary}</span>
+                  <span className={styles.actor}>by {row.actorName}</span>
+                  <span className={styles.timestamp}>{formatDateTime(row.timestamp)}</span>
+                </div>
+              ) : (
+                <div key={row.id} className={styles.row}>
+                  <div className={styles.titleCol}>
+                    <span className={styles.title}>{row.personName}</span>
+                    {row.reason && <span className={styles.subtext}>{row.reason}</span>}
+                  </div>
+                  <span className={row.kind === 'ROLE' ? styles.roleChange : styles.statusChange}>{row.changeLabel}</span>
+                  <span className={styles.assignee} />
+                  <span className={styles.actor}>by {row.actorName}</span>
+                  <span className={styles.timestamp}>{formatDateTime(row.timestamp)}</span>
+                </div>
+              ),
+            )}
+          </div>
+        )}
+      </Card>
+      {rows && (
+        <div className={styles.pagination}>
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+        </div>
+      )}
+    </>
+  )
+}

@@ -6,6 +6,19 @@ export type AssigneeType = 'INDIVIDUAL' | 'TEAM'
 /** Always derived from progressPercentage server-side — never a form field. */
 export type TaskStatus = 'PENDING' | 'ONGOING' | 'COMPLETED'
 
+/** How task lists order themselves — 'updatedAt,desc'/'createdAt,desc' are passed straight
+ *  through as Spring's `sort` query param (`property,direction`), same convention already
+ *  used for the audit-log fetches; 'none' means exactly that — no sort param is sent at
+ *  all, so the list comes back in whatever order the database naturally returns it, the
+ *  same as before sorting existed.
+ *  'updatedAt,desc' is the default everywhere: updatedAt is bumped by Hibernate on every
+ *  save (a progress comment, a reassignment, a subtask's rollup touching its parent), so a
+ *  brand-new task — whose updatedAt equals its createdAt at the moment it's made — already
+ *  sorts to the top, and a task that's actively being worked stays visible even once it's
+ *  no longer the newest thing created. 'createdAt,desc' is the explicit alternative for
+ *  "what did I just set up", separate from "what's actually moving". */
+export type TaskSortValue = 'updatedAt,desc' | 'createdAt,desc' | 'none'
+
 /** Who structured a subtask — the Director themself, or the Team Leader of the team
  *  owning its parent task. Null for a task that predates the hierarchy. */
 export type CreatedByRole = 'DIRECTOR' | 'TEAM_LEADER'
@@ -117,4 +130,23 @@ export interface Page<T> {
   totalPages: number
   number: number
   size: number
+}
+
+export type TaskActivityAction = 'CREATED' | 'DELETED'
+
+/** One row of GET /tasks/activity — every task/subtask created or deleted, org-wide.
+ *  Director or Super Admin only. Everything here is a snapshot taken at the moment of the
+ *  event, not a live lookup — a DELETED row's task no longer exists to look up, and a
+ *  CREATED row should keep showing what the task looked like when it was made either way. */
+export interface TaskActivity {
+  id: number
+  action: TaskActivityAction
+  taskCode: string
+  title: string
+  /** Set only when the task was a subtask. */
+  parentTaskCode: string | null
+  assigneeType: AssigneeType
+  assigneeSummary: string
+  performedByName: string
+  timestamp: string
 }

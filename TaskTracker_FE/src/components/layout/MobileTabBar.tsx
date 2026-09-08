@@ -8,8 +8,8 @@ import styles from './MobileTabBar.module.css'
  *  here rather than left mobile-only-inaccessible, since the Sidebar's logout button
  *  doesn't render at all on this breakpoint. */
 export function MobileTabBar() {
-  const { isSuperAdmin, logout } = useAuth()
-  const navItems = getNavItems(isSuperAdmin)
+  const { isDirector, logout } = useAuth()
+  const navItems = getNavItems(isDirector)
 
   return (
     <nav className={styles.bar}>

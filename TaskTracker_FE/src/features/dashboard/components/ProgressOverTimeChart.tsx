@@ -20,7 +20,7 @@ export function ProgressOverTimeChart() {
         ) : (
           <div className={styles.wrap}>
             <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={points} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+              <AreaChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid stroke="var(--khaki)" strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="date"
@@ -30,7 +30,7 @@ export function ProgressOverTimeChart() {
                   tickLine={false}
                   minTickGap={24}
                 />
-                <YAxis domain={[0, 100]} tick={axisTick} axisLine={false} tickLine={false} width={32} />
+                <YAxis domain={[0, 100]} tick={axisTick} axisLine={false} tickLine={false} width={36} />
                 <Tooltip
                   labelFormatter={(label) => formatDate(String(label))}
                   formatter={(value) => [formatPercentage(Number(value)), 'Avg progress']}

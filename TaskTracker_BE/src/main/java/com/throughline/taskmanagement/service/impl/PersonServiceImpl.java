@@ -177,7 +177,11 @@ public class PersonServiceImpl implements PersonService {
     public Page<RoleChangeResponse> getRoleChangeActivity(Long requesterId, Pageable pageable) {
         Person requester = personRepository.findById(requesterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
-        requireSuperAdmin(requester, "Only a Super Admin can view role-change activity.");
+        // Viewing this log is Director-or-above, same tier as Task Activity — a level
+        // below requireSuperAdmin, which stays reserved for actually MAKING a role change.
+        if (!Role.isAtLeastDirector(requester.getRole())) {
+            throw new ForbiddenActionException("Only a Director or Super Admin can view role-change activity.");
+        }
 
         return roleChangeRepository.findAllByOrderByTimestampDesc(pageable).map(this::toRoleChangeResponse);
     }
@@ -186,7 +190,11 @@ public class PersonServiceImpl implements PersonService {
     public Page<AccountStatusChangeResponse> getAccountStatusChangeActivity(Long requesterId, Pageable pageable) {
         Person requester = personRepository.findById(requesterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
-        requireSuperAdmin(requester, "Only a Super Admin can view account-status activity.");
+        // Same reasoning as getRoleChangeActivity above — viewing is Director-or-above,
+        // actually (de)activating an account stays Super-Admin-only (setPersonActive).
+        if (!Role.isAtLeastDirector(requester.getRole())) {
+            throw new ForbiddenActionException("Only a Director or Super Admin can view account-status activity.");
+        }
 
         return accountStatusChangeRepository.findAllByOrderByTimestampDesc(pageable)
                 .map(this::toAccountStatusChangeResponse);

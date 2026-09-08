@@ -4,6 +4,7 @@ import { SelectField } from '../../../components/ui/SelectField'
 import { TextField } from '../../../components/ui/TextField'
 import { useAuth } from '../../auth/useAuth'
 import { useTeamMembers } from '../../teams/hooks/useTeamMembers'
+import { maxAssignableDate } from '../../../lib/dateLimits'
 import type { CreateSubtaskRequest } from '../../../types/task.types'
 import styles from '../../tasks/components/CreateTaskForm.module.css'
 
@@ -64,7 +65,14 @@ export function CreateSubtaskForm({ teamId, onSubmit, onCancel, submitting }: Cr
         options={(membersQuery.data ?? []).map((member) => ({ label: member.fullName, value: String(member.personId) }))}
       />
 
-      <TextField label="Date assigned" type="date" value={dateAssigned} onChange={setDateAssigned} required />
+      <TextField
+        label="Date assigned"
+        type="date"
+        value={dateAssigned}
+        onChange={setDateAssigned}
+        max={maxAssignableDate()}
+        required
+      />
 
       <TextField
         label="Opening note"

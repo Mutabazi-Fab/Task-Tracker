@@ -4,8 +4,10 @@ import { EmptyState } from '../../../components/ui/EmptyState'
 import { Pagination } from '../../../components/ui/Pagination'
 import { QueryBoundary } from '../../../components/feedback/QueryBoundary'
 import { TaskCard } from '../../tasks/components/TaskCard'
+import { TaskSortToggle } from '../../tasks/components/TaskSortToggle'
 import { useAuth } from '../../auth/useAuth'
 import { useDirectorTasks } from '../hooks/useDirectorTasks'
+import type { TaskSortValue } from '../../../types/task.types'
 import styles from './DirectorInitiativesSection.module.css'
 
 const PAGE_SIZE = 12
@@ -23,11 +25,21 @@ const PAGE_SIZE = 12
 export function DirectorInitiativesSection() {
   const { currentUser } = useAuth()
   const [page, setPage] = useState(0)
-  const query = useDirectorTasks(currentUser?.id ?? NaN, page, PAGE_SIZE)
+  const [sort, setSort] = useState<TaskSortValue>('updatedAt,desc')
+  const query = useDirectorTasks(currentUser?.id ?? NaN, page, PAGE_SIZE, sort)
 
   return (
     <Card>
-      <div className={styles.sectionHeading}>My initiatives</div>
+      <div className={styles.headingRow}>
+        <div className={styles.sectionHeading}>My initiatives</div>
+        <TaskSortToggle
+          value={sort}
+          onChange={(next) => {
+            setSort(next)
+            setPage(0)
+          }}
+        />
+      </div>
       <QueryBoundary query={query}>
         {(result) =>
           result.content.length === 0 ? (

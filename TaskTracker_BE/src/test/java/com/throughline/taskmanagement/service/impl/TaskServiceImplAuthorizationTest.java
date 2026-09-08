@@ -14,6 +14,7 @@ import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
 import com.throughline.taskmanagement.repository.TaskReassignmentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
+import com.throughline.taskmanagement.repository.TaskActivityRepository;
 import com.throughline.taskmanagement.repository.TeamMemberRepository;
 import com.throughline.taskmanagement.repository.TeamRepository;
 import com.throughline.taskmanagement.service.NotificationService;
@@ -52,6 +53,7 @@ class TaskServiceImplAuthorizationTest {
     @Mock private TaskReassignmentRepository taskReassignmentRepository;
     @Mock private TaskMapper taskMapper;
     @Mock private NotificationService notificationService;
+    @Mock private TaskActivityRepository taskActivityRepository;
 
     private TaskServiceImpl taskService;
 
@@ -63,7 +65,7 @@ class TaskServiceImplAuthorizationTest {
     void setUp() {
         taskService = new TaskServiceImpl(taskRepository, personRepository, teamRepository,
                 teamMemberRepository, taskCommentRepository, taskReassignmentRepository, taskMapper,
-                notificationService);
+                notificationService, taskActivityRepository);
 
         owningTeam = new Team();
         owningTeam.setId(5L);

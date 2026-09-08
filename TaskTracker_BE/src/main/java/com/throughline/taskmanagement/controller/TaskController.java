@@ -7,6 +7,7 @@ import com.throughline.taskmanagement.dto.request.ReassignTaskRequest;
 import com.throughline.taskmanagement.dto.request.UpdateTaskRequest;
 import com.throughline.taskmanagement.dto.response.CommentResponse;
 import com.throughline.taskmanagement.dto.response.ReassignmentResponse;
+import com.throughline.taskmanagement.dto.response.TaskActivityResponse;
 import com.throughline.taskmanagement.dto.response.TaskDetailResponse;
 import com.throughline.taskmanagement.dto.response.TaskListResponse;
 import com.throughline.taskmanagement.dto.response.TaskTimelineResponse;
@@ -104,6 +105,14 @@ public class TaskController {
         Long actorId = currentPersonResolver.resolveId(authentication);
         taskService.deleteTask(id, actorId);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Director or Super Admin only — every task/subtask created or deleted, org-wide. A
+     *  static path, so it's matched ahead of GET /{id} the same way GET /search already is. */
+    @GetMapping("/activity")
+    public ResponseEntity<Page<TaskActivityResponse>> getTaskActivity(Pageable pageable, Authentication authentication) {
+        Long requesterId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(taskService.getTaskActivity(requesterId, pageable));
     }
 
     @PostMapping("/{id}/comments")

@@ -4,7 +4,7 @@ import { EmptyState } from '../../../components/ui/EmptyState'
 import { ErrorMessage } from '../../../components/ui/ErrorMessage'
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner'
 import { Pagination } from '../../../components/ui/Pagination'
-import type { TaskStatus } from '../../../types/task.types'
+import type { TaskSortValue, TaskStatus } from '../../../types/task.types'
 import { useTasks } from '../hooks/useTasks'
 import { TaskCard } from './TaskCard'
 import styles from './TaskLaneColumn.module.css'
@@ -16,6 +16,7 @@ interface TaskLaneColumnProps {
   /** Same scoping as the rest of this page — undefined for a Director (sees everyone),
    *  the viewer's own id for a Member. */
   assignedPersonId?: number
+  sort: TaskSortValue
   /** 'column' (default) for the normal three-lanes-side-by-side board — one narrow vertical
    *  stack of cards. 'grid' for when this is the ONLY visible lane (a status filter narrowed
    *  the board down to one column) — cards wrap left-to-right to fill the available width
@@ -27,9 +28,9 @@ interface TaskLaneColumnProps {
  *  other two columns. A lane with hundreds of tasks pages through LANE_PAGE_SIZE at a
  *  time instead of dumping everything into one long scroll; a lane with three tasks just
  *  never shows a pager at all (Pagination renders nothing for a single page). */
-export function TaskLaneColumn({ status, assignedPersonId, layout = 'column' }: TaskLaneColumnProps) {
+export function TaskLaneColumn({ status, assignedPersonId, sort, layout = 'column' }: TaskLaneColumnProps) {
   const [page, setPage] = useState(0)
-  const query = useTasks({ status, assignedPersonId, page, size: LANE_PAGE_SIZE })
+  const query = useTasks({ status, assignedPersonId, page, size: LANE_PAGE_SIZE, sort })
 
   return (
     <div className={styles.column}>

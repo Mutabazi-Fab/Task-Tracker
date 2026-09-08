@@ -1,0 +1,99 @@
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.titleCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.taskCode {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subtext {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.created,
+.deleted,
+.roleChange,
+.statusChange {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  text-align: center;
+}
+
+.created {
+  color: var(--status-completed);
+  background: var(--status-completed-bg);
+}
+
+.deleted {
+  color: var(--status-pending);
+  background: var(--status-pending-bg);
+}
+
+.roleChange {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.statusChange {
+  color: var(--ink);
+  background: var(--track);
+}
+
+.assignee {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.actor {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.timestamp {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-4);
+}

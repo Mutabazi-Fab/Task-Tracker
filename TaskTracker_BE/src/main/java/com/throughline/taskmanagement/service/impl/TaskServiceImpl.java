@@ -7,12 +7,14 @@ import com.throughline.taskmanagement.dto.request.ReassignTaskRequest;
 import com.throughline.taskmanagement.dto.request.UpdateTaskRequest;
 import com.throughline.taskmanagement.dto.response.CommentResponse;
 import com.throughline.taskmanagement.dto.response.ReassignmentResponse;
+import com.throughline.taskmanagement.dto.response.TaskActivityResponse;
 import com.throughline.taskmanagement.dto.response.TaskDetailResponse;
 import com.throughline.taskmanagement.dto.response.TaskListResponse;
 import com.throughline.taskmanagement.dto.response.TaskTimelineResponse;
 import com.throughline.taskmanagement.enums.AssigneeType;
 import com.throughline.taskmanagement.enums.CreatedByRole;
 import com.throughline.taskmanagement.enums.Role;
+import com.throughline.taskmanagement.enums.TaskActivityAction;
 import com.throughline.taskmanagement.enums.TaskStatus;
 import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.InvalidAssignmentException;
@@ -21,11 +23,13 @@ import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.mapper.TaskMapper;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
+import com.throughline.taskmanagement.model.TaskActivity;
 import com.throughline.taskmanagement.model.TaskComment;
 import com.throughline.taskmanagement.model.TaskReassignment;
 import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.model.TeamMember;
 import com.throughline.taskmanagement.repository.PersonRepository;
+import com.throughline.taskmanagement.repository.TaskActivityRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
 import com.throughline.taskmanagement.repository.TaskReassignmentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
@@ -38,6 +42,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 
 import java.util.List;
 
@@ -54,6 +60,7 @@ public class TaskServiceImpl implements TaskService {
     private final TaskReassignmentRepository taskReassignmentRepository;
     private final TaskMapper taskMapper;
     private final NotificationService notificationService;
+    private final TaskActivityRepository taskActivityRepository;
 
     @Override
     public TaskDetailResponse createTask(CreateTaskRequest request) {
@@ -68,6 +75,7 @@ public class TaskServiceImpl implements TaskService {
         if (hasTeam == hasPerson) {
             throw new InvalidAssignmentException("Provide exactly one of assignedTeamId or assignedPersonId.");
         }
+        requireReasonableDate(request.dateAssigned());
 
         Task task = new Task();
         task.setTaskCode(nextTaskCode());
@@ -95,6 +103,7 @@ public class TaskServiceImpl implements TaskService {
         Task savedTask = taskRepository.save(task);
         addOpeningComment(savedTask, createdBy, request.openingNote());
         notificationService.notifyTaskAssigned(savedTask, createdBy);
+        recordActivity(savedTask, TaskActivityAction.CREATED, createdBy);
 
         return taskMapper.toDetailResponse(savedTask);
     }
@@ -110,6 +119,7 @@ public class TaskServiceImpl implements TaskService {
         if (parent.getAssignedTeam() == null) {
             throw new InvalidAssignmentException("Parent task has no assigned team.");
         }
+        requireReasonableDate(request.dateAssigned());
         Long teamId = parent.getAssignedTeam().getId();
 
         Person createdBy = personRepository.findById(request.createdById())
@@ -151,6 +161,7 @@ public class TaskServiceImpl implements TaskService {
         parent.getSubtasks().add(savedSubtask);
         recalculateParentRollup(parent);
         notificationService.notifySubtaskAssigned(savedSubtask, createdBy);
+        recordActivity(savedSubtask, TaskActivityAction.CREATED, createdBy);
 
         return taskMapper.toDetailResponse(savedSubtask);
     }
@@ -427,12 +438,24 @@ public class TaskServiceImpl implements TaskService {
     public TaskDetailResponse updateTask(Long id, UpdateTaskRequest request) {
         Task task = taskRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        requireReasonableDate(request.dateAssigned());
 
         task.setTitle(request.title());
         task.setDescription(request.description());
         task.setDateAssigned(request.dateAssigned());
 
         return taskMapper.toDetailResponse(taskRepository.save(task));
+    }
+
+    /** A typo guard only (e.g. picking 2036 instead of 2026), not a real business rule —
+     *  see maxAssignableDate on the frontend, which keeps the date picker from offering the
+     *  mistake in the first place. Past dates are never rejected: backfilling a real
+     *  assignment that happened before anyone got around to entering it is normal, and
+     *  there's no due-date/deadline concept here for a future date to violate either way. */
+    private void requireReasonableDate(LocalDate dateAssigned) {
+        if (dateAssigned.isAfter(LocalDate.now().plusYears(1))) {
+            throw new InvalidAssignmentException("dateAssigned can't be more than a year in the future.");
+        }
     }
 
     @Override
@@ -447,6 +470,12 @@ public class TaskServiceImpl implements TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
         Task parent = task.getParentTask();
 
+        // Recorded before the delete, not after — recordActivity reads taskCode/title/
+        // assignee straight off the entity, which won't exist to read from once it's gone.
+        // Only this one task gets a DELETED entry, not each subtask a cascade takes with
+        // it — the log is "what did a Director/Super Admin just do", not a full cascade trace.
+        recordActivity(task, TaskActivityAction.DELETED, actor);
+
         // Deleting a top-level task cascades to its subtasks (Task.subtasks is
         // CascadeType.ALL + orphanRemoval). Deleting a subtask needs the parent's rollup
         // recomputed afterward, since its subtask set just shrank.
@@ -455,5 +484,40 @@ public class TaskServiceImpl implements TaskService {
         if (parent != null) {
             recalculateParentRollup(parent);
         }
+    }
+
+    private void recordActivity(Task task, TaskActivityAction action, Person performedBy) {
+        TaskActivity activity = new TaskActivity();
+        activity.setAction(action);
+        activity.setTaskCode(task.getTaskCode());
+        activity.setTitle(task.getTitle());
+        activity.setParentTaskCode(task.getParentTask() != null ? task.getParentTask().getTaskCode() : null);
+        activity.setAssigneeType(task.getAssigneeType());
+        activity.setAssigneeSummary(task.getAssigneeType() == AssigneeType.TEAM
+                ? task.getAssignedTeam().getName()
+                : task.getAssignedPerson().getFullName());
+        activity.setPerformedBy(performedBy);
+        taskActivityRepository.save(activity);
+    }
+
+    @Override
+    public Page<TaskActivityResponse> getTaskActivity(Long requesterId, Pageable pageable) {
+        Person requester = personRepository.findById(requesterId)
+                .orElseThrow(() -> new ResourceNotFoundException("requesterId not found"));
+        if (!Role.isAtLeastDirector(requester.getRole())) {
+            throw new ForbiddenActionException("Only a Director or Super Admin can view task activity.");
+        }
+
+        return taskActivityRepository.findAll(pageable).map(a -> new TaskActivityResponse(
+                a.getId(),
+                a.getAction(),
+                a.getTaskCode(),
+                a.getTitle(),
+                a.getParentTaskCode(),
+                a.getAssigneeType(),
+                a.getAssigneeSummary(),
+                a.getPerformedBy().getFullName(),
+                a.getTimestamp()
+        ));
     }
 }

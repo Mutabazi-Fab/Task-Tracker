@@ -31,7 +31,7 @@ export function TaskListPage() {
 
   const scopeToPersonId = isDirector ? undefined : currentUser?.id
   const statusParam = status === 'ALL' ? undefined : status
-  const tableQuery = useTasks({ status: statusParam, assignedPersonId: scopeToPersonId, page, size: PAGE_SIZE })
+  const tableQuery = useTasks({ status: statusParam, assignedPersonId: scopeToPersonId, page, size: PAGE_SIZE, sort: 'none' })
   const { searchQuery, debouncedQuery } = useTaskSearch(search, scopeToPersonId)
   // Keyed off the SAME debounced value the query itself is enabled/disabled on — see
   // useTaskSearch's doc comment for why using the raw `search` state here crashed
@@ -78,7 +78,7 @@ export function TaskListPage() {
           )}
         </>
       ) : (
-        <TaskLanesBoard assignedPersonId={scopeToPersonId} status={status} />
+        <TaskLanesBoard assignedPersonId={scopeToPersonId} status={status} sort="none" />
       )}
 
       {isDirector && <CreateTaskModal open={createOpen} onClose={() => setCreateOpen(false)} />}

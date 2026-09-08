@@ -1,10 +1,10 @@
 import { Route, Routes } from 'react-router-dom'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { TaskListPage } from '../features/tasks/TaskListPage'
+import { ActivityPage } from '../features/tasks/ActivityPage'
 import { TaskDetailPage } from '../features/taskDetail/TaskDetailPage'
 import { PeopleListPage } from '../features/people/PeopleListPage'
 import { PersonProfilePage } from '../features/people/PersonProfilePage'
-import { RoleChangeActivityPage } from '../features/people/RoleChangeActivityPage'
 import { TeamsListPage } from '../features/teams/TeamsListPage'
 import { TeamPage } from '../features/teams/TeamPage'
 import { SearchResultsPage } from '../features/search/SearchResultsPage'
@@ -92,12 +92,12 @@ export function AppRoutes() {
       <Route path={ROUTES.dashboard} element={protectedPage(<DashboardPage />)} />
       <Route path={ROUTES.tasks} element={protectedPage(<TaskListPage />)} />
       <Route path="/tasks/:taskId" element={protectedPage(<TaskDetailPage />)} />
+      <Route path={ROUTES.activity} element={protectedPage(<ActivityPage />)} />
       <Route path={ROUTES.people} element={protectedPage(<PeopleListPage />)} />
       <Route path="/people/:personId" element={protectedPage(<PersonProfilePage />)} />
       <Route path={ROUTES.teams} element={protectedPage(<TeamsListPage />)} />
       <Route path="/teams/:teamId" element={protectedPage(<TeamPage />)} />
       <Route path={ROUTES.search} element={protectedPage(<SearchResultsPage />)} />
-      <Route path={ROUTES.roleChanges} element={protectedPage(<RoleChangeActivityPage />)} />
       <Route path="*" element={protectedPage(<NotFoundPage />)} />
     </Routes>
   )
