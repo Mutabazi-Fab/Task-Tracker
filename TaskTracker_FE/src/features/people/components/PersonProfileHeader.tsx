@@ -7,6 +7,7 @@ import styles from './PersonProfileHeader.module.css'
  *  everywhere else in the app, so it reads the same way here. */
 const ROLE_LABEL: Record<string, string> = {
   DIRECTOR: 'Director',
+  EXECUTIVE: 'Executive',
   SUPER_ADMIN: 'Super Admin',
   MEMBER: 'Member',
 }
@@ -29,6 +30,8 @@ export function PersonProfileHeader({ person }: { person: Person }) {
           {isTeamLeader ? ' · Team Leader' : ''}
         </p>
         <p className={styles.unit}>
+          {person.departmentName ? `Department: ${person.departmentName}` : 'No department assigned'}
+          {' · '}
           {person.teams.length > 0 ? `Unit: ${person.teams.map((t) => t.teamName).join(', ')}` : 'Unassigned'}
         </p>
       </div>

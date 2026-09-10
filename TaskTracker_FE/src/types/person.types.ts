@@ -1,8 +1,11 @@
-/** Global role, ascending: MEMBER < DIRECTOR < SUPER_ADMIN. "Team Leader" is scoped
- *  per-team instead (see TeamMember on the backend), not a value here. Null for a person
- *  created before roles existed and never migrated. Super Admin has every Director
- *  permission plus a few exclusively its own — see useAuth's isDirector/isSuperAdmin. */
-export type Role = 'DIRECTOR' | 'MEMBER' | 'SUPER_ADMIN'
+/** Global role, ascending: MEMBER < DIRECTOR < EXECUTIVE < SUPER_ADMIN. "Team Leader" is
+ *  scoped per-team instead (see TeamMember on the backend), not a value here. Null for a
+ *  person created before roles existed and never migrated. Executive is the CEO's seat —
+ *  everything a Director can do, plus org-wide task creation at the Department level and
+ *  the executive dashboard (see useAuth's isDirector/isExecutive/isSuperAdmin). Super Admin
+ *  has every Executive permission plus a few exclusively its own (role changes, account
+ *  activation, department administration). */
+export type Role = 'DIRECTOR' | 'EXECUTIVE' | 'MEMBER' | 'SUPER_ADMIN'
 
 /** One team this person belongs to — a person can be on several at once. */
 export interface PersonTeamMembership {
@@ -21,12 +24,17 @@ export interface Person {
   emailVerified: boolean
   active: boolean
   teams: PersonTeamMembership[]
+  /** Every person belongs to exactly one Department, independent of team membership —
+   *  null only for an account that predates this field. */
+  departmentName: string | null
+  departmentId: number | null
 }
 
 /**
- * Body for POST /people (and reused for PUT /people/{id}, which ignores createdById/role).
- * createdById must be a Director or Super Admin; only a Super Admin may set role to
- * anything other than Member (omitted/undefined defaults to Member).
+ * Body for POST /people (and reused for PUT /people/{id}, which ignores createdById/role/
+ * departmentId). createdById must be a Director or Super Admin; only a Super Admin may set
+ * role to anything other than Member (omitted/undefined defaults to Member); departmentId
+ * is required at creation — every person belongs to exactly one department.
  */
 export interface CreatePersonRequest {
   fullName: string
@@ -35,6 +43,7 @@ export interface CreatePersonRequest {
   rank?: string
   createdById?: number
   role?: Role
+  departmentId?: number
 }
 
 /** Body for PUT /people/{id}/role. Super-Admin-only; reason is mandatory (both here and

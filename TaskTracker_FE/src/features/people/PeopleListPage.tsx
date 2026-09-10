@@ -21,6 +21,7 @@ const PAGE_SIZE = 12
  *  everywhere else in the app, so it reads the same way here. */
 const ROLE_LABEL: Record<string, string> = {
   DIRECTOR: 'Director',
+  EXECUTIVE: 'Executive',
   SUPER_ADMIN: 'Super Admin',
   MEMBER: 'Member',
 }

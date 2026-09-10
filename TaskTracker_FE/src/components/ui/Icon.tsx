@@ -20,6 +20,7 @@ export type IconName =
   | 'eyeOff'
   | 'shield'
   | 'bell'
+  | 'departments'
   | 'chevronLeft'
   | 'chevronRight'
 
@@ -39,6 +40,8 @@ const PATHS: Record<IconName, string> = {
     'M3.5 3.5l17 17M10.6 5.7A10.6 10.6 0 0 1 12 5.5c6.5 0 10 6.5 10 6.5a15.7 15.7 0 0 1-3.4 4.4M6.7 6.7C4 8.4 2 12 2 12s3.5 6.5 10 6.5a9.9 9.9 0 0 0 3.9-.8M9.5 9.9a3 3 0 0 0 4.2 4.2',
   shield: 'M12 3.5 5 6v6c0 4.5 3 7.5 7 8.5 4-1 7-4 7-8.5V6z M9 12l2 2 4-4.5',
   bell: 'M6 10.5a6 6 0 0 1 12 0v4.5l1.8 2.5H4.2L6 15z M10 20a2 2 0 0 0 4 0',
+  departments:
+    'M5 20V6.5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1V20M13 20v-8.5a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1V20M3 20h18M8 8.5h.01M8 12h.01M8 15.5h.01M16.5 13h.01M16.5 16.5h.01',
   chevronLeft: 'M15 5l-7 7 7 7',
   chevronRight: 'M9 5l7 7-7 7',
 }

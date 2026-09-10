@@ -1,0 +1,57 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.head {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.sectionHeading {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: var(--space-4);
+}
+
+.teamList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.teamLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--track);
+}
+
+.teamName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.teamLeader {
+  font-size: 12px;
+  color: var(--muted);
+}

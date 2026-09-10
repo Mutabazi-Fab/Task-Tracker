@@ -36,7 +36,9 @@ public class PersonMapper {
                 person.getRole(),
                 person.isEmailVerified(),
                 person.isActive(),
-                teams
+                teams,
+                person.getDepartment() != null ? person.getDepartment().getName() : null,
+                person.getDepartment() != null ? person.getDepartment().getId() : null
         );
     }
 }

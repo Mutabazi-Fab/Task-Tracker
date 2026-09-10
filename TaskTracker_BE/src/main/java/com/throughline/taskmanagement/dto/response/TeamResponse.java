@@ -10,5 +10,7 @@ public record TeamResponse(
     String leaderName,
     Long leaderId,
     int memberCount,
-    LocalDateTime createdAt
+    LocalDateTime createdAt,
+    String departmentName,
+    Long departmentId
 ) {}

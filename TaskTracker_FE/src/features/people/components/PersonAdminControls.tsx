@@ -14,6 +14,7 @@ import styles from './PersonAdminControls.module.css'
 const ROLE_OPTIONS: { label: string; value: Role }[] = [
   { label: 'Member', value: 'MEMBER' },
   { label: 'Director', value: 'DIRECTOR' },
+  { label: 'Executive', value: 'EXECUTIVE' },
   { label: 'Super Admin', value: 'SUPER_ADMIN' },
 ]
 

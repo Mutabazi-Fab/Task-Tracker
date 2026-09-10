@@ -17,12 +17,14 @@ import com.throughline.taskmanagement.exception.InvalidAssignmentException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.mapper.PersonMapper;
 import com.throughline.taskmanagement.model.AccountStatusChange;
+import com.throughline.taskmanagement.model.Department;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.RoleChange;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.model.TeamMember;
 import com.throughline.taskmanagement.repository.AccountStatusChangeRepository;
+import com.throughline.taskmanagement.repository.DepartmentRepository;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.RoleChangeRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
@@ -52,6 +54,7 @@ public class PersonServiceImpl implements PersonService {
     private final TaskCommentRepository taskCommentRepository;
     private final RoleChangeRepository roleChangeRepository;
     private final AccountStatusChangeRepository accountStatusChangeRepository;
+    private final DepartmentRepository departmentRepository;
     private final PersonMapper personMapper;
     private final NotificationService notificationService;
     private final MailService mailService;
@@ -78,12 +81,19 @@ public class PersonServiceImpl implements PersonService {
             requireSuperAdmin(createdBy, "Only a Super Admin can set a new person's role to Director or Super Admin.");
         }
 
+        if (request.departmentId() == null) {
+            throw new InvalidAssignmentException("departmentId is required.");
+        }
+        Department department = departmentRepository.findById(request.departmentId())
+                .orElseThrow(() -> new ResourceNotFoundException("departmentId not found"));
+
         Person person = new Person();
         person.setFullName(request.fullName());
         person.setEmail(request.email());
         person.setJobTitle(request.jobTitle());
         person.setRank(request.rank());
         person.setRole(targetRole);
+        person.setDepartment(department);
         // emailVerified defaults false (see Person.emailVerified) — new to the system,
         // still has to prove they control this inbox once they sign up to activate login.
 

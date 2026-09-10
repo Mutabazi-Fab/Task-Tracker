@@ -42,10 +42,13 @@
 
   /* Role badges (Sidebar, PersonAdminControls) — distinct from --status-* (task status only)
      and from --accent (Team Leader reuses --accent-strong/--accent-soft, matching the
-     existing per-team "Leader" tag). Director and Super Admin get their own hues so the
-     four states (Member/Team Leader/Director/Super Admin) never look ambiguous at a glance. */
+     existing per-team "Leader" tag). Director, Executive and Super Admin each get their
+     own hue so the five states (Member/Team Leader/Director/Executive/Super Admin) never
+     look ambiguous at a glance. */
   --signal-admin: #6b3fa0;
   --signal-admin-bg: #ece2f5;
+  --signal-exec: #a8641a;
+  --signal-exec-bg: #f6e9d7;
 
   /* Radii */
   --radius-sm: 4px;
@@ -90,4 +93,6 @@
   --signal-info-bg: #14262b;
   --signal-admin: #b98fe0;
   --signal-admin-bg: #241a2e;
+  --signal-exec: #d99b4e;
+  --signal-exec-bg: #2c2113;
 }

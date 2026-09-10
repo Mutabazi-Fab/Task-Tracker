@@ -25,10 +25,14 @@ const BASE_NAV_ITEMS: NavItem[] = [
 /** Shared with MobileTabBar so the two never drift out of sync. A function, not a plain
  *  constant, since the Activity item only appears for a Director or Super Admin — one
  *  merged feed covering task creation/deletion, role changes, and account activation/
- *  deactivation, all gated at that same tier (see ActivityPage). */
+ *  deactivation, all gated at that same tier (see ActivityPage). Departments is likewise
+ *  Director-or-above — read access to the org chart is open to Director/Executive/Super
+ *  Admin (writes stay Super-Admin-only, enforced in DepartmentAdminControls/the backend),
+ *  a plain Member has no use for it since they can't act on anything there. */
 export function getNavItems(isDirector: boolean): NavItem[] {
   const items = [...BASE_NAV_ITEMS]
   if (isDirector) {
+    items.push({ to: ROUTES.departments, label: 'Departments', icon: 'departments' })
     items.push({ to: ROUTES.activity, label: 'Activity', icon: 'shield' })
   }
   return items

@@ -27,5 +27,7 @@ export const ROUTES = {
   personProfile: (personId: number | string) => `/people/${personId}`,
   teams: '/teams',
   team: (teamId: number | string) => `/teams/${teamId}`,
+  departments: '/departments',
+  department: (departmentId: number | string) => `/departments/${departmentId}`,
   search: '/search',
 } as const

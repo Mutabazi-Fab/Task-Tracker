@@ -7,6 +7,9 @@ export interface Team {
   leaderId: number | null
   memberCount: number
   createdAt: string
+  /** Every team belongs to exactly one Department — no team exists outside the org chart. */
+  departmentName: string | null
+  departmentId: number | null
 }
 
 /** One row of GET /teams/{id}/members — has an id/isLeader/joinedAt that plain Person
@@ -23,12 +26,14 @@ export interface TeamMember {
 
 /** Body for POST /teams. The Director creates the team, picks its initial roster, and
  *  designates one of those members as Team Leader all in one request — leaderId must be
- *  one of memberIds (enforced server-side). */
+ *  one of memberIds (enforced server-side). departmentId is required — every team belongs
+ *  to exactly one Department. */
 export interface CreateTeamRequest {
   name: string
   createdById: number
   leaderId: number
   memberIds: number[]
+  departmentId: number
 }
 
 /** Body for PUT /teams/{id}. Rename only — membership and leadership go through their own

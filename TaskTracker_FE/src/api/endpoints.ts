@@ -67,6 +67,13 @@ export const endpoints = {
     membershipHistory: (id: number | string) => `${BASE}/teams/${id}/membership-history`,
     activity: () => `${BASE}/teams/activity`,
   },
+  departments: {
+    list: () => `${BASE}/departments`,
+    create: () => `${BASE}/departments`,
+    detail: (id: number | string) => `${BASE}/departments/${id}`,
+    rename: (id: number | string) => `${BASE}/departments/${id}`,
+    changeHead: (id: number | string) => `${BASE}/departments/${id}/head`,
+  },
   notifications: {
     list: () => `${BASE}/notifications`,
     markRead: (id: number | string) => `${BASE}/notifications/${id}/read`,

@@ -34,7 +34,9 @@ export function TeamsListPage() {
                   <Card padding="sm">
                     <span className={styles.name}>{team.name}</span>
                     <span className={styles.leader}>{team.leaderName ? `Led by ${team.leaderName}` : 'No leader'}</span>
-                    <span className={styles.meta}>{team.memberCount} members</span>
+                    <span className={styles.meta}>
+                      {team.memberCount} members{team.departmentName ? ` · ${team.departmentName}` : ''}
+                    </span>
                   </Card>
                 </Link>
               ))}

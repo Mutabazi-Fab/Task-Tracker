@@ -13,5 +13,7 @@ public record PersonResponse(
     Role role,
     boolean emailVerified,
     boolean active,
-    List<PersonTeamMembershipResponse> teams
+    List<PersonTeamMembershipResponse> teams,
+    String departmentName,
+    Long departmentId
 ) {}

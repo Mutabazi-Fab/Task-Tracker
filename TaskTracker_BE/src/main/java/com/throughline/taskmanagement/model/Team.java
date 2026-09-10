@@ -31,6 +31,13 @@ public class Team {
     @JoinColumn(name = "created_by_id")
     private Person createdBy;
 
+    /** Every team belongs to exactly one Department — no team exists outside the org
+     *  chart. Required in practice (TeamServiceImpl.createTeam), not a DB constraint,
+     *  same approach as Task's assignedTeam/assignedPerson XOR. */
+    @ManyToOne
+    @JoinColumn(name = "department_id")
+    private Department department;
+
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TeamMember> members = new ArrayList<>();
 

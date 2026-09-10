@@ -3,12 +3,14 @@ import { Button } from '../../../components/ui/Button'
 import { SelectField } from '../../../components/ui/SelectField'
 import { TextField } from '../../../components/ui/TextField'
 import { useAuth } from '../../auth/useAuth'
+import { useDepartments } from '../../departments/hooks/useDepartments'
 import type { CreatePersonRequest, Role } from '../../../types/person.types'
 import styles from '../../teams/components/CreateTeamForm.module.css'
 
 const ROLE_OPTIONS: { label: string; value: Role }[] = [
   { label: 'Member', value: 'MEMBER' },
   { label: 'Director', value: 'DIRECTOR' },
+  { label: 'Executive', value: 'EXECUTIVE' },
   { label: 'Super Admin', value: 'SUPER_ADMIN' },
 ]
 
@@ -23,14 +25,21 @@ interface CreatePersonFormProps {
  *  would just be rejected. */
 export function CreatePersonForm({ onSubmit, onCancel, submitting }: CreatePersonFormProps) {
   const { currentUser, isSuperAdmin } = useAuth()
+  const departmentsQuery = useDepartments()
 
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [jobTitle, setJobTitle] = useState('')
   const [rank, setRank] = useState('')
   const [role, setRole] = useState<Role>('MEMBER')
+  const [departmentId, setDepartmentId] = useState('')
 
-  const isValid = fullName.trim() !== '' && email.trim() !== '' && jobTitle.trim() !== '' && currentUser !== null
+  const isValid =
+    fullName.trim() !== '' &&
+    email.trim() !== '' &&
+    jobTitle.trim() !== '' &&
+    departmentId !== '' &&
+    currentUser !== null
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -43,6 +52,7 @@ export function CreatePersonForm({ onSubmit, onCancel, submitting }: CreatePerso
       rank: rank.trim() || undefined,
       createdById: currentUser.id,
       role: isSuperAdmin ? role : undefined,
+      departmentId: Number(departmentId),
     })
   }
 
@@ -59,6 +69,14 @@ export function CreatePersonForm({ onSubmit, onCancel, submitting }: CreatePerso
       />
       <TextField label="Job title" value={jobTitle} onChange={setJobTitle} placeholder="e.g. Backend Engineer" required />
       <TextField label="Rank (optional)" value={rank} onChange={setRank} placeholder="e.g. Captain" />
+
+      <SelectField
+        label="Department"
+        value={departmentId}
+        onChange={setDepartmentId}
+        placeholder="Select a department"
+        options={(departmentsQuery.data ?? []).map((d) => ({ label: d.name, value: String(d.id) }))}
+      />
 
       {isSuperAdmin && (
         <SelectField

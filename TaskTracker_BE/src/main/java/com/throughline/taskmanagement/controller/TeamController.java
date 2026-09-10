@@ -43,7 +43,7 @@ public class TeamController {
     @PostMapping
     public ResponseEntity<TeamResponse> createTeam(@Valid @RequestBody CreateTeamRequest request, Authentication authentication) {
         Long actorId = currentPersonResolver.resolveId(authentication);
-        CreateTeamRequest verified = new CreateTeamRequest(request.name(), actorId, request.leaderId(), request.memberIds());
+        CreateTeamRequest verified = new CreateTeamRequest(request.name(), actorId, request.leaderId(), request.memberIds(), request.departmentId());
         return new ResponseEntity<>(teamService.createTeam(verified), HttpStatus.CREATED);
     }
 

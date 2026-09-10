@@ -26,7 +26,9 @@ public class TeamMapper {
                 leader != null ? leader.getPerson().getFullName() : null,
                 leader != null ? leader.getPerson().getId() : null,
                 team.getMembers() != null ? team.getMembers().size() : 0,
-                team.getCreatedAt()
+                team.getCreatedAt(),
+                team.getDepartment() != null ? team.getDepartment().getName() : null,
+                team.getDepartment() != null ? team.getDepartment().getId() : null
         );
     }
 }

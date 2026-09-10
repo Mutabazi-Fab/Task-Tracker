@@ -51,6 +51,14 @@ public class Person {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    /** Every person belongs to exactly one Department, independent of team membership —
+     *  someone assigned work directly as an individual, with no team at all, still visibly
+     *  belongs to a department. Required in practice (PersonServiceImpl.createPerson), not
+     *  a DB constraint. Nullable only for accounts that predate this field. */
+    @ManyToOne
+    @JoinColumn(name = "department_id")
+    private Department department;
+
     /**
      * Stored in plaintext (see SecurityConfig's NoOpPasswordEncoder — a deliberate,
      * explicit choice for this project). A null password means this account has never

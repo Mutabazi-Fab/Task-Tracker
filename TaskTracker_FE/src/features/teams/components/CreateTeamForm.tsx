@@ -4,6 +4,7 @@ import { SelectField } from '../../../components/ui/SelectField'
 import { TextField } from '../../../components/ui/TextField'
 import { useAuth } from '../../auth/useAuth'
 import { usePeople } from '../../people/hooks/usePeople'
+import { useDepartments } from '../../departments/hooks/useDepartments'
 import type { CreateTeamRequest } from '../../../types/team.types'
 import styles from './CreateTeamForm.module.css'
 
@@ -18,10 +19,12 @@ interface CreateTeamFormProps {
 export function CreateTeamForm({ onSubmit, onCancel, submitting }: CreateTeamFormProps) {
   const { currentUser } = useAuth()
   const peopleQuery = usePeople()
+  const departmentsQuery = useDepartments()
 
   const [name, setName] = useState('')
   const [memberIds, setMemberIds] = useState<number[]>([])
   const [leaderId, setLeaderId] = useState('')
+  const [departmentId, setDepartmentId] = useState('')
 
   function toggleMember(id: number) {
     setMemberIds((prev) => {
@@ -33,7 +36,8 @@ export function CreateTeamForm({ onSubmit, onCancel, submitting }: CreateTeamFor
     })
   }
 
-  const isValid = name.trim() !== '' && memberIds.length > 0 && leaderId !== '' && currentUser !== null
+  const isValid =
+    name.trim() !== '' && memberIds.length > 0 && leaderId !== '' && departmentId !== '' && currentUser !== null
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -44,12 +48,21 @@ export function CreateTeamForm({ onSubmit, onCancel, submitting }: CreateTeamFor
       createdById: currentUser.id,
       leaderId: Number(leaderId),
       memberIds,
+      departmentId: Number(departmentId),
     })
   }
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
       <TextField label="Team name" value={name} onChange={setName} placeholder="e.g. Auditing App" required />
+
+      <SelectField
+        label="Department"
+        value={departmentId}
+        onChange={setDepartmentId}
+        placeholder="Select a department"
+        options={(departmentsQuery.data ?? []).map((d) => ({ label: d.name, value: String(d.id) }))}
+      />
 
       <div className={styles.field}>
         <span className={styles.label}>Members</span>

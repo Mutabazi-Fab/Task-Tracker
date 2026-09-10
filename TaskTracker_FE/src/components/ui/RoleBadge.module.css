@@ -29,3 +29,8 @@
   color: var(--signal-admin);
   background: var(--signal-admin-bg);
 }
+
+.executive {
+  color: var(--signal-exec);
+  background: var(--signal-exec-bg);
+}

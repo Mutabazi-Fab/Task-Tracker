@@ -26,12 +26,16 @@ type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 export interface AuthContextValue {
   status: AuthStatus
   currentUser: Person | null
-  /** Director or Super Admin — every "Director-only" check in the UI should read this,
-   *  not currentUser.role === 'DIRECTOR' directly, so Super Admin never loses access to
-   *  something a Director can do. */
+  /** Director, Executive, or Super Admin — every "Director-only" check in the UI should
+   *  read this, not currentUser.role === 'DIRECTOR' directly, so Executive/Super Admin
+   *  never lose access to something a Director can do. */
   isDirector: boolean
+  /** Executive or Super Admin — the CEO's tier and above: org-wide (Department-level)
+   *  task creation, task severity, and the org-wide executive dashboard. Super Admin sees
+   *  the literal same executive view, not a separate lookalike. */
+  isExecutive: boolean
   /** Super Admin only — the handful of things exclusively theirs (granting roles,
-   *  deactivating accounts, the role-change audit log). */
+   *  deactivating accounts, the role-change audit log, department administration). */
   isSuperAdmin: boolean
   /** remember=true persists the token in localStorage (survives closing the browser);
    *  false keeps it in sessionStorage only (gone once the tab closes) — the "Remember me"
@@ -194,7 +198,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       status,
       currentUser,
-      isDirector: currentUser?.role === 'DIRECTOR' || currentUser?.role === 'SUPER_ADMIN',
+      isDirector:
+        currentUser?.role === 'DIRECTOR' ||
+        currentUser?.role === 'EXECUTIVE' ||
+        currentUser?.role === 'SUPER_ADMIN',
+      isExecutive: currentUser?.role === 'EXECUTIVE' || currentUser?.role === 'SUPER_ADMIN',
       isSuperAdmin: currentUser?.role === 'SUPER_ADMIN',
       login,
       signup,

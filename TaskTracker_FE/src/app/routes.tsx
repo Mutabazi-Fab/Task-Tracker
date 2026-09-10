@@ -7,6 +7,8 @@ import { PeopleListPage } from '../features/people/PeopleListPage'
 import { PersonProfilePage } from '../features/people/PersonProfilePage'
 import { TeamsListPage } from '../features/teams/TeamsListPage'
 import { TeamPage } from '../features/teams/TeamPage'
+import { DepartmentsListPage } from '../features/departments/DepartmentsListPage'
+import { DepartmentPage } from '../features/departments/DepartmentPage'
 import { SearchResultsPage } from '../features/search/SearchResultsPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { SignupPage } from '../features/auth/SignupPage'
@@ -97,6 +99,8 @@ export function AppRoutes() {
       <Route path="/people/:personId" element={protectedPage(<PersonProfilePage />)} />
       <Route path={ROUTES.teams} element={protectedPage(<TeamsListPage />)} />
       <Route path="/teams/:teamId" element={protectedPage(<TeamPage />)} />
+      <Route path={ROUTES.departments} element={protectedPage(<DepartmentsListPage />)} />
+      <Route path="/departments/:departmentId" element={protectedPage(<DepartmentPage />)} />
       <Route path={ROUTES.search} element={protectedPage(<SearchResultsPage />)} />
       <Route path="*" element={protectedPage(<NotFoundPage />)} />
     </Routes>

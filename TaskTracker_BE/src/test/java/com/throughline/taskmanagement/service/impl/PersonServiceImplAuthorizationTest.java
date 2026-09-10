@@ -9,6 +9,7 @@ import com.throughline.taskmanagement.exception.InvalidAssignmentException;
 import com.throughline.taskmanagement.mapper.PersonMapper;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.repository.AccountStatusChangeRepository;
+import com.throughline.taskmanagement.repository.DepartmentRepository;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.RoleChangeRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
@@ -46,6 +47,7 @@ class PersonServiceImplAuthorizationTest {
     @Mock private TaskCommentRepository taskCommentRepository;
     @Mock private RoleChangeRepository roleChangeRepository;
     @Mock private AccountStatusChangeRepository accountStatusChangeRepository;
+    @Mock private DepartmentRepository departmentRepository;
     @Mock private PersonMapper personMapper;
     @Mock private NotificationService notificationService;
     @Mock private MailService mailService;
@@ -56,8 +58,8 @@ class PersonServiceImplAuthorizationTest {
     @BeforeEach
     void setUp() {
         personService = new PersonServiceImpl(personRepository, teamMemberRepository, taskRepository,
-                taskCommentRepository, roleChangeRepository, accountStatusChangeRepository, personMapper,
-                notificationService, mailService, authService);
+                taskCommentRepository, roleChangeRepository, accountStatusChangeRepository, departmentRepository,
+                personMapper, notificationService, mailService, authService);
         // Only some tests exercise getPersonStatistics/getPersonTaskHistory's downstream
         // repository calls, but requireCanViewPerson runs first in all three — stub the
         // harmless empty-list ones leniently so tests that never reach them don't fail

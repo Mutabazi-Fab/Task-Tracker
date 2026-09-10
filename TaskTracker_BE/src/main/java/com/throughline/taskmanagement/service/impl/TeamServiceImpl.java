@@ -18,12 +18,14 @@ import com.throughline.taskmanagement.exception.InvalidAssignmentException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.mapper.TaskMapper;
 import com.throughline.taskmanagement.mapper.TeamMapper;
+import com.throughline.taskmanagement.model.Department;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.TaskComment;
 import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.model.TeamMember;
 import com.throughline.taskmanagement.model.TeamMembershipChange;
+import com.throughline.taskmanagement.repository.DepartmentRepository;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
@@ -53,6 +55,7 @@ public class TeamServiceImpl implements TeamService {
     private final TaskCommentRepository taskCommentRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final TeamMembershipChangeRepository teamMembershipChangeRepository;
+    private final DepartmentRepository departmentRepository;
     private final NotificationService notificationService;
     private final TaskMapper taskMapper;
     private final TeamMapper teamMapper;
@@ -71,9 +74,15 @@ public class TeamServiceImpl implements TeamService {
             throw new InvalidAssignmentException("leaderId must be one of memberIds.");
         }
 
+        // Every team belongs to exactly one Department — no team exists outside the org
+        // chart. Enforced here, not as a DB constraint (same approach as Task's assignee XOR).
+        Department department = departmentRepository.findById(request.departmentId())
+                .orElseThrow(() -> new ResourceNotFoundException("departmentId not found"));
+
         Team team = new Team();
         team.setName(request.name());
         team.setCreatedBy(createdBy);
+        team.setDepartment(department);
         Team saved = teamRepository.save(team);
 
         for (Long memberId : request.memberIds()) {
