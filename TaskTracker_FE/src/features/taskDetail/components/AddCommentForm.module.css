@@ -13,13 +13,20 @@
   color: var(--muted);
 }
 
-.hint {
-  font-size: 12.5px;
-  color: var(--muted);
-  margin: -8px 0 0;
-}
-
 .actions {
   display: flex;
   justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.doneNote {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: var(--space-2);
+}
+
+.confirmText {
+  font-size: 14px;
+  color: var(--ink);
+  margin-bottom: var(--space-4);
 }

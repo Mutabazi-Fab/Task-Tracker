@@ -1,6 +1,7 @@
 package com.throughline.taskmanagement.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.throughline.taskmanagement.enums.CommentType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -44,6 +45,23 @@ public class TaskComment {
 
     @Column(nullable = false)
     private int sequenceNumber;
+
+    /** PROGRESS (the default, for every comment that predates this field) is a real
+     *  percentage reading and counts toward the trend/timeline chart; DISCUSSION is a
+     *  plain Q&A message in the open thread below it, never trusted for progress and never
+     *  plotted on the trend chart — see TaskMapper/TaskServiceImpl.getTaskProgressTimeline. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CommentType type = CommentType.PROGRESS;
+
+    /** Set only for a DISCUSSION reply — the top-level comment it replies to. Replying to
+     *  a reply attaches to that reply's own top-level parent instead of nesting further
+     *  (see TaskServiceImpl.addDiscussionComment), the same one-level-deep flattening
+     *  Instagram uses. Always null for a PROGRESS comment. */
+    @ManyToOne
+    @JoinColumn(name = "parent_comment_id")
+    @JsonIgnore
+    private TaskComment parentComment;
 
     @CreationTimestamp
     @Column(updatable = false)

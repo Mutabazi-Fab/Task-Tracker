@@ -1,11 +1,17 @@
 package com.throughline.taskmanagement.controller;
 
 import com.throughline.taskmanagement.dto.request.AddCommentRequest;
+import com.throughline.taskmanagement.dto.request.AddDiscussionCommentRequest;
 import com.throughline.taskmanagement.dto.request.CreateSubtaskRequest;
 import com.throughline.taskmanagement.dto.request.CreateTaskRequest;
+import com.throughline.taskmanagement.dto.request.DecideDeadlineExtensionRequest;
+import com.throughline.taskmanagement.dto.request.ExtendDeadlineRequest;
 import com.throughline.taskmanagement.dto.request.ReassignTaskRequest;
+import com.throughline.taskmanagement.dto.request.RequestDeadlineExtensionRequest;
+import com.throughline.taskmanagement.dto.request.SetPinnedRequest;
 import com.throughline.taskmanagement.dto.request.UpdateTaskRequest;
 import com.throughline.taskmanagement.dto.response.CommentResponse;
+import com.throughline.taskmanagement.dto.response.DeadlineExtensionResponse;
 import com.throughline.taskmanagement.dto.response.ReassignmentResponse;
 import com.throughline.taskmanagement.dto.response.TaskActivityResponse;
 import com.throughline.taskmanagement.dto.response.TaskDetailResponse;
@@ -47,7 +53,8 @@ public class TaskController {
         Long actorId = currentPersonResolver.resolveId(authentication);
         CreateTaskRequest verified = new CreateTaskRequest(
                 request.title(), request.description(), actorId, request.assignedTeamId(),
-                request.assignedPersonId(), request.dateAssigned(), request.openingNote());
+                request.assignedPersonId(), request.assignedDepartmentId(), request.dateAssigned(),
+                request.deadline(), request.source(), request.sourceLabel(), request.severity(), request.openingNote());
         return new ResponseEntity<>(taskService.createTask(verified), HttpStatus.CREATED);
     }
 
@@ -59,7 +66,8 @@ public class TaskController {
         Long actorId = currentPersonResolver.resolveId(authentication);
         CreateSubtaskRequest verified = new CreateSubtaskRequest(
                 request.title(), request.description(), actorId, request.assignedPersonId(),
-                request.dateAssigned(), request.openingNote());
+                request.assignedTeamId(), request.dateAssigned(), request.deadline(),
+                request.source(), request.sourceLabel(), request.severity(), request.openingNote());
         return new ResponseEntity<>(taskService.createSubtask(parentTaskId, verified), HttpStatus.CREATED);
     }
 
@@ -130,13 +138,26 @@ public class TaskController {
         return ResponseEntity.ok(taskService.getTaskComments(id, pageable));
     }
 
+    /** Fully open — any authenticated person may post on any task, same as the progress
+     *  log always has been (see TaskService.addDiscussionComment). */
+    @PostMapping("/{id}/discussion-comments")
+    public ResponseEntity<TaskDetailResponse> addDiscussionComment(
+            @PathVariable Long id,
+            @Valid @RequestBody AddDiscussionCommentRequest request,
+            Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        AddDiscussionCommentRequest verified = new AddDiscussionCommentRequest(actorId, request.body(), request.parentCommentId());
+        return new ResponseEntity<>(taskService.addDiscussionComment(id, verified), HttpStatus.CREATED);
+    }
+
     @PostMapping("/{id}/reassign")
     public ResponseEntity<TaskDetailResponse> reassignTask(
             @PathVariable Long id,
             @Valid @RequestBody ReassignTaskRequest request,
             Authentication authentication) {
         Long actorId = currentPersonResolver.resolveId(authentication);
-        ReassignTaskRequest verified = new ReassignTaskRequest(request.newTeamId(), request.newPersonId(), actorId, request.reason());
+        ReassignTaskRequest verified = new ReassignTaskRequest(
+                request.newTeamId(), request.newPersonId(), request.newDepartmentId(), actorId, request.reason());
         return ResponseEntity.ok(taskService.reassignTask(id, verified));
     }
 
@@ -148,6 +169,54 @@ public class TaskController {
     @GetMapping("/{id}/progress-timeline")
     public ResponseEntity<Page<TaskTimelineResponse>> getTaskProgressTimeline(@PathVariable Long id, Pageable pageable) {
         return ResponseEntity.ok(taskService.getTaskProgressTimeline(id, pageable));
+    }
+
+    @PostMapping("/{id}/deadline-extensions")
+    public ResponseEntity<TaskDetailResponse> requestDeadlineExtension(
+            @PathVariable Long id,
+            @Valid @RequestBody RequestDeadlineExtensionRequest request,
+            Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        RequestDeadlineExtensionRequest verified =
+                new RequestDeadlineExtensionRequest(request.requestedDeadline(), request.justification(), actorId);
+        return new ResponseEntity<>(taskService.requestDeadlineExtension(id, verified), HttpStatus.CREATED);
+    }
+
+    @PutMapping("/{id}/deadline-extensions/{extensionId}")
+    public ResponseEntity<TaskDetailResponse> decideDeadlineExtension(
+            @PathVariable Long id,
+            @PathVariable Long extensionId,
+            @Valid @RequestBody DecideDeadlineExtensionRequest request,
+            Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        DecideDeadlineExtensionRequest verified =
+                new DecideDeadlineExtensionRequest(request.approve(), request.decisionNote(), actorId);
+        return ResponseEntity.ok(taskService.decideDeadlineExtension(id, extensionId, verified));
+    }
+
+    @PutMapping("/{id}/deadline")
+    public ResponseEntity<TaskDetailResponse> extendDeadlineDirectly(
+            @PathVariable Long id,
+            @Valid @RequestBody ExtendDeadlineRequest request,
+            Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        ExtendDeadlineRequest verified = new ExtendDeadlineRequest(request.newDeadline(), request.reason(), actorId);
+        return ResponseEntity.ok(taskService.extendDeadlineDirectly(id, verified));
+    }
+
+    @GetMapping("/{id}/deadline-extensions")
+    public ResponseEntity<Page<DeadlineExtensionResponse>> getDeadlineHistory(@PathVariable Long id, Pageable pageable) {
+        return ResponseEntity.ok(taskService.getDeadlineHistory(id, pageable));
+    }
+
+    @PutMapping("/{id}/pin")
+    public ResponseEntity<TaskDetailResponse> setPinned(
+            @PathVariable Long id,
+            @Valid @RequestBody SetPinnedRequest request,
+            Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        SetPinnedRequest verified = new SetPinnedRequest(request.pinned(), actorId);
+        return ResponseEntity.ok(taskService.setPinned(id, verified));
     }
 
     /** A Director/Super Admin may pass any assignedPersonId (or none, to see everything);

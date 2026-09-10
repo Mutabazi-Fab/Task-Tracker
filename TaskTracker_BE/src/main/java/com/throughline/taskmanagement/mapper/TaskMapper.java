@@ -1,9 +1,16 @@
 package com.throughline.taskmanagement.mapper;
 
 import com.throughline.taskmanagement.dto.response.*;
+import com.throughline.taskmanagement.enums.AssigneeType;
+import com.throughline.taskmanagement.enums.CommentType;
+import com.throughline.taskmanagement.enums.Role;
+import com.throughline.taskmanagement.model.Department;
+import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.TaskComment;
+import com.throughline.taskmanagement.model.TaskDeadlineExtensionRequest;
 import com.throughline.taskmanagement.model.TaskReassignment;
+import com.throughline.taskmanagement.model.Team;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -19,18 +26,27 @@ public class TaskMapper {
                 comment.getAuthor().getFullName(),
                 comment.getPercentageAtComment(),
                 comment.getBody(),
+                comment.getType(),
+                comment.getParentComment() != null ? comment.getParentComment().getId() : null,
                 comment.getCreatedAt()
         );
     }
 
+    private String reassignmentPartyName(AssigneeType type, Person person, Team team, Department department) {
+        if (type == null) return "Unknown";
+        return switch (type) {
+            case INDIVIDUAL -> person != null ? person.getFullName() : "Unknown";
+            case TEAM -> team != null ? team.getName() : "Unknown";
+            case DEPARTMENT -> department != null ? department.getName() : "Unknown";
+        };
+    }
+
     public ReassignmentResponse toReassignmentResponse(TaskReassignment reassignment) {
         if (reassignment == null) return null;
-        String fromName = reassignment.getFromAssigneeType().name().equals("INDIVIDUAL") ?
-                (reassignment.getFromPerson() != null ? reassignment.getFromPerson().getFullName() : "Unknown") :
-                (reassignment.getFromTeam() != null ? reassignment.getFromTeam().getName() : "Unknown");
-        String toName = reassignment.getToAssigneeType().name().equals("INDIVIDUAL") ?
-                (reassignment.getToPerson() != null ? reassignment.getToPerson().getFullName() : "Unknown") :
-                (reassignment.getToTeam() != null ? reassignment.getToTeam().getName() : "Unknown");
+        String fromName = reassignmentPartyName(reassignment.getFromAssigneeType(),
+                reassignment.getFromPerson(), reassignment.getFromTeam(), reassignment.getFromDepartment());
+        String toName = reassignmentPartyName(reassignment.getToAssigneeType(),
+                reassignment.getToPerson(), reassignment.getToTeam(), reassignment.getToDepartment());
 
         return new ReassignmentResponse(
                 reassignment.getId(),
@@ -39,6 +55,22 @@ public class TaskMapper {
                 reassignment.getReassignedBy().getFullName(),
                 reassignment.getReason(),
                 reassignment.getReassignedAt()
+        );
+    }
+
+    public DeadlineExtensionResponse toDeadlineExtensionResponse(TaskDeadlineExtensionRequest request) {
+        if (request == null) return null;
+        return new DeadlineExtensionResponse(
+                request.getId(),
+                request.getCurrentDeadline(),
+                request.getRequestedDeadline(),
+                request.getJustification(),
+                request.getRequestedBy().getFullName(),
+                request.getStatus(),
+                request.getDecidedBy() != null ? request.getDecidedBy().getFullName() : null,
+                request.getDecisionNote(),
+                request.getRequestedAt(),
+                request.getDecidedAt()
         );
     }
 
@@ -52,9 +84,19 @@ public class TaskMapper {
     }
 
     private String assigneeNameOf(Task task) {
-        return task.getAssigneeType().name().equals("INDIVIDUAL") ?
-                (task.getAssignedPerson() != null ? task.getAssignedPerson().getFullName() : "Unknown") :
-                (task.getAssignedTeam() != null ? task.getAssignedTeam().getName() : "Unknown");
+        return switch (task.getAssigneeType()) {
+            case INDIVIDUAL -> task.getAssignedPerson() != null ? task.getAssignedPerson().getFullName() : "Unknown";
+            case TEAM -> task.getAssignedTeam() != null ? task.getAssignedTeam().getName() : "Unknown";
+            case DEPARTMENT -> task.getAssignedDepartment() != null ? task.getAssignedDepartment().getName() : "Unknown";
+        };
+    }
+
+    private Long assigneeIdOf(Task task) {
+        return switch (task.getAssigneeType()) {
+            case INDIVIDUAL -> task.getAssignedPerson() != null ? task.getAssignedPerson().getId() : null;
+            case TEAM -> task.getAssignedTeam() != null ? task.getAssignedTeam().getId() : null;
+            case DEPARTMENT -> task.getAssignedDepartment() != null ? task.getAssignedDepartment().getId() : null;
+        };
     }
 
     public SubtaskSummaryResponse toSubtaskSummary(Task subtask) {
@@ -64,6 +106,7 @@ public class TaskMapper {
                 subtask.getTaskCode(),
                 subtask.getTitle(),
                 assigneeNameOf(subtask),
+                subtask.getAssigneeType(),
                 subtask.getStatus(),
                 subtask.getProgressPercentage(),
                 subtask.getCreatedByRole()
@@ -84,35 +127,70 @@ public class TaskMapper {
                 task.getStatus(),
                 task.getProgressPercentage(),
                 task.getDateAssigned(),
+                task.getDeadline(),
+                task.getSource(),
+                task.getSourceLabel(),
+                task.getSeverity(),
+                task.isPinned(),
                 task.getAssignedBy().getFullName(),
                 task.getReassignments() != null ? task.getReassignments().size() : 0,
                 toCommentResponse(lastComment),
                 task.getParentTask() != null ? task.getParentTask().getId() : null,
                 task.getParentTask() != null ? task.getParentTask().getTaskCode() : null,
                 task.getCreatedByRole(),
-                subtasks
+                subtasks,
+                task.getDepth()
         );
+    }
+
+    /** Same chain-of-command resolution as TaskServiceImpl.resolveDeadlineDecider /
+     *  NotificationServiceImpl's copy of it: deadline decisions are a Director's job, even
+     *  when this task's own assignedBy is a mere Team Leader (who can create a leaf
+     *  subtask — see TaskServiceImpl.createLeafSubtask — but has no authority over its
+     *  deadline). Walk up to the nearest ancestor whose assignedBy is already Director-or-
+     *  above. */
+    private Person resolveDeadlineDecider(Task task) {
+        Task current = task;
+        while (current != null) {
+            if (Role.isAtLeastDirector(current.getAssignedBy().getRole())) {
+                return current.getAssignedBy();
+            }
+            current = current.getParentTask();
+        }
+        return task.getAssignedBy();
     }
 
     public TaskDetailResponse toDetailResponse(Task task) {
         if (task == null) return null;
 
-        Long assigneeId = task.getAssigneeType().name().equals("INDIVIDUAL") ?
-                (task.getAssignedPerson() != null ? task.getAssignedPerson().getId() : null) :
-                (task.getAssignedTeam() != null ? task.getAssignedTeam().getId() : null);
+        Long assigneeId = assigneeIdOf(task);
+        Person deadlineDecider = resolveDeadlineDecider(task);
 
-        Long owningTeamId = task.getParentTask() == null
+        // "The team that currently owns this task": the task's OWN team when it's TEAM-
+        // assigned (a real top-level task, or a depth-1 Department implementation task);
+        // otherwise its parent's team, but only when that parent is itself TEAM-assigned
+        // (an ordinary leaf subtask) — a DEPARTMENT- or INDIVIDUAL-assigned task has no
+        // "owning team" of its own to inherit. Checking the task's OWN assigneeType first,
+        // rather than "parentTask == null", is what makes this correct one level deeper.
+        Long owningTeamId = task.getAssigneeType() == AssigneeType.TEAM
                 ? (task.getAssignedTeam() != null ? task.getAssignedTeam().getId() : null)
-                : (task.getParentTask().getAssignedTeam() != null ? task.getParentTask().getAssignedTeam().getId() : null);
+                : (task.getParentTask() != null && task.getParentTask().getAssignedTeam() != null
+                        ? task.getParentTask().getAssignedTeam().getId() : null);
 
         List<CommentResponse> comments = task.getComments() != null ?
                 task.getComments().stream().map(this::toCommentResponse).toList() : List.of();
         List<ReassignmentResponse> reassignments = task.getReassignments() != null ?
                 task.getReassignments().stream().map(this::toReassignmentResponse).toList() : List.of();
+        // DISCUSSION comments never carry a real percentage reading (see CommentType) —
+        // excluded here so the trend chart only ever plots genuine progress updates.
         List<TaskTimelineResponse> timeline = task.getComments() != null ?
-                task.getComments().stream().map(this::toTimelineResponse).toList() : List.of();
+                task.getComments().stream()
+                        .filter(c -> c.getType() == CommentType.PROGRESS)
+                        .map(this::toTimelineResponse).toList() : List.of();
         List<SubtaskSummaryResponse> subtasks = task.getSubtasks() != null ?
                 task.getSubtasks().stream().map(this::toSubtaskSummary).toList() : List.of();
+        List<DeadlineExtensionResponse> deadlineExtensions = task.getDeadlineExtensionRequests() != null ?
+                task.getDeadlineExtensionRequests().stream().map(this::toDeadlineExtensionResponse).toList() : List.of();
 
         return new TaskDetailResponse(
                 task.getId(),
@@ -126,14 +204,23 @@ public class TaskMapper {
                 task.getStatus(),
                 task.getProgressPercentage(),
                 task.getDateAssigned(),
+                task.getDeadline(),
+                task.getSource(),
+                task.getSourceLabel(),
+                task.getSeverity(),
+                task.isPinned(),
                 task.getAssignedBy().getFullName(),
                 task.getAssignedBy().getId(),
+                deadlineDecider.getFullName(),
+                deadlineDecider.getId(),
                 task.getParentTask() != null ? task.getParentTask().getId() : null,
                 task.getParentTask() != null ? task.getParentTask().getTaskCode() : null,
                 task.getCreatedByRole(),
+                task.getDepth(),
                 subtasks,
                 comments,
                 reassignments,
+                deadlineExtensions,
                 timeline,
                 task.getCreatedAt(),
                 task.getUpdatedAt()

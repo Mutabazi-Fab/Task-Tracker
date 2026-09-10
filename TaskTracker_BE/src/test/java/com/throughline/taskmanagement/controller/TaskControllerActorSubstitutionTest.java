@@ -56,7 +56,8 @@ class TaskControllerActorSubstitutionTest {
     @Test
     void createTask_ignoresASpoofedCreatedById() {
         CreateTaskRequest spoofed = new CreateTaskRequest(
-                "Spoofed task", "desc", SPOOFED_ACTOR_ID, 5L, null, LocalDate.now(), "opening note");
+                "Spoofed task", "desc", SPOOFED_ACTOR_ID, 5L, null, null, LocalDate.now(), LocalDate.now().plusDays(7),
+                null, null, null, "opening note");
 
         controller.createTask(spoofed, authentication);
 
@@ -67,7 +68,7 @@ class TaskControllerActorSubstitutionTest {
 
     @Test
     void reassignTask_ignoresASpoofedReassignedById() {
-        ReassignTaskRequest spoofed = new ReassignTaskRequest(6L, null, SPOOFED_ACTOR_ID, "handing off");
+        ReassignTaskRequest spoofed = new ReassignTaskRequest(6L, null, null, SPOOFED_ACTOR_ID, "handing off");
 
         controller.reassignTask(13L, spoofed, authentication);
 

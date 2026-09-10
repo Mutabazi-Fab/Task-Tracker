@@ -1,0 +1,113 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--space-6);
+}
+
+.bubbleRow {
+  position: relative;
+  height: 20px;
+}
+
+.bubble {
+  position: absolute;
+  top: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--panel);
+  background: var(--accent-strong);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+/* The native input IS the interactive track — thumb/track styled to match the app's
+   accent colour, ticks below are purely visual (see .ticks). The traversed portion (0 up
+   to the current value) fills in green via --fill, an inline custom property set on the
+   element itself in ProgressSlider.tsx — inherited by its own pseudo-elements, which is
+   what lets ::-webkit-slider-runnable-track's background reference it below. */
+.range {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  margin: var(--space-2) 0;
+  background: transparent;
+  border-radius: var(--radius-pill);
+  outline: none;
+  cursor: pointer;
+}
+
+.range:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(to right, var(--accent-strong) var(--fill), var(--track) var(--fill));
+}
+
+.range::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--accent-strong);
+  border: 2px solid var(--panel);
+  box-shadow: 0 0 0 1px var(--accent-strong);
+}
+
+.range::-moz-range-track {
+  height: 6px;
+  background: var(--track);
+  border-radius: var(--radius-pill);
+}
+
+/* Firefox's own dedicated pseudo-element for the traversed portion — no gradient trick
+   needed here, unlike WebKit above. */
+.range::-moz-range-progress {
+  height: 6px;
+  background: var(--accent-strong);
+  border-radius: var(--radius-pill) 0 0 var(--radius-pill);
+}
+
+.range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-strong);
+  border: 2px solid var(--panel);
+  box-shadow: 0 0 0 1px var(--accent-strong);
+}
+
+.ticks {
+  position: relative;
+  height: 28px;
+}
+
+.tick {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.tickMark {
+  width: 1px;
+  height: 6px;
+  background: var(--line);
+}
+
+.tickLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}

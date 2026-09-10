@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../app/routes'
+import { Icon } from '../../../components/ui/Icon'
 import { ProgressBar } from '../../../components/ui/ProgressBar'
+import { SeverityBadge } from '../../../components/ui/SeverityBadge'
 import { StatusChip } from '../../../components/ui/StatusChip'
 import { formatPercentage } from '../../../lib/formatPercentage'
 import type { TaskListItem } from '../../../types/task.types'
@@ -12,8 +14,14 @@ export function TaskMobileRow({ task }: { task: TaskListItem }) {
   return (
     <Link to={ROUTES.taskDetail(task.id)} className={styles.row}>
       <div className={styles.top}>
-        <span className={styles.code}>{task.taskCode}</span>
-        <StatusChip status={task.status} />
+        <span className={styles.code}>
+          {task.pinned && <Icon name="pin" size={12} className={styles.pinIcon} />}
+          {task.taskCode}
+        </span>
+        <div className={styles.badges}>
+          {task.severity && <SeverityBadge severity={task.severity} />}
+          <StatusChip status={task.status} />
+        </div>
       </div>
       <span className={styles.title}>{task.title}</span>
       <span className={styles.assignee}>{task.assigneeName}</span>

@@ -2,6 +2,8 @@ package com.throughline.taskmanagement.model;
 
 import com.throughline.taskmanagement.enums.AssigneeType;
 import com.throughline.taskmanagement.enums.CreatedByRole;
+import com.throughline.taskmanagement.enums.TaskSeverity;
+import com.throughline.taskmanagement.enums.TaskSource;
 import com.throughline.taskmanagement.enums.TaskStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -57,15 +59,34 @@ public class Task {
     @JoinColumn(name = "assigned_team_id")
     private Team assignedTeam;
 
+    /** Set only when assigneeType is DEPARTMENT — an Executive-only, depth-0 task handed
+     *  to a whole Department rather than a Team or Person. Null for every TEAM/INDIVIDUAL
+     *  task, same nullable-but-XOR-enforced-in-code approach as assignedTeam/assignedPerson. */
+    @ManyToOne
+    @JoinColumn(name = "assigned_department_id")
+    private Department assignedDepartment;
+
     /**
-     * Null = top-level (Director-only, always team-assigned). Non-null = a subtask
-     * (created by the Team Leader of the owning team, or the Director directly;
-     * always individual-assigned). Strictly two levels — the service layer rejects
-     * giving a subtask its own children.
+     * Null = top-level (depth 0 — Director-created team/individual task, or an
+     * Executive-created Department task). Non-null = a subtask. Two shapes exist below a
+     * DEPARTMENT-typed root: depth 1 is that Department's "implementation task" (created
+     * by its head Director, team- or individual-assigned, exactly like a depth-0 task one
+     * level deeper — see TaskServiceImpl.createSubtask); depth 2 exists only under a
+     * depth-1 TEAM-assigned implementation task, and is an ordinary individual leaf
+     * subtask, identical in shape to a depth-1 subtask under a plain top-level team task.
+     * A hierarchy NOT rooted in a Department task stays capped at depth 1, exactly as
+     * before this field existed.
      */
     @ManyToOne
     @JoinColumn(name = "parent_task_id")
     private Task parentTask;
+
+    /** 0 for every top-level task (plain or Department-assigned), 1 for a direct child,
+     *  2 for a grandchild (only possible under a DEPARTMENT-rooted hierarchy). Set once at
+     *  creation and never changed afterward — a task is never re-parented, only
+     *  reassigned to a different owner within its own level (see TaskServiceImpl.reassignTask). */
+    @Column(nullable = false)
+    private int depth = 0;
 
     @OneToMany(mappedBy = "parentTask", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("createdAt ASC")
@@ -78,6 +99,45 @@ public class Task {
 
     @Column(nullable = false)
     private LocalDate dateAssigned;
+
+    /** Every task gets a due date going forward — required at creation via
+     *  CreateTaskRequest/CreateSubtaskRequest, but nullable at the DB level since tasks
+     *  created before this field existed have none. Extended directly by whoever set it
+     *  (assignedBy), or via the request/approve workflow by whoever's actually doing the
+     *  work — see TaskService.requestDeadlineExtension/decideDeadlineExtension/
+     *  extendDeadlineDirectly and {@link TaskDeadlineExtensionRequest}. Never touched by
+     *  UpdateTaskRequest — that would silently bypass the whole audit trail. */
+    @Column
+    private LocalDate deadline;
+
+    /** Who actually originated this task — settable by whoever creates it, at any depth,
+     *  no role restriction. Nullable — most tasks are just ordinary internal work with
+     *  no need to record where the mandate came from. */
+    @Enumerated(EnumType.STRING)
+    private TaskSource source;
+
+    /** Free text alongside source (e.g. "Director Musoni", "GPO", "E&Y", "Board of
+     *  Directors") — not a Person FK, since these are often external/organizational, not
+     *  app users. Null unless source is also set. */
+    @Column(length = 200)
+    private String sourceLabel;
+
+    /** Executive-only, settable at creation only — see TaskServiceImpl.createTask/
+     *  createLeafSubtask/createImplementationTask, all of which reject a non-Executive
+     *  creator's attempt to set this, at any depth. Nullable — most tasks carry no
+     *  severity classification at all. */
+    @Enumerated(EnumType.STRING)
+    private TaskSeverity severity;
+
+    /** A manual, independently-editable toggle (see TaskService.setPinned,
+     *  Director-or-above) — NOT hard-derived from severity, since "needs eyes right now"
+     *  genuinely changes over a task's life independent of its fixed severity
+     *  classification. CRITICAL severity sets this true as a one-time default at
+     *  creation only (see the creation paths in TaskServiceImpl) and is never
+     *  re-enforced afterward, so a CRITICAL task can be freely un-pinned once it's
+     *  actually on track. */
+    @Column(nullable = false)
+    private boolean pinned = false;
 
     /**
      * For a subtask: set only via addProgressComment (the comment's percentage), exactly
@@ -101,6 +161,10 @@ public class Task {
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("reassignedAt ASC")
     private List<TaskReassignment> reassignments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("requestedAt ASC")
+    private List<TaskDeadlineExtensionRequest> deadlineExtensionRequests = new ArrayList<>();
 
     @CreationTimestamp
     @Column(updatable = false)

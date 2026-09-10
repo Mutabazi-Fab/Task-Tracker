@@ -10,13 +10,16 @@ export interface TaskReassignment {
 
 /**
  * Body for POST /tasks/{id}/reassign. No newAssigneeType — which field applies is
- * structural, not a free choice: a top-level task can only move to a different TEAM
- * (newTeamId), a subtask can only move to a different PERSON who's a member of the team
- * that owns its parent task (newPersonId). Reason is mandatory server-side.
+ * structural, not a free choice: a TEAM/INDIVIDUAL-assigned task moves via newTeamId/
+ * newPersonId (scoped to the parent's team for an ordinary leaf subtask, org-wide
+ * otherwise — see ReassignTaskModal); a DEPARTMENT-assigned task moves to a different
+ * Department entirely via newDepartmentId (Executive/Super Admin only). Reason is
+ * mandatory server-side.
  */
 export interface ReassignTaskRequest {
   newTeamId?: number
   newPersonId?: number
+  newDepartmentId?: number
   reassignedById: number
   reason: string
 }

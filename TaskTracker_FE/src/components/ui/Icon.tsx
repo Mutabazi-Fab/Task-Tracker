@@ -21,6 +21,7 @@ export type IconName =
   | 'shield'
   | 'bell'
   | 'departments'
+  | 'pin'
   | 'chevronLeft'
   | 'chevronRight'
 
@@ -42,6 +43,7 @@ const PATHS: Record<IconName, string> = {
   bell: 'M6 10.5a6 6 0 0 1 12 0v4.5l1.8 2.5H4.2L6 15z M10 20a2 2 0 0 0 4 0',
   departments:
     'M5 20V6.5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1V20M13 20v-8.5a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1V20M3 20h18M8 8.5h.01M8 12h.01M8 15.5h.01M16.5 13h.01M16.5 16.5h.01',
+  pin: 'M12 2.5c-2.9 0-5.2 2.3-5.2 5.2 0 3.7 5.2 9.3 5.2 9.3s5.2-5.6 5.2-9.3c0-2.9-2.3-5.2-5.2-5.2zM12 10a2.3 2.3 0 1 0 0-4.6 2.3 2.3 0 0 0 0 4.6zM12 17v4.5',
   chevronLeft: 'M15 5l-7 7 7 7',
   chevronRight: 'M9 5l7 7-7 7',
 }
@@ -49,12 +51,13 @@ const PATHS: Record<IconName, string> = {
 interface IconProps {
   name: IconName
   size?: number
+  className?: string
 }
 
-export function Icon({ name, size = 16 }: IconProps) {
+export function Icon({ name, size = 16, className }: IconProps) {
   return (
     <svg
-      className={styles.icon}
+      className={className ? `${styles.icon} ${className}` : styles.icon}
       width={size}
       height={size}
       viewBox="0 0 24 24"

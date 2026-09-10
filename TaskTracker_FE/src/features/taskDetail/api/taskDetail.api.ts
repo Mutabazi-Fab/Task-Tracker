@@ -1,8 +1,13 @@
 import { axiosClient } from '../../../api/axiosClient'
 import { endpoints } from '../../../api/endpoints'
-import type { AddCommentRequest } from '../../../types/comment.types'
+import type { AddCommentRequest, AddDiscussionCommentRequest } from '../../../types/comment.types'
 import type { ReassignTaskRequest } from '../../../types/reassignment.types'
-import type { TaskDetail } from '../../../types/task.types'
+import type { SetPinnedRequest, TaskDetail } from '../../../types/task.types'
+import type {
+  DecideDeadlineExtensionRequest,
+  ExtendDeadlineRequest,
+  RequestDeadlineExtensionRequest,
+} from '../../../types/deadlineExtension.types'
 
 export async function fetchTaskDetail(taskId: number): Promise<TaskDetail> {
   const { data } = await axiosClient.get<TaskDetail>(endpoints.tasks.detail(taskId))
@@ -17,5 +22,41 @@ export async function addComment(taskId: number, payload: AddCommentRequest): Pr
 
 export async function reassignTask(taskId: number, payload: ReassignTaskRequest): Promise<TaskDetail> {
   const { data } = await axiosClient.post<TaskDetail>(endpoints.tasks.reassign(taskId), payload)
+  return data
+}
+
+export async function requestDeadlineExtension(
+  taskId: number,
+  payload: RequestDeadlineExtensionRequest,
+): Promise<TaskDetail> {
+  const { data } = await axiosClient.post<TaskDetail>(endpoints.tasks.deadlineExtensions(taskId), payload)
+  return data
+}
+
+export async function decideDeadlineExtension(
+  taskId: number,
+  extensionId: number,
+  payload: DecideDeadlineExtensionRequest,
+): Promise<TaskDetail> {
+  const { data } = await axiosClient.put<TaskDetail>(
+    endpoints.tasks.decideDeadlineExtension(taskId, extensionId),
+    payload,
+  )
+  return data
+}
+
+export async function extendDeadlineDirectly(taskId: number, payload: ExtendDeadlineRequest): Promise<TaskDetail> {
+  const { data } = await axiosClient.put<TaskDetail>(endpoints.tasks.deadline(taskId), payload)
+  return data
+}
+
+export async function setPinned(taskId: number, payload: SetPinnedRequest): Promise<TaskDetail> {
+  const { data } = await axiosClient.put<TaskDetail>(endpoints.tasks.pin(taskId), payload)
+  return data
+}
+
+/** A plain Q&A message, fully open — never touches percentage/status. */
+export async function addDiscussionComment(taskId: number, payload: AddDiscussionCommentRequest): Promise<TaskDetail> {
+  const { data } = await axiosClient.post<TaskDetail>(endpoints.tasks.discussionComments(taskId), payload)
   return data
 }

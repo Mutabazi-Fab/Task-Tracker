@@ -29,3 +29,14 @@
   color: var(--muted);
   max-width: 70ch;
 }
+
+.source {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.pinIcon {
+  color: var(--accent-strong);
+  flex-shrink: 0;
+}

@@ -10,6 +10,7 @@ import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.model.Notification;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
+import com.throughline.taskmanagement.model.TaskDeadlineExtensionRequest;
 import com.throughline.taskmanagement.model.TaskReassignment;
 import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.model.TeamMember;
@@ -23,6 +24,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 
 @Service
 @Transactional
@@ -147,6 +150,14 @@ public class NotificationServiceImpl implements NotificationService {
                         task.getTitle(), assignedBy.getFullName());
                 send(leader, NotificationType.TASK_ASSIGNED, message, task.getId());
             });
+        } else if (task.getAssigneeType() == AssigneeType.DEPARTMENT) {
+            Person head = task.getAssignedDepartment().getHeadDirector();
+            if (head == null || head.getId().equals(assignedBy.getId())) {
+                return;
+            }
+            String message = String.format("Your department was assigned a new task \"%s\" by %s.",
+                    task.getTitle(), assignedBy.getFullName());
+            send(head, NotificationType.TASK_ASSIGNED, message, task.getId());
         } else {
             Person assignee = task.getAssignedPerson();
             if (assignee.getId().equals(assignedBy.getId())) {
@@ -238,6 +249,99 @@ public class NotificationServiceImpl implements NotificationService {
             }
             send(recipient, NotificationType.SUBTASK_REASSIGNED, broadcastMessage, subtask.getId());
         }
+    }
+
+    @Override
+    public void notifyDepartmentTaskReassigned(Task task, TaskReassignment reassignment) {
+        Person reassignedBy = reassignment.getReassignedBy();
+        Person newHead = reassignment.getToDepartment().getHeadDirector();
+        if (newHead == null || newHead.getId().equals(reassignedBy.getId())) {
+            return;
+        }
+        String previousDepartment = reassignment.getFromDepartment() != null
+                ? reassignment.getFromDepartment().getName() : "no department";
+        String message = String.format("Your department was assigned the task \"%s\" (moved from %s) by %s: %s",
+                task.getTitle(), previousDepartment, reassignedBy.getFullName(), reassignment.getReason());
+        send(newHead, NotificationType.TASK_REASSIGNED, message, task.getId());
+    }
+
+    @Override
+    public void notifyDeadlineExtensionRequested(TaskDeadlineExtensionRequest request) {
+        Task task = request.getTask();
+        Person decider = resolveDeadlineDecider(task);
+        Person requestedBy = request.getRequestedBy();
+        if (decider.getId().equals(requestedBy.getId())) {
+            return;
+        }
+        String message = String.format("%s requested an extension on \"%s\" (%s) to %s: %s",
+                requestedBy.getFullName(), task.getTitle(), task.getTaskCode(),
+                request.getRequestedDeadline(), request.getJustification());
+        send(decider, NotificationType.DEADLINE_EXTENSION_REQUESTED, message, task.getId());
+    }
+
+    /** Same chain-of-command resolution as TaskServiceImpl.resolveDeadlineDecider: a
+     *  deadline decision is a Director's job, never a Team Leader's, even when a Team
+     *  Leader is technically this task's own assignedBy (they created it as a leaf
+     *  subtask — see TaskServiceImpl.createLeafSubtask). Walk up to the nearest ancestor
+     *  whose assignedBy is already Director-or-above and notify them instead. */
+    private Person resolveDeadlineDecider(Task task) {
+        Task current = task;
+        while (current != null) {
+            if (Role.isAtLeastDirector(current.getAssignedBy().getRole())) {
+                return current.getAssignedBy();
+            }
+            current = current.getParentTask();
+        }
+        return task.getAssignedBy();
+    }
+
+    @Override
+    public void notifyDeadlineExtensionApproved(TaskDeadlineExtensionRequest request) {
+        Task task = request.getTask();
+        Person requestedBy = request.getRequestedBy();
+        Person decidedBy = request.getDecidedBy();
+        if (decidedBy != null && decidedBy.getId().equals(requestedBy.getId())) {
+            return;
+        }
+        String decider = decidedBy != null ? decidedBy.getFullName() : "someone";
+        String message = String.format("Your extension request on \"%s\" (%s) was approved by %s — new deadline %s.",
+                task.getTitle(), task.getTaskCode(), decider, request.getRequestedDeadline());
+        send(requestedBy, NotificationType.DEADLINE_EXTENSION_APPROVED, message, task.getId());
+    }
+
+    @Override
+    public void notifyDeadlineExtensionRejected(TaskDeadlineExtensionRequest request) {
+        Task task = request.getTask();
+        Person requestedBy = request.getRequestedBy();
+        Person decidedBy = request.getDecidedBy();
+        if (decidedBy != null && decidedBy.getId().equals(requestedBy.getId())) {
+            return;
+        }
+        String decider = decidedBy != null ? decidedBy.getFullName() : "someone";
+        String reasonSuffix = request.getDecisionNote() != null && !request.getDecisionNote().isBlank()
+                ? ": " + request.getDecisionNote() : ".";
+        String message = String.format("Your extension request on \"%s\" (%s) was rejected by %s%s",
+                task.getTitle(), task.getTaskCode(), decider, reasonSuffix);
+        send(requestedBy, NotificationType.DEADLINE_EXTENSION_REJECTED, message, task.getId());
+    }
+
+    @Override
+    public void notifyDeadlineExtended(Task task, LocalDate previousDeadline, Person extendedBy) {
+        Person recipient = switch (task.getAssigneeType()) {
+            case INDIVIDUAL -> task.getAssignedPerson();
+            case TEAM -> task.getAssignedTeam() != null
+                    ? teamMemberRepository.findByTeamIdAndIsLeaderTrue(task.getAssignedTeam().getId())
+                            .map(TeamMember::getPerson).orElse(null)
+                    : null;
+            case DEPARTMENT -> task.getAssignedDepartment() != null ? task.getAssignedDepartment().getHeadDirector() : null;
+        };
+        if (recipient == null || recipient.getId().equals(extendedBy.getId())) {
+            return;
+        }
+        String previous = previousDeadline != null ? previousDeadline.toString() : "none";
+        String message = String.format("%s extended the deadline on \"%s\" (%s) from %s to %s.",
+                extendedBy.getFullName(), task.getTitle(), task.getTaskCode(), previous, task.getDeadline());
+        send(recipient, NotificationType.DEADLINE_EXTENDED, message, task.getId());
     }
 
     private void send(Person recipient, NotificationType type, String message, Long relatedEntityId) {

@@ -4,10 +4,13 @@ import com.throughline.taskmanagement.dto.response.NotificationResponse;
 import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
+import com.throughline.taskmanagement.model.TaskDeadlineExtensionRequest;
 import com.throughline.taskmanagement.model.TaskReassignment;
 import com.throughline.taskmanagement.model.TeamMembershipChange;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import java.time.LocalDate;
 
 public interface NotificationService {
     /** Called by TeamServiceImpl right after a membership change is persisted — never
@@ -57,6 +60,29 @@ public interface NotificationService {
      *  assignee directly, plus every other member of the (unchanged) owning team — team
      *  visibility, same reasoning as notifySubtaskAssigned. */
     void notifySubtaskReassigned(Task subtask, TaskReassignment reassignment);
+
+    /** Called by TaskServiceImpl right after a Department-level task is moved to a
+     *  different Department. Notifies the new Department's head Director — the old head
+     *  isn't notified of losing it, same "only the new owner hears about it" pattern as
+     *  notifyTaskReassigned. */
+    void notifyDepartmentTaskReassigned(Task task, TaskReassignment reassignment);
+
+    /** Called by TaskServiceImpl right after a deadline extension is requested. Notifies
+     *  whoever set the task's deadline (its assignedBy) — the person who'll decide it. */
+    void notifyDeadlineExtensionRequested(TaskDeadlineExtensionRequest request);
+
+    /** Called by TaskServiceImpl right after an extension request is approved. Notifies
+     *  whoever requested it. */
+    void notifyDeadlineExtensionApproved(TaskDeadlineExtensionRequest request);
+
+    /** Called by TaskServiceImpl right after an extension request is rejected. Notifies
+     *  whoever requested it. */
+    void notifyDeadlineExtensionRejected(TaskDeadlineExtensionRequest request);
+
+    /** Called by TaskServiceImpl right after a deadline is extended directly (no request/
+     *  approval round-trip). Notifies the task's accountable person — the same recipient
+     *  notifyTaskAssigned/notifyTaskStalled would resolve to. */
+    void notifyDeadlineExtended(Task task, LocalDate previousDeadline, Person extendedBy);
 
     Page<NotificationResponse> getNotifications(Long recipientId, Pageable pageable);
 

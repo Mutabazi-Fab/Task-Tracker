@@ -1,36 +1,50 @@
 package com.throughline.taskmanagement.service.impl;
 
 import com.throughline.taskmanagement.dto.request.AddCommentRequest;
+import com.throughline.taskmanagement.dto.request.AddDiscussionCommentRequest;
 import com.throughline.taskmanagement.dto.request.CreateSubtaskRequest;
 import com.throughline.taskmanagement.dto.request.CreateTaskRequest;
+import com.throughline.taskmanagement.dto.request.DecideDeadlineExtensionRequest;
+import com.throughline.taskmanagement.dto.request.ExtendDeadlineRequest;
 import com.throughline.taskmanagement.dto.request.ReassignTaskRequest;
+import com.throughline.taskmanagement.dto.request.RequestDeadlineExtensionRequest;
+import com.throughline.taskmanagement.dto.request.SetPinnedRequest;
 import com.throughline.taskmanagement.dto.request.UpdateTaskRequest;
 import com.throughline.taskmanagement.dto.response.CommentResponse;
+import com.throughline.taskmanagement.dto.response.DeadlineExtensionResponse;
 import com.throughline.taskmanagement.dto.response.ReassignmentResponse;
 import com.throughline.taskmanagement.dto.response.TaskActivityResponse;
 import com.throughline.taskmanagement.dto.response.TaskDetailResponse;
 import com.throughline.taskmanagement.dto.response.TaskListResponse;
 import com.throughline.taskmanagement.dto.response.TaskTimelineResponse;
 import com.throughline.taskmanagement.enums.AssigneeType;
+import com.throughline.taskmanagement.enums.CommentType;
 import com.throughline.taskmanagement.enums.CreatedByRole;
+import com.throughline.taskmanagement.enums.ExtensionRequestStatus;
 import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.enums.TaskActivityAction;
+import com.throughline.taskmanagement.enums.TaskSeverity;
+import com.throughline.taskmanagement.enums.TaskSource;
 import com.throughline.taskmanagement.enums.TaskStatus;
 import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.InvalidAssignmentException;
 import com.throughline.taskmanagement.exception.InvalidProgressException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.mapper.TaskMapper;
+import com.throughline.taskmanagement.model.Department;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.TaskActivity;
 import com.throughline.taskmanagement.model.TaskComment;
+import com.throughline.taskmanagement.model.TaskDeadlineExtensionRequest;
 import com.throughline.taskmanagement.model.TaskReassignment;
 import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.model.TeamMember;
+import com.throughline.taskmanagement.repository.DepartmentRepository;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.TaskActivityRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
+import com.throughline.taskmanagement.repository.TaskDeadlineExtensionRequestRepository;
 import com.throughline.taskmanagement.repository.TaskReassignmentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
 import com.throughline.taskmanagement.repository.TeamMemberRepository;
@@ -39,11 +53,14 @@ import com.throughline.taskmanagement.service.NotificationService;
 import com.throughline.taskmanagement.service.TaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import java.util.List;
 
@@ -56,8 +73,10 @@ public class TaskServiceImpl implements TaskService {
     private final PersonRepository personRepository;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
+    private final DepartmentRepository departmentRepository;
     private final TaskCommentRepository taskCommentRepository;
     private final TaskReassignmentRepository taskReassignmentRepository;
+    private final TaskDeadlineExtensionRequestRepository taskDeadlineExtensionRequestRepository;
     private final TaskMapper taskMapper;
     private final NotificationService notificationService;
     private final TaskActivityRepository taskActivityRepository;
@@ -72,32 +91,45 @@ public class TaskServiceImpl implements TaskService {
 
         boolean hasTeam = request.assignedTeamId() != null;
         boolean hasPerson = request.assignedPersonId() != null;
-        if (hasTeam == hasPerson) {
-            throw new InvalidAssignmentException("Provide exactly one of assignedTeamId or assignedPersonId.");
+        boolean hasDepartment = request.assignedDepartmentId() != null;
+        if ((hasTeam ? 1 : 0) + (hasPerson ? 1 : 0) + (hasDepartment ? 1 : 0) != 1) {
+            throw new InvalidAssignmentException("Provide exactly one of assignedTeamId, assignedPersonId, or assignedDepartmentId.");
+        }
+        if (hasDepartment && !Role.isAtLeastExecutive(createdBy.getRole())) {
+            throw new ForbiddenActionException("Only an Executive or Super Admin can assign a task to a whole Department.");
         }
         requireReasonableDate(request.dateAssigned());
+        requireDeadlineNotBeforeAssignment(request.dateAssigned(), request.deadline());
 
         Task task = new Task();
         task.setTaskCode(nextTaskCode());
         task.setTitle(request.title());
         task.setDescription(request.description());
         task.setDateAssigned(request.dateAssigned());
+        task.setDeadline(request.deadline());
         task.setAssignedBy(createdBy);
         task.setParentTask(null);
+        task.setDepth(0);
         task.setCreatedByRole(CreatedByRole.DIRECTOR);
         task.setProgressPercentage(0);
         task.setStatus(TaskStatus.PENDING);
+        applySourceAndSeverity(task, request.source(), request.sourceLabel(), request.severity(), createdBy);
 
         if (hasTeam) {
             Team assignedTeam = teamRepository.findById(request.assignedTeamId())
                     .orElseThrow(() -> new ResourceNotFoundException("assignedTeamId not found"));
             task.setAssigneeType(AssigneeType.TEAM);
             task.setAssignedTeam(assignedTeam);
-        } else {
+        } else if (hasPerson) {
             Person assignedPerson = personRepository.findById(request.assignedPersonId())
                     .orElseThrow(() -> new ResourceNotFoundException("assignedPersonId not found"));
             task.setAssigneeType(AssigneeType.INDIVIDUAL);
             task.setAssignedPerson(assignedPerson);
+        } else {
+            Department assignedDepartment = departmentRepository.findById(request.assignedDepartmentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("assignedDepartmentId not found"));
+            task.setAssigneeType(AssigneeType.DEPARTMENT);
+            task.setAssignedDepartment(assignedDepartment);
         }
 
         Task savedTask = taskRepository.save(task);
@@ -113,17 +145,42 @@ public class TaskServiceImpl implements TaskService {
         Task parent = taskRepository.findWithDetailsById(parentTaskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Parent task not found"));
 
-        if (parent.getParentTask() != null) {
-            throw new InvalidAssignmentException("Cannot create a subtask under another subtask — hierarchy is strictly two levels.");
-        }
-        if (parent.getAssignedTeam() == null) {
-            throw new InvalidAssignmentException("Parent task has no assigned team.");
+        if (parent.getDepth() >= 2) {
+            throw new InvalidAssignmentException("Cannot create a subtask under a task that's already at maximum depth.");
         }
         requireReasonableDate(request.dateAssigned());
-        Long teamId = parent.getAssignedTeam().getId();
+        requireDeadlineNotBeforeAssignment(request.dateAssigned(), request.deadline());
 
         Person createdBy = personRepository.findById(request.createdById())
                 .orElseThrow(() -> new ResourceNotFoundException("createdById not found"));
+
+        // A DEPARTMENT-typed parent is always depth 0 (only an Executive creates one) — its
+        // child is the new depth-1 "implementation task", team- or individual-assigned, org-
+        // wide. Every other parent shape (a plain top-level TEAM task, or a depth-1 TEAM
+        // implementation task) uses the original leaf-subtask case: always INDIVIDUAL,
+        // always a member of the parent's own team. An INDIVIDUAL-typed parent is never a
+        // valid parent at all — falls through to the "no assigned team" rejection below,
+        // same as before this phase.
+        if (parent.getAssigneeType() == AssigneeType.DEPARTMENT) {
+            return createImplementationTask(parent, request, createdBy);
+        }
+        return createLeafSubtask(parent, request, createdBy);
+    }
+
+    /** The classic case, unchanged in shape from before Phase B: parent must be TEAM-
+     *  assigned (a plain top-level task, or a depth-1 Department implementation task),
+     *  and the new subtask is always INDIVIDUAL, always a member of that same team. */
+    private TaskDetailResponse createLeafSubtask(Task parent, CreateSubtaskRequest request, Person createdBy) {
+        if (parent.getAssignedTeam() == null) {
+            throw new InvalidAssignmentException("Parent task has no assigned team.");
+        }
+        if (request.assignedPersonId() == null) {
+            throw new InvalidAssignmentException("assignedPersonId is required.");
+        }
+        if (request.assignedTeamId() != null) {
+            throw new InvalidAssignmentException("A leaf subtask is always assigned to a person, not a team.");
+        }
+        Long teamId = parent.getAssignedTeam().getId();
 
         // isDirector here also covers Super Admin (see Role.isAtLeastDirector) — a
         // Super-Admin-created subtask is recorded as CreatedByRole.DIRECTOR below, same as
@@ -147,13 +204,16 @@ public class TaskServiceImpl implements TaskService {
         subtask.setTitle(request.title());
         subtask.setDescription(request.description());
         subtask.setDateAssigned(request.dateAssigned());
+        subtask.setDeadline(request.deadline());
         subtask.setAssignedBy(createdBy);
         subtask.setAssigneeType(AssigneeType.INDIVIDUAL);
         subtask.setAssignedPerson(assignedPerson);
         subtask.setParentTask(parent);
+        subtask.setDepth(parent.getDepth() + 1);
         subtask.setCreatedByRole(isDirector ? CreatedByRole.DIRECTOR : CreatedByRole.TEAM_LEADER);
         subtask.setProgressPercentage(0);
         subtask.setStatus(TaskStatus.PENDING);
+        applySourceAndSeverity(subtask, request.source(), request.sourceLabel(), request.severity(), createdBy);
 
         Task savedSubtask = taskRepository.save(subtask);
         addOpeningComment(savedSubtask, createdBy, request.openingNote());
@@ -164,6 +224,73 @@ public class TaskServiceImpl implements TaskService {
         recordActivity(savedSubtask, TaskActivityAction.CREATED, createdBy);
 
         return taskMapper.toDetailResponse(savedSubtask);
+    }
+
+    /** The new depth-1 case: parent is a Department-assigned Executive task. Its
+     *  "implementation task" is team- or individual-assigned, exactly like a plain
+     *  top-level task's own creation (see createTask) — no team-membership restriction,
+     *  since this is the Department turning an org-wide mandate into real work, not a Team
+     *  Leader staffing their own roster. Restricted to that Department's own head Director
+     *  (or an Executive/Super Admin override) — not just any Director, since a Director
+     *  who doesn't head this Department has no standing over its Executive-level mandate. */
+    private TaskDetailResponse createImplementationTask(Task parent, CreateSubtaskRequest request, Person createdBy) {
+        Department department = parent.getAssignedDepartment();
+        boolean isExecutiveOrAbove = Role.isAtLeastExecutive(createdBy.getRole());
+        boolean isThisDepartmentsHead = department.getHeadDirector() != null
+                && department.getHeadDirector().getId().equals(createdBy.getId());
+        if (!isExecutiveOrAbove && !isThisDepartmentsHead) {
+            throw new ForbiddenActionException(
+                    "Only this Department's head Director or an Executive/Super Admin can create its implementation task.");
+        }
+
+        boolean hasTeam = request.assignedTeamId() != null;
+        boolean hasPerson = request.assignedPersonId() != null;
+        if (hasTeam == hasPerson) {
+            throw new InvalidAssignmentException("Provide exactly one of assignedTeamId or assignedPersonId.");
+        }
+
+        Task task = new Task();
+        task.setTaskCode(nextTaskCode());
+        task.setTitle(request.title());
+        task.setDescription(request.description());
+        task.setDateAssigned(request.dateAssigned());
+        task.setDeadline(request.deadline());
+        task.setAssignedBy(createdBy);
+        task.setParentTask(parent);
+        task.setDepth(parent.getDepth() + 1);
+        // No distinct audit value for "a Department's implementation task" — recorded the
+        // same way a Director's own subtask creation is, since the authorization tier
+        // (Director-or-above) is what CreatedByRole is actually tracking here.
+        task.setCreatedByRole(CreatedByRole.DIRECTOR);
+        task.setProgressPercentage(0);
+        task.setStatus(TaskStatus.PENDING);
+        applySourceAndSeverity(task, request.source(), request.sourceLabel(), request.severity(), createdBy);
+
+        if (hasTeam) {
+            Team assignedTeam = teamRepository.findById(request.assignedTeamId())
+                    .orElseThrow(() -> new ResourceNotFoundException("assignedTeamId not found"));
+            task.setAssigneeType(AssigneeType.TEAM);
+            task.setAssignedTeam(assignedTeam);
+        } else {
+            Person assignedPerson = personRepository.findById(request.assignedPersonId())
+                    .orElseThrow(() -> new ResourceNotFoundException("assignedPersonId not found"));
+            task.setAssigneeType(AssigneeType.INDIVIDUAL);
+            task.setAssignedPerson(assignedPerson);
+        }
+
+        Task savedTask = taskRepository.save(task);
+        addOpeningComment(savedTask, createdBy, request.openingNote());
+
+        parent.getSubtasks().add(savedTask);
+        recalculateParentRollup(parent);
+        // Reuses the plain "you were handed a new task" notification, not
+        // notifySubtaskAssigned — this reads to its recipient exactly like a fresh
+        // top-level assignment (a whole team or a single person taking on new work), not
+        // like being handed one slice of an already-known team task.
+        notificationService.notifyTaskAssigned(savedTask, createdBy);
+        recordActivity(savedTask, TaskActivityAction.CREATED, createdBy);
+
+        return taskMapper.toDetailResponse(savedTask);
     }
 
     private String nextTaskCode() {
@@ -182,9 +309,15 @@ public class TaskServiceImpl implements TaskService {
         task.getComments().add(comment);
     }
 
-    /** Recomputes a top-level task's percentage as the average of its subtasks (0 if none),
-     *  called whenever a subtask's percentage or existence changes. Never called for a comment
-     *  added directly to a top-level task itself — that's narrative only. */
+    /** Recomputes a task's percentage as the average of its own subtasks (0 if none),
+     *  called whenever one of them changes. Self-recursive: a depth-1 task under a
+     *  Department root can itself have a parent (the depth-0 Department task), which must
+     *  bubble the same way once this task's own rollup changes — nothing guarantees exactly
+     *  one depth-1 child per Department task, so genuine average-of-children rollup all the
+     *  way up is the only correct behavior. For the plain 2-level case this is a no-op
+     *  beyond the first call, since a depth-0 task has no parent of its own. Never called
+     *  for a comment added directly to a task that's rolled-up (TEAM-assigned) — that's
+     *  narrative only. */
     private void recalculateParentRollup(Task parent) {
         List<Task> subtasks = taskRepository.findByParentTaskId(parent.getId());
         int rollup = subtasks.isEmpty()
@@ -194,6 +327,10 @@ public class TaskServiceImpl implements TaskService {
         recalculateStatus(parent);
         parent.setStaleAlertSentAt(null);
         taskRepository.save(parent);
+
+        if (parent.getParentTask() != null) {
+            recalculateParentRollup(parent.getParentTask());
+        }
     }
 
     private void recalculateStatus(Task task) {
@@ -222,15 +359,16 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public Page<TaskListResponse> getAllTasks(TaskStatus status, Long assignedPersonId, Pageable pageable) {
+        Pageable pinnedFirst = withPinnedFirst(pageable);
         Page<Task> tasks;
         if (assignedPersonId != null && status != null) {
-            tasks = taskRepository.findVisibleToPersonAndStatus(assignedPersonId, status, pageable);
+            tasks = taskRepository.findVisibleToPersonAndStatus(assignedPersonId, status, pinnedFirst);
         } else if (assignedPersonId != null) {
-            tasks = taskRepository.findVisibleToPerson(assignedPersonId, pageable);
+            tasks = taskRepository.findVisibleToPerson(assignedPersonId, pinnedFirst);
         } else if (status != null) {
-            tasks = taskRepository.findByStatus(status, pageable);
+            tasks = taskRepository.findByStatus(status, pinnedFirst);
         } else {
-            tasks = taskRepository.findAll(pageable);
+            tasks = taskRepository.findAll(pinnedFirst);
         }
         return tasks.map(t -> {
             TaskComment lastComment = taskCommentRepository.findFirstByTaskIdOrderByCreatedAtDesc(t.getId()).orElse(null);
@@ -245,8 +383,10 @@ public class TaskServiceImpl implements TaskService {
 
         // Defense-in-depth: @Min/@Max on AddCommentRequest already reject an out-of-range
         // percentage at the HTTP boundary, but this is the one place progress is actually
-        // written, so it must not trust the DTO alone.
-        if (request.percentageAtComment() < 0 || request.percentageAtComment() > 100) {
+        // written, so it must not trust the DTO alone. Skipped entirely when null — that's
+        // a valid, genuinely optional narrative-only comment, not a missing value to reject.
+        if (request.percentageAtComment() != null
+                && (request.percentageAtComment() < 0 || request.percentageAtComment() > 100)) {
             throw new InvalidProgressException("percentageAtComment must be between 0 and 100");
         }
 
@@ -254,26 +394,37 @@ public class TaskServiceImpl implements TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("Author not found"));
 
         long commentCount = taskCommentRepository.countByTaskId(taskId);
-        boolean isTeamAssigned = task.getAssigneeType() == AssigneeType.TEAM;
+        // TEAM and DEPARTMENT are both rolled up from children, never set by a comment
+        // directly — a DEPARTMENT task always has children (its implementation task), same
+        // reasoning as a plain team task's subtasks.
+        boolean isRolledUp = task.getAssigneeType() == AssigneeType.TEAM || task.getAssigneeType() == AssigneeType.DEPARTMENT;
+        // A narrative-only comment — no percentage sent at all — changes nothing about
+        // actual progress, whether that's because the task is rolled up (percentage is
+        // never trusted from a comment either way) or because the commenter explicitly
+        // chose to leave a note without logging a change.
+        boolean isNarrativeOnly = isRolledUp || request.percentageAtComment() == null;
 
         TaskComment comment = new TaskComment();
         comment.setTask(task);
         comment.setAuthor(author);
-        // A team-assigned task's comment is a narrative record only — whatever percentage
-        // the request carries is never trusted for it. The comment still needs SOME
-        // percentage on record for the trend/timeline chart, so it gets the task's own
-        // current progress (the subtask rollup) instead of an arbitrary number the
-        // commenter picked, which could otherwise show a value the task never actually had.
-        comment.setPercentageAtComment(isTeamAssigned ? task.getProgressPercentage() : request.percentageAtComment());
+        // A narrative-only comment still needs SOME percentage on record for the trend/
+        // timeline chart, so it gets the task's own current progress instead of an
+        // arbitrary number, or one the commenter never actually supplied.
+        comment.setPercentageAtComment(isNarrativeOnly ? task.getProgressPercentage() : request.percentageAtComment());
         comment.setBody(request.body());
         comment.setSequenceNumber((int) commentCount + 1);
+        // Always PROGRESS — this endpoint is the progress log specifically; a plain
+        // question/discussion message goes through addDiscussionComment instead, which
+        // never touches percentage/status at all (see CommentType).
+        comment.setType(CommentType.PROGRESS);
 
         taskCommentRepository.save(comment);
         task.getComments().add(comment);
 
-        if (isTeamAssigned) {
-            // Narrative only — the task's percentage is always the subtask average (or 0
-            // with none), never set by a comment directly.
+        if (isNarrativeOnly) {
+            // No change to progress/status, and staleAlertSentAt is deliberately left
+            // untouched — a note that changes nothing shouldn't quietly defeat the
+            // stalled-task check by looking like real activity.
         } else {
             // Individually-assigned: a normal subtask (parentTask != null), or a task from
             // before the hierarchy rework that's individually-assigned at the top level
@@ -293,21 +444,88 @@ public class TaskServiceImpl implements TaskService {
         return taskMapper.toDetailResponse(taskRepository.save(task));
     }
 
+    /** A plain Q&A message — fully open (any authenticated person may post on any task,
+     *  same as the progress log always has been; see the plan's confirmed decision to keep
+     *  discussion visibility/authorship completely open rather than restricting it to a
+     *  private Executive-Director channel). Never touches percentage/status/
+     *  staleAlertSentAt. Threading is one level deep, same as Instagram: replying to a
+     *  reply attaches to that reply's own top-level parent instead of nesting further. */
+    @Override
+    public TaskDetailResponse addDiscussionComment(Long taskId, AddDiscussionCommentRequest request) {
+        Task task = taskRepository.findWithDetailsById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        Person author = personRepository.findById(request.authorId())
+                .orElseThrow(() -> new ResourceNotFoundException("Author not found"));
+
+        TaskComment parent = null;
+        if (request.parentCommentId() != null) {
+            TaskComment requestedParent = taskCommentRepository.findById(request.parentCommentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("parentCommentId not found"));
+            if (!requestedParent.getTask().getId().equals(taskId)) {
+                throw new InvalidAssignmentException("parentCommentId doesn't belong to this task.");
+            }
+            // Flatten a reply-to-a-reply onto the original top-level comment, exactly like
+            // Instagram does, rather than growing a deeper thread.
+            parent = requestedParent.getParentComment() != null ? requestedParent.getParentComment() : requestedParent;
+        }
+
+        long commentCount = taskCommentRepository.countByTaskId(taskId);
+
+        TaskComment comment = new TaskComment();
+        comment.setTask(task);
+        comment.setAuthor(author);
+        // A snapshot only, for display consistency with PROGRESS comments — never trusted
+        // as a real reading (see toTimelineResponse's PROGRESS-only filter, which excludes
+        // DISCUSSION comments from the trend chart entirely).
+        comment.setPercentageAtComment(task.getProgressPercentage());
+        comment.setBody(request.body());
+        comment.setSequenceNumber((int) commentCount + 1);
+        comment.setType(CommentType.DISCUSSION);
+        comment.setParentComment(parent);
+
+        taskCommentRepository.save(comment);
+        task.getComments().add(comment);
+
+        return taskMapper.toDetailResponse(task);
+    }
+
     @Override
     public TaskDetailResponse reassignTask(Long taskId, ReassignTaskRequest request) {
         Task task = taskRepository.findWithDetailsById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
         Person reassignedBy = personRepository.findById(request.reassignedById())
                 .orElseThrow(() -> new ResourceNotFoundException("reassignedBy not found"));
-        requireCanReassign(reassignedBy, task);
+
+        boolean isDepartmentTask = task.getAssigneeType() == AssigneeType.DEPARTMENT;
+        if (isDepartmentTask) {
+            // A different, higher tier than the team-leader-or-Director rule below — moving
+            // a whole Department task to a different Department is the same authority as
+            // creating one in the first place (see createTask), not something a Director
+            // who happens to lead a team gets a say in.
+            if (!Role.isAtLeastExecutive(reassignedBy.getRole())) {
+                throw new ForbiddenActionException(
+                        "Only an Executive or Super Admin can reassign a Department-level task to a different department.");
+            }
+        } else {
+            requireCanReassign(reassignedBy, task);
+        }
 
         TaskReassignment reassignment = new TaskReassignment();
         reassignment.setTask(task);
         reassignment.setFromAssigneeType(task.getAssigneeType());
         reassignment.setFromPerson(task.getAssignedPerson());
         reassignment.setFromTeam(task.getAssignedTeam());
+        reassignment.setFromDepartment(task.getAssignedDepartment());
 
-        if (task.getParentTask() == null) {
+        // "Top-level-shaped" covers a true depth-0 task AND a depth-1 implementation task
+        // under a Department root — both are staffed the same free-form way (team OR
+        // individual, no membership restriction). Only a real leaf subtask (depth 1 under a
+        // plain team task, or depth 2 under a Department's team-assigned implementation
+        // task) is restricted to reassignSubtask's "same team, individual only" rule.
+        boolean isTopLevelShaped = isTopLevelShaped(task);
+        if (isDepartmentTask) {
+            reassignDepartmentTask(task, request, reassignment);
+        } else if (isTopLevelShaped) {
             reassignTopLevelTask(task, request, reassignment);
         } else {
             reassignSubtask(task, request, reassignment);
@@ -318,7 +536,9 @@ public class TaskServiceImpl implements TaskService {
         task.getReassignments().add(reassignment);
 
         Task savedTask = taskRepository.save(task);
-        if (task.getParentTask() == null) {
+        if (isDepartmentTask) {
+            notificationService.notifyDepartmentTaskReassigned(savedTask, reassignment);
+        } else if (isTopLevelShaped) {
             notificationService.notifyTaskReassigned(savedTask, reassignment);
         } else {
             notificationService.notifySubtaskReassigned(savedTask, reassignment);
@@ -327,14 +547,44 @@ public class TaskServiceImpl implements TaskService {
         return taskMapper.toDetailResponse(savedTask);
     }
 
-    /** Only a Director/Super Admin, or the leader of the team that currently owns this task
-     *  (the task's own team for a top-level task, its parent's team for a subtask), may
-     *  reassign it — an ordinary team member cannot. */
+    /** Moves a Department-level task (always depth 0) to a different Department entirely —
+     *  e.g. the CEO's office realizes what was handed to IT actually belongs to
+     *  Cybersecurity. Never changes assigneeType (stays DEPARTMENT), only which Department
+     *  owns it — its (not yet created, or already-created) implementation task is
+     *  untouched by this, same as reassigning a top-level task never touches its subtasks. */
+    private void reassignDepartmentTask(Task task, ReassignTaskRequest request, TaskReassignment reassignment) {
+        if (request.newDepartmentId() == null) {
+            throw new InvalidAssignmentException("newDepartmentId is required to reassign a Department-level task.");
+        }
+        if (task.getAssignedDepartment() != null && task.getAssignedDepartment().getId().equals(request.newDepartmentId())) {
+            throw new InvalidAssignmentException("Task is already assigned to this department.");
+        }
+
+        Department newDepartment = departmentRepository.findById(request.newDepartmentId())
+                .orElseThrow(() -> new ResourceNotFoundException("newDepartmentId not found"));
+
+        reassignment.setToAssigneeType(AssigneeType.DEPARTMENT);
+        reassignment.setToDepartment(newDepartment);
+        task.setAssignedDepartment(newDepartment);
+    }
+
+    /** True for a real depth-0 task, and for a depth-1 implementation task directly under a
+     *  Department root — both are staffed the same free-form way as a brand-new top-level
+     *  task. False for an ordinary leaf subtask, which is restricted to one team. */
+    private boolean isTopLevelShaped(Task task) {
+        return task.getParentTask() == null || task.getParentTask().getAssigneeType() == AssigneeType.DEPARTMENT;
+    }
+
+    /** Only a Director/Super Admin, or the leader of the team that currently owns this task,
+     *  may reassign it — an ordinary team member cannot. "The team that currently owns this
+     *  task" is the task's OWN team when it's top-level-shaped (a real depth-0 task, or a
+     *  depth-1 Department implementation task — see isTopLevelShaped), or its parent's team
+     *  for an ordinary leaf subtask. */
     private void requireCanReassign(Person actor, Task task) {
         if (Role.isAtLeastDirector(actor.getRole())) {
             return;
         }
-        Team owningTeam = task.getParentTask() == null
+        Team owningTeam = isTopLevelShaped(task)
                 ? task.getAssignedTeam()
                 : task.getParentTask().getAssignedTeam();
         boolean isLeader = owningTeam != null
@@ -431,9 +681,10 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public Page<TaskListResponse> searchTasks(String q, Long assignedPersonId, Pageable pageable) {
+        Pageable pinnedFirst = withPinnedFirst(pageable);
         Page<Task> results = assignedPersonId != null
-                ? taskRepository.searchVisibleToPerson(q, assignedPersonId, pageable)
-                : taskRepository.search(q, pageable);
+                ? taskRepository.searchVisibleToPerson(q, assignedPersonId, pinnedFirst)
+                : taskRepository.search(q, pinnedFirst);
         return results.map(t -> {
             TaskComment lastComment = taskCommentRepository.findFirstByTaskIdOrderByCreatedAtDesc(t.getId()).orElse(null);
             return taskMapper.toListResponse(t, lastComment);
@@ -462,6 +713,43 @@ public class TaskServiceImpl implements TaskService {
         if (dateAssigned.isAfter(LocalDate.now().plusYears(1))) {
             throw new InvalidAssignmentException("dateAssigned can't be more than a year in the future.");
         }
+    }
+
+    /** A deadline before the task even starts makes no sense — checked once at creation,
+     *  same "typo guard" spirit as requireReasonableDate. Never re-checked afterward: the
+     *  extension workflow only ever moves a deadline later (see requestDeadlineExtension/
+     *  extendDeadlineDirectly), so it can never regress behind dateAssigned once past this. */
+    private void requireDeadlineNotBeforeAssignment(LocalDate dateAssigned, LocalDate deadline) {
+        if (deadline.isBefore(dateAssigned)) {
+            throw new InvalidAssignmentException("deadline can't be before dateAssigned.");
+        }
+    }
+
+    /** source/sourceLabel are open to anyone creating a task, at any depth. severity is
+     *  Executive-only — a Director creating a depth-1 task under a Department root still
+     *  can't set it, even when the Department task above it is CRITICAL. CRITICAL sets
+     *  pinned = true as a one-time default here, at creation only — pinning itself stays
+     *  a separate, independently-editable toggle afterward (see setPinned), never
+     *  re-enforced from here. */
+    private void applySourceAndSeverity(Task task, TaskSource source, String sourceLabel, TaskSeverity severity, Person createdBy) {
+        task.setSource(source);
+        task.setSourceLabel(sourceLabel);
+        if (severity != null) {
+            if (!Role.isAtLeastExecutive(createdBy.getRole())) {
+                throw new ForbiddenActionException("Only an Executive or Super Admin can set a task's severity.");
+            }
+            task.setSeverity(severity);
+            task.setPinned(severity == TaskSeverity.CRITICAL);
+        }
+    }
+
+    /** Composes "pinned first" as an extra leading sort key onto whatever the client
+     *  already requested (or nothing, for the "none" sort case) — transparent under
+     *  Newest/Recently-updated/All exactly as those already work, rather than a 4th
+     *  client-facing sort option or duplicated repository queries. */
+    private Pageable withPinnedFirst(Pageable pageable) {
+        Sort pinnedFirst = Sort.by(Sort.Direction.DESC, "pinned").and(pageable.getSort());
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), pinnedFirst);
     }
 
     @Override
@@ -499,9 +787,11 @@ public class TaskServiceImpl implements TaskService {
         activity.setTitle(task.getTitle());
         activity.setParentTaskCode(task.getParentTask() != null ? task.getParentTask().getTaskCode() : null);
         activity.setAssigneeType(task.getAssigneeType());
-        activity.setAssigneeSummary(task.getAssigneeType() == AssigneeType.TEAM
-                ? task.getAssignedTeam().getName()
-                : task.getAssignedPerson().getFullName());
+        activity.setAssigneeSummary(switch (task.getAssigneeType()) {
+            case TEAM -> task.getAssignedTeam().getName();
+            case INDIVIDUAL -> task.getAssignedPerson().getFullName();
+            case DEPARTMENT -> task.getAssignedDepartment().getName();
+        });
         activity.setPerformedBy(performedBy);
         taskActivityRepository.save(activity);
     }
@@ -525,5 +815,194 @@ public class TaskServiceImpl implements TaskService {
                 a.getPerformedBy().getFullName(),
                 a.getTimestamp()
         ));
+    }
+
+    @Override
+    public TaskDetailResponse requestDeadlineExtension(Long taskId, RequestDeadlineExtensionRequest request) {
+        Task task = taskRepository.findWithDetailsById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        Person requestedBy = personRepository.findById(request.requestedById())
+                .orElseThrow(() -> new ResourceNotFoundException("requestedById not found"));
+        requireCanRequestExtension(requestedBy, task);
+
+        if (task.getDeadline() != null && !request.requestedDeadline().isAfter(task.getDeadline())) {
+            throw new InvalidAssignmentException("requestedDeadline must be after the task's current deadline.");
+        }
+
+        TaskDeadlineExtensionRequest extensionRequest = new TaskDeadlineExtensionRequest();
+        extensionRequest.setTask(task);
+        extensionRequest.setCurrentDeadline(task.getDeadline());
+        extensionRequest.setRequestedDeadline(request.requestedDeadline());
+        extensionRequest.setJustification(request.justification());
+        extensionRequest.setRequestedBy(requestedBy);
+        extensionRequest.setStatus(ExtensionRequestStatus.PENDING);
+
+        TaskDeadlineExtensionRequest saved = taskDeadlineExtensionRequestRepository.save(extensionRequest);
+        task.getDeadlineExtensionRequests().add(saved);
+
+        notificationService.notifyDeadlineExtensionRequested(saved);
+
+        return taskMapper.toDetailResponse(task);
+    }
+
+    @Override
+    public TaskDetailResponse decideDeadlineExtension(Long taskId, Long extensionRequestId, DecideDeadlineExtensionRequest request) {
+        Task task = taskRepository.findWithDetailsById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        TaskDeadlineExtensionRequest extensionRequest = taskDeadlineExtensionRequestRepository.findById(extensionRequestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Deadline extension request not found"));
+        if (!extensionRequest.getTask().getId().equals(taskId)) {
+            throw new InvalidAssignmentException("This extension request doesn't belong to this task.");
+        }
+        if (extensionRequest.getStatus() != ExtensionRequestStatus.PENDING) {
+            throw new InvalidAssignmentException("This extension request has already been decided.");
+        }
+
+        Person decidedBy = personRepository.findById(request.decidedById())
+                .orElseThrow(() -> new ResourceNotFoundException("decidedById not found"));
+        requireCanDecideDeadline(decidedBy, task);
+
+        extensionRequest.setStatus(request.approve() ? ExtensionRequestStatus.APPROVED : ExtensionRequestStatus.REJECTED);
+        extensionRequest.setDecidedBy(decidedBy);
+        extensionRequest.setDecisionNote(request.decisionNote());
+        extensionRequest.setDecidedAt(LocalDateTime.now());
+        taskDeadlineExtensionRequestRepository.save(extensionRequest);
+
+        if (request.approve()) {
+            task.setDeadline(extensionRequest.getRequestedDeadline());
+            taskRepository.save(task);
+            notificationService.notifyDeadlineExtensionApproved(extensionRequest);
+        } else {
+            notificationService.notifyDeadlineExtensionRejected(extensionRequest);
+        }
+
+        return taskMapper.toDetailResponse(task);
+    }
+
+    @Override
+    public TaskDetailResponse extendDeadlineDirectly(Long taskId, ExtendDeadlineRequest request) {
+        Task task = taskRepository.findWithDetailsById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        Person extendedBy = personRepository.findById(request.extendedById())
+                .orElseThrow(() -> new ResourceNotFoundException("extendedById not found"));
+        requireCanDecideDeadline(extendedBy, task);
+
+        if (task.getDeadline() != null && !request.newDeadline().isAfter(task.getDeadline())) {
+            throw new InvalidAssignmentException("newDeadline must be after the task's current deadline.");
+        }
+
+        LocalDate previousDeadline = task.getDeadline();
+        String justification = request.reason() != null && !request.reason().isBlank()
+                ? request.reason() : "Extended directly, no request/approval round-trip.";
+
+        TaskDeadlineExtensionRequest extensionRequest = new TaskDeadlineExtensionRequest();
+        extensionRequest.setTask(task);
+        extensionRequest.setCurrentDeadline(previousDeadline);
+        extensionRequest.setRequestedDeadline(request.newDeadline());
+        extensionRequest.setJustification(justification);
+        extensionRequest.setRequestedBy(extendedBy);
+        extensionRequest.setStatus(ExtensionRequestStatus.APPROVED);
+        extensionRequest.setDecidedBy(extendedBy);
+        extensionRequest.setDecisionNote(request.reason());
+        extensionRequest.setDecidedAt(LocalDateTime.now());
+
+        TaskDeadlineExtensionRequest saved = taskDeadlineExtensionRequestRepository.save(extensionRequest);
+        task.getDeadlineExtensionRequests().add(saved);
+        task.setDeadline(request.newDeadline());
+
+        Task savedTask = taskRepository.save(task);
+        notificationService.notifyDeadlineExtended(savedTask, previousDeadline, extendedBy);
+
+        return taskMapper.toDetailResponse(savedTask);
+    }
+
+    @Override
+    public Page<DeadlineExtensionResponse> getDeadlineHistory(Long taskId, Pageable pageable) {
+        return taskDeadlineExtensionRequestRepository.findByTaskIdOrderByRequestedAtDesc(taskId, pageable)
+                .map(taskMapper::toDeadlineExtensionResponse);
+    }
+
+    @Override
+    public TaskDetailResponse setPinned(Long taskId, SetPinnedRequest request) {
+        Task task = taskRepository.findWithDetailsById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        Person changedBy = personRepository.findById(request.changedById())
+                .orElseThrow(() -> new ResourceNotFoundException("changedById not found"));
+        if (!Role.isAtLeastDirector(changedBy.getRole())) {
+            throw new ForbiddenActionException("Only a Director or Super Admin can pin or unpin a task.");
+        }
+
+        task.setPinned(request.pinned());
+        return taskMapper.toDetailResponse(taskRepository.save(task));
+    }
+
+    /** Same "who's actually responsible for this task" concept used by TaskStalenessJob/
+     *  notifyTaskAssigned: the team's Leader for a TEAM-assigned task, the assignee for an
+     *  INDIVIDUAL one, or the Department's head Director for a DEPARTMENT-assigned one.
+     *  Null if there's nobody to resolve to (e.g. a team with no leader set). */
+    private Person resolveAccountablePerson(Task task) {
+        return switch (task.getAssigneeType()) {
+            case INDIVIDUAL -> task.getAssignedPerson();
+            case TEAM -> task.getAssignedTeam() != null
+                    ? teamMemberRepository.findByTeamIdAndIsLeaderTrue(task.getAssignedTeam().getId())
+                            .map(TeamMember::getPerson).orElse(null)
+                    : null;
+            case DEPARTMENT -> task.getAssignedDepartment() != null ? task.getAssignedDepartment().getHeadDirector() : null;
+        };
+    }
+
+    /** The override tier for anything deadline-related on this task: Executive-or-above
+     *  for a Department-assigned task (the same authority that assigns/reassigns one),
+     *  Director-or-above otherwise — mirrors reassignTask's own split. */
+    private boolean isDeadlineOverrideTier(Task task, Person actor) {
+        return task.getAssigneeType() == AssigneeType.DEPARTMENT
+                ? Role.isAtLeastExecutive(actor.getRole())
+                : Role.isAtLeastDirector(actor.getRole());
+    }
+
+    /** Requesting an extension: the task's own accountable person (Team Leader/individual
+     *  assignee/Department head Director), or the override tier. */
+    private void requireCanRequestExtension(Person actor, Task task) {
+        if (isDeadlineOverrideTier(task, actor)) {
+            return;
+        }
+        Person accountable = resolveAccountablePerson(task);
+        if (accountable == null || !accountable.getId().equals(actor.getId())) {
+            throw new ForbiddenActionException("Only this task's accountable person, or a Director/Super Admin "
+                    + "(Executive/Super Admin for a Department task), can request a deadline extension.");
+        }
+    }
+
+    /** Deciding a request, or extending directly: this task's own deadline decider (see
+     *  resolveDeadlineDecider), or the override tier. */
+    private void requireCanDecideDeadline(Person actor, Task task) {
+        if (isDeadlineOverrideTier(task, actor)) {
+            return;
+        }
+        if (!resolveDeadlineDecider(task).getId().equals(actor.getId())) {
+            throw new ForbiddenActionException("Only whoever set this task's deadline, or a Director/Super Admin "
+                    + "(Executive/Super Admin for a Department task), can decide a deadline extension.");
+        }
+    }
+
+    /** Deadline decisions are a Director's job, not a Team Leader's — a Team Leader can
+     *  create a leaf subtask (see createLeafSubtask), which makes them that subtask's own
+     *  assignedBy, but they're still just a Member as far as authority over a deadline
+     *  goes. So: use this task's own assignedBy if they already hold Director-or-above,
+     *  otherwise walk up to its parent (whose creator is always Director-or-above — every
+     *  task shape ABOVE a plain leaf subtask is created by a Director, an Executive, or a
+     *  Department's head Director, all of which satisfy this) and use that. Chain of
+     *  command: whoever's actually doing the work requests, but a real Director decides. */
+    private Person resolveDeadlineDecider(Task task) {
+        Task current = task;
+        while (current != null) {
+            if (Role.isAtLeastDirector(current.getAssignedBy().getRole())) {
+                return current.getAssignedBy();
+            }
+            current = current.getParentTask();
+        }
+        // Unreachable in practice — every hierarchy is rooted in a Director/Executive-
+        // created task, so the loop above always returns before running out of ancestors.
+        return task.getAssignedBy();
     }
 }

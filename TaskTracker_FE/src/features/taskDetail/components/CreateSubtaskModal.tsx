@@ -5,13 +5,23 @@ import { CreateSubtaskForm } from './CreateSubtaskForm'
 
 interface CreateSubtaskModalProps {
   parentTaskId: number
+  /** The parent's own team — meaningless (and unused) when isDepartmentImplementation is
+   *  true, since that case picks a team org-wide instead of using one fixed team's roster. */
   teamId: number
+  /** True only when the parent is a Department-assigned Executive task. */
+  isDepartmentImplementation?: boolean
   open: boolean
   onClose: () => void
 }
 
 /** Form shell + submit — owns the mutation, CreateSubtaskForm owns only the fields. */
-export function CreateSubtaskModal({ parentTaskId, teamId, open, onClose }: CreateSubtaskModalProps) {
+export function CreateSubtaskModal({
+  parentTaskId,
+  teamId,
+  isDepartmentImplementation,
+  open,
+  onClose,
+}: CreateSubtaskModalProps) {
   const createSubtask = useCreateSubtask(parentTaskId)
 
   function handleSubmit(payload: Parameters<typeof createSubtask.mutate>[0]) {
@@ -19,9 +29,15 @@ export function CreateSubtaskModal({ parentTaskId, teamId, open, onClose }: Crea
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="New subtask">
+    <Modal open={open} onClose={onClose} title={isDepartmentImplementation ? 'New implementation task' : 'New subtask'}>
       {createSubtask.isError && <ErrorMessage message={createSubtask.error.message} />}
-      <CreateSubtaskForm teamId={teamId} onSubmit={handleSubmit} onCancel={onClose} submitting={createSubtask.isPending} />
+      <CreateSubtaskForm
+        teamId={teamId}
+        isDepartmentImplementation={isDepartmentImplementation}
+        onSubmit={handleSubmit}
+        onCancel={onClose}
+        submitting={createSubtask.isPending}
+      />
     </Modal>
   )
 }

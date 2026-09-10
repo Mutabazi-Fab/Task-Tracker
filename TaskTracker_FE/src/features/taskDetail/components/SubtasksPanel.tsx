@@ -6,39 +6,52 @@ import { EmptyState } from '../../../components/ui/EmptyState'
 import { ProgressBar } from '../../../components/ui/ProgressBar'
 import { StatusChip } from '../../../components/ui/StatusChip'
 import { useAuth } from '../../auth/useAuth'
+import { useDepartment } from '../../departments/hooks/useDepartment'
 import { CreateSubtaskModal } from './CreateSubtaskModal'
 import type { TaskDetail } from '../../../types/task.types'
 import styles from './SubtasksPanel.module.css'
 
 /**
- * Only rendered for a team-assigned top-level task (task.parentTaskId === null AND
- * task.assigneeType === 'TEAM') — a subtask can't have subtasks of its own, and neither can
- * a top-level task assigned directly to one person (see CreateTaskForm): with no team
- * behind it, there's no one to break it down further, so it's structurally a dead end just
- * like a subtask is. "Add subtask" is shown to a Director/Super Admin, or to whoever leads
- * the team this task is assigned to (task.assigneeId is that team's id here, since
- * assigneeType is already confirmed TEAM) — the same two roles the backend itself allows.
+ * Rendered for any task that can still be broken down further: a TEAM-assigned task under
+ * depth 2 (a plain top-level task, or a depth-1 Department implementation task — either
+ * way, its "Add subtask" flow is the ordinary leaf case, scoped to that team's roster), or
+ * a DEPARTMENT-assigned task (always depth 0 — its "Add subtask" is the new implementation-
+ * task case, team-or-individual, org-wide). See TaskDetailPage's canHaveSubtasks, which
+ * mirrors this exactly so the panel is never rendered when it'd have nothing to offer.
+ *
+ * "Add subtask" itself is shown to a Director/Super Admin, to whoever leads the team this
+ * task is assigned to (the ordinary leaf case), or — for a Department task — to that
+ * Department's own head Director or an Executive/Super Admin, the same tiers the backend
+ * itself enforces.
  */
 export function SubtasksPanel({ task }: { task: TaskDetail }) {
-  const { currentUser, isDirector } = useAuth()
+  const { currentUser, isDirector, isExecutive } = useAuth()
   const [createOpen, setCreateOpen] = useState(false)
 
+  const isDepartmentTask = task.assigneeType === 'DEPARTMENT'
+  const departmentQuery = useDepartment(isDepartmentTask ? (task.assigneeId ?? NaN) : NaN)
+
   const isThisTeamsLeader = currentUser?.teams.some((t) => t.teamId === task.assigneeId && t.isLeader)
-  const canCreate = isDirector || isThisTeamsLeader
+  const isThisDepartmentsHead =
+    isDepartmentTask && departmentQuery.data?.headDirectorId === currentUser?.id
+
+  const canCreate = isDepartmentTask
+    ? isExecutive || isThisDepartmentsHead
+    : isDirector || isThisTeamsLeader
 
   return (
     <>
       <div className={styles.header}>
-        <span>Subtasks</span>
+        <span>{isDepartmentTask ? 'Implementation task' : 'Subtasks'}</span>
         {canCreate && (
           <Button variant="primary" onClick={() => setCreateOpen(true)}>
-            Add subtask
+            {isDepartmentTask ? 'Add implementation task' : 'Add subtask'}
           </Button>
         )}
       </div>
 
       {task.subtasks.length === 0 ? (
-        <EmptyState title="No subtasks yet" />
+        <EmptyState title={isDepartmentTask ? 'No implementation task yet' : 'No subtasks yet'} />
       ) : (
         <div className={styles.list}>
           {task.subtasks.map((subtask) => (
@@ -62,7 +75,8 @@ export function SubtasksPanel({ task }: { task: TaskDetail }) {
       {canCreate && (
         <CreateSubtaskModal
           parentTaskId={task.id}
-          teamId={task.assigneeId}
+          teamId={task.assigneeId ?? NaN}
+          isDepartmentImplementation={isDepartmentTask}
           open={createOpen}
           onClose={() => setCreateOpen(false)}
         />

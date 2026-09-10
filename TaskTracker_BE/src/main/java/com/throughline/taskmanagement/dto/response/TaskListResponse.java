@@ -2,6 +2,8 @@ package com.throughline.taskmanagement.dto.response;
 
 import com.throughline.taskmanagement.enums.AssigneeType;
 import com.throughline.taskmanagement.enums.CreatedByRole;
+import com.throughline.taskmanagement.enums.TaskSeverity;
+import com.throughline.taskmanagement.enums.TaskSource;
 import com.throughline.taskmanagement.enums.TaskStatus;
 import java.time.LocalDate;
 import java.util.List;
@@ -15,6 +17,12 @@ public record TaskListResponse(
     TaskStatus status,
     int progressPercentage,
     LocalDate dateAssigned,
+    // Null only for a task that predates this field.
+    LocalDate deadline,
+    TaskSource source,
+    String sourceLabel,
+    TaskSeverity severity,
+    boolean pinned,
     String assignedByName,
     int reassignmentCount,
     CommentResponse lastComment,
@@ -25,8 +33,12 @@ public record TaskListResponse(
     // assigneeType INDIVIDUAL with nothing else distinguishing them.
     String parentTaskCode,
     CreatedByRole createdByRole,
-    // Empty for a subtask (subtasks can't nest). For a top-level task, lets a list view
-    // (e.g. the Director's Dashboard) show who created each subtask and who it's assigned
-    // to without a second call per row.
-    List<SubtaskSummaryResponse> subtasks
+    // Empty for a leaf subtask (can't nest further). For a top-level task, or a depth-1
+    // TEAM-assigned implementation task, lets a list view (e.g. the Director's Dashboard)
+    // show who created each subtask and who it's assigned to without a second call per row.
+    List<SubtaskSummaryResponse> subtasks,
+    // 0 for a real top-level task (plain or Department-assigned), 1 for a direct child
+    // (an ordinary subtask, or a Department's implementation task), 2 for a grandchild
+    // (only possible under a Department-rooted hierarchy).
+    int depth
 ) {}

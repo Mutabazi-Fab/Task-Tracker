@@ -1,39 +1,99 @@
 import { useState } from 'react'
 import { Button } from '../../../components/ui/Button'
+import { ErrorMessage } from '../../../components/ui/ErrorMessage'
+import { SegmentedControl } from '../../../components/ui/SegmentedControl'
 import { SelectField } from '../../../components/ui/SelectField'
 import { TextField } from '../../../components/ui/TextField'
 import { useAuth } from '../../auth/useAuth'
 import { useTeamMembers } from '../../teams/hooks/useTeamMembers'
+import { useTeams } from '../../teams/hooks/useTeams'
+import { usePeople } from '../../people/hooks/usePeople'
 import { maxAssignableDate } from '../../../lib/dateLimits'
-import type { CreateSubtaskRequest } from '../../../types/task.types'
+import type { CreateSubtaskRequest, TaskSeverity, TaskSource } from '../../../types/task.types'
 import styles from '../../tasks/components/CreateTaskForm.module.css'
 
+type AssigneeKind = 'TEAM' | 'INDIVIDUAL'
+
+const ASSIGNEE_KIND_OPTIONS: { label: string; value: AssigneeKind }[] = [
+  { label: 'Team', value: 'TEAM' },
+  { label: 'Individual', value: 'INDIVIDUAL' },
+]
+
+const SOURCE_OPTIONS: { label: string; value: TaskSource }[] = [
+  { label: 'Initiative', value: 'INITIATIVE' },
+  { label: 'Auditor', value: 'AUDITOR' },
+  { label: 'Regulator', value: 'REGULATOR' },
+  { label: 'Board', value: 'BOARD' },
+]
+
+// Executive/Super Admin only — the backend rejects a non-Executive creator's attempt to
+// set severity, so a plain Director/Team Leader never sees a picker that'd just be
+// rejected.
+const SEVERITY_OPTIONS: { label: string; value: TaskSeverity }[] = [
+  { label: 'Low', value: 'LOW' },
+  { label: 'Medium', value: 'MEDIUM' },
+  { label: 'High', value: 'HIGH' },
+  { label: 'Critical', value: 'CRITICAL' },
+]
+
 interface CreateSubtaskFormProps {
-  /** The parent (top-level) task's assigned team — subtask assignees are scoped to its
-   *  members, never anyone outside the team. */
+  /** The ordinary leaf case: parent is TEAM-assigned (a plain top-level task, or a depth-1
+   *  Department implementation task) — assignees are scoped to that team's members, never
+   *  anyone outside it, and always individual. */
   teamId: number
+  /** True only when the parent is a Department-assigned Executive task — this is its
+   *  "implementation task", team- or individual-assigned, org-wide, exactly like creating
+   *  a brand-new top-level task (see CreateTaskForm). teamId above is unused in this mode. */
+  isDepartmentImplementation?: boolean
   onSubmit: (payload: CreateSubtaskRequest) => void
   onCancel: () => void
   submitting: boolean
 }
 
-/** createdById is always the logged-in person — the backend still checks they're either
- *  a Director/Super Admin or this team's leader, but there's no reason to ask when we
- *  already know who's here. */
-export function CreateSubtaskForm({ teamId, onSubmit, onCancel, submitting }: CreateSubtaskFormProps) {
-  const { currentUser } = useAuth()
-  const membersQuery = useTeamMembers(teamId)
+/** createdById is always the logged-in person — the backend still checks authorization
+ *  (this team's leader or a Director/Super Admin for the leaf case; that Department's
+ *  head Director or an Executive/Super Admin for the implementation-task case), but
+ *  there's no reason to ask when we already know who's here. */
+export function CreateSubtaskForm({
+  teamId,
+  isDepartmentImplementation = false,
+  onSubmit,
+  onCancel,
+  submitting,
+}: CreateSubtaskFormProps) {
+  const { currentUser, isExecutive } = useAuth()
+  const membersQuery = useTeamMembers(teamId, !isDepartmentImplementation)
+  const teamsQuery = useTeams()
+  const peopleQuery = usePeople()
 
+  const [assigneeKind, setAssigneeKind] = useState<AssigneeKind>('TEAM')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [assignedPersonId, setAssignedPersonId] = useState('')
+  const [assignedTeamId, setAssignedTeamId] = useState('')
   const [dateAssigned, setDateAssigned] = useState('')
+  const [deadline, setDeadline] = useState('')
+  const [source, setSource] = useState<TaskSource | ''>('')
+  const [sourceLabel, setSourceLabel] = useState('')
+  const [severity, setSeverity] = useState<TaskSeverity | ''>('')
   const [openingNote, setOpeningNote] = useState('')
 
+  function handleAssigneeKindChange(next: AssigneeKind) {
+    setAssigneeKind(next)
+    setAssignedPersonId('')
+    setAssignedTeamId('')
+  }
+
+  const hasTarget = isDepartmentImplementation
+    ? assigneeKind === 'TEAM' ? assignedTeamId !== '' : assignedPersonId !== ''
+    : assignedPersonId !== ''
+  const isDeadlineBeforeAssignment = dateAssigned !== '' && deadline !== '' && deadline < dateAssigned
   const isValid =
     title.trim() !== '' &&
-    assignedPersonId !== '' &&
+    hasTarget &&
     dateAssigned !== '' &&
+    deadline !== '' &&
+    !isDeadlineBeforeAssignment &&
     openingNote.trim() !== '' &&
     currentUser !== null
 
@@ -45,8 +105,14 @@ export function CreateSubtaskForm({ teamId, onSubmit, onCancel, submitting }: Cr
       title: title.trim(),
       description: description.trim() || undefined,
       createdById: currentUser.id,
-      assignedPersonId: Number(assignedPersonId),
+      assignedPersonId:
+        !isDepartmentImplementation || assigneeKind === 'INDIVIDUAL' ? Number(assignedPersonId) || undefined : undefined,
+      assignedTeamId: isDepartmentImplementation && assigneeKind === 'TEAM' ? Number(assignedTeamId) : undefined,
       dateAssigned,
+      deadline,
+      source: source || undefined,
+      sourceLabel: source && sourceLabel.trim() ? sourceLabel.trim() : undefined,
+      severity: isExecutive && severity ? severity : undefined,
       openingNote: openingNote.trim(),
     })
   }
@@ -57,13 +123,39 @@ export function CreateSubtaskForm({ teamId, onSubmit, onCancel, submitting }: Cr
 
       <TextField label="Description" value={description} onChange={setDescription} placeholder="Optional detail" />
 
-      <SelectField
-        label="Assigned to"
-        value={assignedPersonId}
-        onChange={setAssignedPersonId}
-        placeholder={membersQuery.isLoading ? 'Loading…' : 'Select a team member'}
-        options={(membersQuery.data ?? []).map((member) => ({ label: member.fullName, value: String(member.personId) }))}
-      />
+      {isDepartmentImplementation ? (
+        <>
+          <div className={styles.field}>
+            <span className={styles.label}>Assign to</span>
+            <SegmentedControl options={ASSIGNEE_KIND_OPTIONS} value={assigneeKind} onChange={handleAssigneeKindChange} />
+          </div>
+          {assigneeKind === 'TEAM' ? (
+            <SelectField
+              label="Assigned team"
+              value={assignedTeamId}
+              onChange={setAssignedTeamId}
+              placeholder={teamsQuery.isLoading ? 'Loading…' : 'Select a team'}
+              options={(teamsQuery.data ?? []).map((team) => ({ label: team.name, value: String(team.id) }))}
+            />
+          ) : (
+            <SelectField
+              label="Assigned person"
+              value={assignedPersonId}
+              onChange={setAssignedPersonId}
+              placeholder={peopleQuery.isLoading ? 'Loading…' : 'Select a person'}
+              options={(peopleQuery.data ?? []).map((person) => ({ label: person.fullName, value: String(person.id) }))}
+            />
+          )}
+        </>
+      ) : (
+        <SelectField
+          label="Assigned to"
+          value={assignedPersonId}
+          onChange={setAssignedPersonId}
+          placeholder={membersQuery.isLoading ? 'Loading…' : 'Select a team member'}
+          options={(membersQuery.data ?? []).map((member) => ({ label: member.fullName, value: String(member.personId) }))}
+        />
+      )}
 
       <TextField
         label="Date assigned"
@@ -73,6 +165,42 @@ export function CreateSubtaskForm({ teamId, onSubmit, onCancel, submitting }: Cr
         max={maxAssignableDate()}
         required
       />
+
+      <TextField
+        label="Deadline"
+        type="date"
+        value={deadline}
+        onChange={setDeadline}
+        min={dateAssigned || undefined}
+        required
+      />
+      {isDeadlineBeforeAssignment && <ErrorMessage message="Deadline can't be before the date assigned." />}
+
+      <SelectField
+        label="Source (optional)"
+        value={source}
+        onChange={(v) => setSource(v as TaskSource)}
+        placeholder="Where this came from"
+        options={SOURCE_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+      />
+      {source && (
+        <TextField
+          label="Source detail"
+          value={sourceLabel}
+          onChange={setSourceLabel}
+          placeholder="e.g. Director Musoni, GPO, E&Y, Board of Directors"
+        />
+      )}
+
+      {isExecutive && (
+        <SelectField
+          label="Severity (optional)"
+          value={severity}
+          onChange={(v) => setSeverity(v as TaskSeverity)}
+          placeholder="Not classified"
+          options={SEVERITY_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+        />
+      )}
 
       <TextField
         label="Opening note"

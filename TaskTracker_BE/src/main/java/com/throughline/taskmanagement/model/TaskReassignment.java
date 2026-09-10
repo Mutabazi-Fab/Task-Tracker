@@ -37,6 +37,12 @@ public class TaskReassignment {
     @JoinColumn(name = "from_team_id")
     private Team fromTeam;
 
+    /** Set only when a Department-level task is reassigned to a different Department —
+     *  the only reassignment lane that ever touches a Department at all. */
+    @ManyToOne
+    @JoinColumn(name = "from_department_id")
+    private Department fromDepartment;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AssigneeType toAssigneeType;
@@ -48,6 +54,10 @@ public class TaskReassignment {
     @ManyToOne
     @JoinColumn(name = "to_team_id")
     private Team toTeam;
+
+    @ManyToOne
+    @JoinColumn(name = "to_department_id")
+    private Department toDepartment;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "reassigned_by_id", nullable = false)

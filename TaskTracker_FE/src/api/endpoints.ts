@@ -32,6 +32,12 @@ export const endpoints = {
     reassignments: (id: number | string) => `${BASE}/tasks/${id}/reassignments`,
     progressTimeline: (id: number | string) => `${BASE}/tasks/${id}/progress-timeline`,
     activity: () => `${BASE}/tasks/activity`,
+    deadline: (id: number | string) => `${BASE}/tasks/${id}/deadline`,
+    deadlineExtensions: (id: number | string) => `${BASE}/tasks/${id}/deadline-extensions`,
+    decideDeadlineExtension: (id: number | string, extensionId: number | string) =>
+      `${BASE}/tasks/${id}/deadline-extensions/${extensionId}`,
+    pin: (id: number | string) => `${BASE}/tasks/${id}/pin`,
+    discussionComments: (id: number | string) => `${BASE}/tasks/${id}/discussion-comments`,
   },
   people: {
     list: () => `${BASE}/people`,

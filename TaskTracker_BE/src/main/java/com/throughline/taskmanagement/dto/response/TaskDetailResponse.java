@@ -2,6 +2,8 @@ package com.throughline.taskmanagement.dto.response;
 
 import com.throughline.taskmanagement.enums.AssigneeType;
 import com.throughline.taskmanagement.enums.CreatedByRole;
+import com.throughline.taskmanagement.enums.TaskSeverity;
+import com.throughline.taskmanagement.enums.TaskSource;
 import com.throughline.taskmanagement.enums.TaskStatus;
 
 import java.time.LocalDate;
@@ -25,14 +27,41 @@ public record TaskDetailResponse(
     TaskStatus status,
     int progressPercentage,
     LocalDate dateAssigned,
+    // Null only for a task that predates this field. Extended directly by whoever set it,
+    // or via the request/approve workflow — see deadlineExtensions below and
+    // TaskService.requestDeadlineExtension/decideDeadlineExtension/extendDeadlineDirectly.
+    LocalDate deadline,
+    // Both null unless this task's creator chose to record where it originated.
+    TaskSource source,
+    String sourceLabel,
+    // Null unless an Executive/Super Admin set it at creation — see TaskServiceImpl.
+    TaskSeverity severity,
+    // A manual, independently-editable toggle — see TaskService.setPinned. Not derived
+    // from severity; a CRITICAL task can be freely un-pinned once it's on track.
+    boolean pinned,
     String assignedByName,
     Long assignedById,
+    // Who actually decides a deadline extension on this task — a Director-or-above,
+    // always, even when assignedById is a mere Team Leader (who can create a leaf subtask
+    // — see TaskServiceImpl.createLeafSubtask — but has no authority over its deadline).
+    // Usually the same as assignedById/assignedByName above, but not always; the frontend
+    // should gate deadline-decision UI off THIS field, not assignedById. See
+    // TaskServiceImpl.resolveDeadlineDecider.
+    String deadlineDeciderName,
+    Long deadlineDeciderId,
     Long parentTaskId,
     String parentTaskCode,
     CreatedByRole createdByRole,
+    // 0 for a real top-level task (plain or Department-assigned), 1 for a direct child, 2
+    // for a grandchild (only possible under a Department-rooted hierarchy). Lets the
+    // frontend decide whether "Add subtask" should even be offered (rejected server-side
+    // past depth 2 regardless) and which shape of form to show (team-or-individual for a
+    // Department's implementation task, individual-only for an ordinary subtask).
+    int depth,
     List<SubtaskSummaryResponse> subtasks,
     List<CommentResponse> comments,
     List<ReassignmentResponse> reassignments,
+    List<DeadlineExtensionResponse> deadlineExtensions,
     List<TaskTimelineResponse> progressTimeline,
     LocalDateTime createdAt,
     LocalDateTime updatedAt

@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../app/routes'
+import { Icon } from '../../../components/ui/Icon'
 import { ProgressBar } from '../../../components/ui/ProgressBar'
+import { SeverityBadge } from '../../../components/ui/SeverityBadge'
 import { StatusChip } from '../../../components/ui/StatusChip'
 import { formatDate } from '../../../lib/formatDate'
 import { formatPercentage } from '../../../lib/formatPercentage'
@@ -12,7 +14,10 @@ import styles from './TaskTable.module.css'
 export function TaskTableRow({ task }: { task: TaskListItem }) {
   return (
     <Link to={ROUTES.taskDetail(task.id)} className={styles.row}>
-      <span className={styles.code}>{task.taskCode}</span>
+      <span className={styles.code}>
+        {task.pinned && <Icon name="pin" size={12} className={styles.pinIcon} />}
+        {task.taskCode}
+      </span>
       <div className={styles.title}>
         <span className={styles.titleText}>{task.title}</span>
         <span className={styles.dateAssigned}>{formatDate(task.dateAssigned)}</span>
@@ -30,8 +35,9 @@ export function TaskTableRow({ task }: { task: TaskListItem }) {
         <ProgressBar percentage={task.progressPercentage} status={task.status} />
         <span className={styles.percentage}>{formatPercentage(task.progressPercentage)}</span>
       </div>
-      <span>
+      <span className={styles.statusCell}>
         <StatusChip status={task.status} />
+        {task.severity && <SeverityBadge severity={task.severity} />}
       </span>
       <TaskLastCommentCell comment={task.lastComment} />
     </Link>

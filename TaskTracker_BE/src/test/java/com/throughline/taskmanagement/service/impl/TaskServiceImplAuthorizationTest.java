@@ -10,8 +10,10 @@ import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.model.TeamMember;
+import com.throughline.taskmanagement.repository.DepartmentRepository;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
+import com.throughline.taskmanagement.repository.TaskDeadlineExtensionRequestRepository;
 import com.throughline.taskmanagement.repository.TaskReassignmentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
 import com.throughline.taskmanagement.repository.TaskActivityRepository;
@@ -49,8 +51,10 @@ class TaskServiceImplAuthorizationTest {
     @Mock private PersonRepository personRepository;
     @Mock private TeamRepository teamRepository;
     @Mock private TeamMemberRepository teamMemberRepository;
+    @Mock private DepartmentRepository departmentRepository;
     @Mock private TaskCommentRepository taskCommentRepository;
     @Mock private TaskReassignmentRepository taskReassignmentRepository;
+    @Mock private TaskDeadlineExtensionRequestRepository taskDeadlineExtensionRequestRepository;
     @Mock private TaskMapper taskMapper;
     @Mock private NotificationService notificationService;
     @Mock private TaskActivityRepository taskActivityRepository;
@@ -64,8 +68,8 @@ class TaskServiceImplAuthorizationTest {
     @BeforeEach
     void setUp() {
         taskService = new TaskServiceImpl(taskRepository, personRepository, teamRepository,
-                teamMemberRepository, taskCommentRepository, taskReassignmentRepository, taskMapper,
-                notificationService, taskActivityRepository);
+                teamMemberRepository, departmentRepository, taskCommentRepository, taskReassignmentRepository,
+                taskDeadlineExtensionRequestRepository, taskMapper, notificationService, taskActivityRepository);
 
         owningTeam = new Team();
         owningTeam.setId(5L);
@@ -99,7 +103,7 @@ class TaskServiceImplAuthorizationTest {
         when(personRepository.findById(1L)).thenReturn(Optional.of(director));
         when(teamRepository.findById(6L)).thenReturn(Optional.of(otherTeam));
 
-        ReassignTaskRequest request = new ReassignTaskRequest(6L, null, 1L, "handing off to Mobile Banking");
+        ReassignTaskRequest request = new ReassignTaskRequest(6L, null, null, 1L, "handing off to Mobile Banking");
 
         assertDoesNotThrow(() -> taskService.reassignTask(13L, request));
     }
@@ -117,7 +121,7 @@ class TaskServiceImplAuthorizationTest {
         when(teamMemberRepository.findByTeamIdAndIsLeaderTrue(5L)).thenReturn(Optional.of(leadership));
         when(teamRepository.findById(6L)).thenReturn(Optional.of(otherTeam));
 
-        ReassignTaskRequest request = new ReassignTaskRequest(6L, null, 10L, "handing off to Mobile Banking");
+        ReassignTaskRequest request = new ReassignTaskRequest(6L, null, null, 10L, "handing off to Mobile Banking");
 
         assertDoesNotThrow(() -> taskService.reassignTask(13L, request));
     }
@@ -135,7 +139,7 @@ class TaskServiceImplAuthorizationTest {
         when(personRepository.findById(11L)).thenReturn(Optional.of(member));
         when(teamMemberRepository.findByTeamIdAndIsLeaderTrue(5L)).thenReturn(Optional.of(leadership));
 
-        ReassignTaskRequest request = new ReassignTaskRequest(6L, null, 11L, "trying to hand this off");
+        ReassignTaskRequest request = new ReassignTaskRequest(6L, null, null, 11L, "trying to hand this off");
 
         assertThrows(ForbiddenActionException.class, () -> taskService.reassignTask(13L, request));
         // Never even got to looking up the destination team — rejected purely on authority.
@@ -150,7 +154,7 @@ class TaskServiceImplAuthorizationTest {
         when(personRepository.findById(12L)).thenReturn(Optional.of(unrelatedMember));
         when(teamMemberRepository.findByTeamIdAndIsLeaderTrue(5L)).thenReturn(Optional.empty());
 
-        ReassignTaskRequest request = new ReassignTaskRequest(6L, null, 12L, "trying to hand this off");
+        ReassignTaskRequest request = new ReassignTaskRequest(6L, null, null, 12L, "trying to hand this off");
 
         assertThrows(ForbiddenActionException.class, () -> taskService.reassignTask(13L, request));
     }

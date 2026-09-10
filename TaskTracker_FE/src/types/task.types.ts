@@ -1,7 +1,11 @@
 import type { TaskComment } from './comment.types'
 import type { TaskReassignment } from './reassignment.types'
+import type { DeadlineExtension } from './deadlineExtension.types'
 
-export type AssigneeType = 'INDIVIDUAL' | 'TEAM'
+/** DEPARTMENT is Executive-only, and only ever at depth 0 — a whole Department's head
+ *  Director then turns it into a real TEAM- or INDIVIDUAL-assigned "implementation task"
+ *  (depth 1), exactly like a plain top-level task, one level deeper. */
+export type AssigneeType = 'INDIVIDUAL' | 'TEAM' | 'DEPARTMENT'
 
 /** Always derived from progressPercentage server-side — never a form field. */
 export type TaskStatus = 'PENDING' | 'ONGOING' | 'COMPLETED'
@@ -19,16 +23,29 @@ export type TaskStatus = 'PENDING' | 'ONGOING' | 'COMPLETED'
  *  "what did I just set up", separate from "what's actually moving". */
 export type TaskSortValue = 'updatedAt,desc' | 'createdAt,desc' | 'none'
 
+/** Who actually originated a task — open to anyone creating it, at any depth. Paired with
+ *  a free-text sourceLabel on the task itself (e.g. "Director Musoni", "GPO", "E&Y",
+ *  "Board of Directors"). */
+export type TaskSource = 'INITIATIVE' | 'AUDITOR' | 'REGULATOR' | 'BOARD'
+
+/** Executive/Super-Admin-only, settable at creation only, at any depth. CRITICAL sets
+ *  pinned = true as a one-time default at creation — pinning itself stays a separate,
+ *  independently-editable toggle afterward (see SetPinnedRequest). */
+export type TaskSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+
 /** Who structured a subtask — the Director themself, or the Team Leader of the team
  *  owning its parent task. Null for a task that predates the hierarchy. */
 export type CreatedByRole = 'DIRECTOR' | 'TEAM_LEADER'
 
-/** One subtask under a top-level task, as shown on the parent's detail view. */
+/** One subtask under a top-level task, as shown on the parent's detail view. assigneeType
+ *  tells a depth-1 TEAM-assigned "implementation task" (which can itself be broken into
+ *  further subtasks) apart from an ordinary INDIVIDUAL leaf subtask (which never can). */
 export interface SubtaskSummary {
   id: number
   taskCode: string
   title: string
   assigneeName: string
+  assigneeType: AssigneeType
   status: TaskStatus
   progressPercentage: number
   createdByRole: CreatedByRole
@@ -51,6 +68,15 @@ export interface TaskListItem {
   status: TaskStatus
   progressPercentage: number
   dateAssigned: string
+  // Null only for a task that predates this field.
+  deadline: string | null
+  // Both null unless this task's creator recorded where it originated.
+  source: TaskSource | null
+  sourceLabel: string | null
+  // Null unless an Executive/Super Admin set it at creation.
+  severity: TaskSeverity | null
+  // A manual, independently-editable toggle — see SetPinnedRequest.
+  pinned: boolean
   assignedByName: string
   reassignmentCount: number
   lastComment: TaskComment | null
@@ -59,6 +85,9 @@ export interface TaskListItem {
   // 'INDIVIDUAL' with nothing else to tell them apart, so this is what actually
   // distinguishes "assigned to one person directly" from "a subtask of something".
   parentTaskCode: string | null
+  // 0 for a real top-level task (plain or Department-assigned), 1 for a direct child, 2
+  // for a grandchild (only possible under a Department-rooted hierarchy).
+  depth: number
 }
 
 /** Full detail — complete comment + reassignment history, oldest first. */
@@ -78,47 +107,101 @@ export interface TaskDetail {
   status: TaskStatus
   progressPercentage: number
   dateAssigned: string
+  // Null only for a task that predates this field. Extended directly by whoever set it
+  // (assignedById), or via the request/approve workflow — see deadlineExtensions below.
+  deadline: string | null
+  // Both null unless this task's creator recorded where it originated.
+  source: TaskSource | null
+  sourceLabel: string | null
+  // Null unless an Executive/Super Admin set it at creation.
+  severity: TaskSeverity | null
+  // A manual, independently-editable toggle — see SetPinnedRequest. Not derived from
+  // severity; a CRITICAL task can be freely un-pinned once it's on track.
+  pinned: boolean
   assignedByName: string
   assignedById: number
+  // Who actually decides a deadline extension on this task — a Director-or-above,
+  // always, even when assignedById is a mere Team Leader (who can create a leaf subtask
+  // but has no authority over its deadline). Usually the same as assignedById/
+  // assignedByName above, but not always — gate deadline-decision UI off THIS field, not
+  // assignedById (chain of command: whoever's doing the work requests, a real Director
+  // decides).
+  deadlineDeciderName: string
+  deadlineDeciderId: number
   // null = top-level task (always team-assigned). Non-null = a subtask (always
   // individual-assigned, can't have subtasks of its own) — see ReassignTaskModal,
   // which uses this to decide "reassign to a team" vs "reassign to a person".
   parentTaskId: number | null
   parentTaskCode: string | null
   createdByRole: CreatedByRole | null
+  // 0 for a real top-level task (plain or Department-assigned), 1 for a direct child, 2
+  // for a grandchild (only possible under a Department-rooted hierarchy). Decides whether
+  // "Add subtask" is even offered, and which form shape it uses.
+  depth: number
   subtasks: SubtaskSummary[]
   comments: TaskComment[]
   reassignments: TaskReassignment[]
+  deadlineExtensions: DeadlineExtension[]
   progressTimeline: TaskTimelinePoint[]
   createdAt: string
   updatedAt: string
 }
 
-/** Body for POST /tasks — a TOP-LEVEL task only. Director/Super-Admin-only. Assigned to
- *  either a team OR a single individual directly — exactly one of assignedTeamId/
- *  assignedPersonId must be set (the backend rejects both or neither). Must always carry
- *  the opening comment that explains 0%. */
+/** Body for POST /tasks — a TOP-LEVEL (depth 0) task. Director-or-above. Assigned to
+ *  exactly one of a team, a single individual, or (Executive/Super Admin only) a whole
+ *  Department — exactly one of assignedTeamId/assignedPersonId/assignedDepartmentId must
+ *  be set (the backend rejects zero or more than one). Must always carry the opening
+ *  comment that explains 0%. */
 export interface CreateTaskRequest {
   title: string
   description?: string
   createdById: number
   assignedTeamId?: number
   assignedPersonId?: number
+  assignedDepartmentId?: number
   dateAssigned: string
+  deadline: string
+  source?: TaskSource
+  sourceLabel?: string
+  // Executive/Super-Admin-only — the backend rejects a non-Executive creator's attempt
+  // to set this.
+  severity?: TaskSeverity
   openingNote: string
 }
 
-/** Body for POST /tasks/{parentTaskId}/subtasks. createdById must be either the parent
- *  task's Team Leader or a Director/Super Admin (the Director/Super Admin bypassing the
- *  Team Leader is explicitly allowed); assignedPersonId must be a member of the parent
- *  task's team. */
+/**
+ * Body for POST /tasks/{parentTaskId}/subtasks. Two shapes, depending on the parent
+ * task's own assigneeType:
+ *
+ * Parent is TEAM-assigned (an ordinary top-level task, or a depth-1 Department
+ * implementation task): the classic leaf-subtask case. createdById must be either the
+ * parent task's Team Leader or a Director/Super Admin; assignedPersonId is required and
+ * must be a member of the parent task's team; assignedTeamId must be omitted.
+ *
+ * Parent is DEPARTMENT-assigned (a depth-0 Executive task): the "implementation task"
+ * case. createdById must be that department's head Director, or an Executive/Super Admin;
+ * exactly one of assignedTeamId/assignedPersonId must be set, org-wide (no team-membership
+ * restriction).
+ */
 export interface CreateSubtaskRequest {
   title: string
   description?: string
   createdById: number
-  assignedPersonId: number
+  assignedPersonId?: number
+  assignedTeamId?: number
   dateAssigned: string
+  deadline: string
+  source?: TaskSource
+  sourceLabel?: string
+  severity?: TaskSeverity
   openingNote: string
+}
+
+/** Body for PUT /tasks/{id}/pin. Director-or-above only. A manual, independently-editable
+ *  toggle — not derived from severity. */
+export interface SetPinnedRequest {
+  pinned: boolean
+  changedById: number
 }
 
 /** Body for PUT /tasks/{id}. Title/description/dateAssigned only — never progress or assignee. */

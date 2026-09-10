@@ -4,6 +4,7 @@ import { formatDate } from '../../../lib/formatDate'
 import { useTeam } from '../../teams/hooks/useTeam'
 import { useTeamMembers } from '../../teams/hooks/useTeamMembers'
 import { TeamMemberChip } from '../../teams/components/TeamMemberChip'
+import { useDepartment } from '../../departments/hooks/useDepartment'
 import type { TaskDetail } from '../../../types/task.types'
 import styles from './AssignmentMetaPanel.module.css'
 
@@ -16,8 +17,10 @@ import styles from './AssignmentMetaPanel.module.css'
  *  reads the same green "Leader" tag everywhere in the app. */
 export function AssignmentMetaPanel({ task }: { task: TaskDetail }) {
   const isTeamAssigned = task.assigneeType === 'TEAM'
+  const isDepartmentAssigned = task.assigneeType === 'DEPARTMENT'
   const teamQuery = useTeam(isTeamAssigned ? task.assigneeId ?? NaN : NaN)
   const membersQuery = useTeamMembers(isTeamAssigned ? task.assigneeId ?? NaN : NaN)
+  const departmentQuery = useDepartment(isDepartmentAssigned ? task.assigneeId ?? NaN : NaN)
 
   return (
     <Card>
@@ -36,6 +39,14 @@ export function AssignmentMetaPanel({ task }: { task: TaskDetail }) {
             </span>
           </div>
         )}
+        {isDepartmentAssigned && (
+          <div className={styles.item}>
+            <span className={styles.label}>Department head</span>
+            <span className={styles.leaderValue}>
+              {departmentQuery.isLoading ? '…' : (departmentQuery.data?.headDirectorName ?? 'No head assigned')}
+            </span>
+          </div>
+        )}
         <div className={styles.item}>
           <span className={styles.label}>Assigned by</span>
           <span className={styles.value}>{task.assignedByName}</span>
@@ -43,6 +54,10 @@ export function AssignmentMetaPanel({ task }: { task: TaskDetail }) {
         <div className={styles.item}>
           <span className={styles.label}>Date assigned</span>
           <span className={styles.value}>{formatDate(task.dateAssigned)}</span>
+        </div>
+        <div className={styles.item}>
+          <span className={styles.label}>Deadline</span>
+          <span className={styles.value}>{task.deadline ? formatDate(task.deadline) : 'None set'}</span>
         </div>
         <div className={styles.item}>
           <span className={styles.label}>Status</span>

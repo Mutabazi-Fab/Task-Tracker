@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../app/routes'
 import { Card } from '../../../components/ui/Card'
+import { Icon } from '../../../components/ui/Icon'
 import { ProgressBar } from '../../../components/ui/ProgressBar'
+import { SeverityBadge } from '../../../components/ui/SeverityBadge'
 import { formatPercentage } from '../../../lib/formatPercentage'
 import type { TaskListItem } from '../../../types/task.types'
 import { TaskLastCommentCell } from './TaskLastCommentCell'
@@ -14,7 +16,11 @@ export function TaskCard({ task }: { task: TaskListItem }) {
       <Card padding="sm">
         <div className={styles.top}>
           <span className={styles.code}>{task.taskCode}</span>
-          <span className={styles.percentage}>{formatPercentage(task.progressPercentage)}</span>
+          <div className={styles.badges}>
+            {task.pinned && <Icon name="pin" size={12} className={styles.pinIcon} />}
+            {task.severity && <SeverityBadge severity={task.severity} />}
+            <span className={styles.percentage}>{formatPercentage(task.progressPercentage)}</span>
+          </div>
         </div>
         <p className={styles.title}>{task.title}</p>
         <p className={styles.assignee}>

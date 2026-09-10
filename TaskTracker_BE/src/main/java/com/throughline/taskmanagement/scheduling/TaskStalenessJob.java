@@ -69,6 +69,9 @@ public class TaskStalenessJob {
                     .map(tm -> tm.getPerson())
                     .orElse(null);
         }
+        if (task.getAssignedDepartment() != null) {
+            return task.getAssignedDepartment().getHeadDirector();
+        }
         return null;
     }
 }
