@@ -8,7 +8,8 @@ import com.throughline.taskmanagement.dto.response.DepartmentResponse;
 import java.util.List;
 
 public interface DepartmentService {
-    /** Super-Admin-only, enforced here. */
+    /** Executive-or-above, enforced here — a Director cannot, but the CEO who hands work
+     *  out to whole departments can stand a new one up herself, same as Super Admin. */
     DepartmentResponse createDepartment(CreateDepartmentRequest request);
 
     /** Anyone authenticated can read the department list/detail — read access is

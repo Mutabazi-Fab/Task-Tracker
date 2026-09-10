@@ -12,11 +12,12 @@ import { CreateDepartmentModal } from './components/CreateDepartmentModal'
 import styles from './DepartmentsListPage.module.css'
 
 /** Every authenticated person can see the department list (they need it to make sense of
- *  where a team or a colleague sits in the org chart) — only a Super Admin can create one,
- *  same "open read, gated write" split as everywhere else governance-shaped in this app. */
+ *  where a team or a colleague sits in the org chart) — creating one is Executive-or-above
+ *  (the CEO stands up a new department herself, same as Super Admin can); renaming one or
+ *  reassigning its head stays Super-Admin-only (see DepartmentAdminControls on DepartmentPage). */
 export function DepartmentsListPage() {
   const query = useDepartments()
-  const { isSuperAdmin } = useAuth()
+  const { isExecutive } = useAuth()
   const [createOpen, setCreateOpen] = useState(false)
 
   return (
@@ -24,7 +25,7 @@ export function DepartmentsListPage() {
       <PageHeader
         breadcrumb="Throughline"
         title="Departments"
-        right={isSuperAdmin ? <Button onClick={() => setCreateOpen(true)}>New department</Button> : undefined}
+        right={isExecutive ? <Button onClick={() => setCreateOpen(true)}>New department</Button> : undefined}
       />
       <QueryBoundary query={query}>
         {(departments) =>
@@ -48,7 +49,7 @@ export function DepartmentsListPage() {
         }
       </QueryBoundary>
 
-      {isSuperAdmin && <CreateDepartmentModal open={createOpen} onClose={() => setCreateOpen(false)} />}
+      {isExecutive && <CreateDepartmentModal open={createOpen} onClose={() => setCreateOpen(false)} />}
     </>
   )
 }

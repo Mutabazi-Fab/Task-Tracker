@@ -50,10 +50,15 @@ interface CreateTaskFormProps {
  * Top-level (depth 0) tasks only — assigned to a whole team (which a Team Leader/Director
  * later breaks into person-assigned subtasks), straight to one person (which then behaves
  * like a subtask itself: its % comes directly from comments, never a rollup, and it can
- * never have subtasks of its own — see SubtasksPanel), or — Executive/Super Admin only —
- * a whole Department (whose head Director then turns it into a real team-or-individual
- * "implementation task", one level deeper, via the same "Add subtask" flow). createdById
- * is always the logged-in Director-or-above, not a picker.
+ * never have subtasks of its own — see SubtasksPanel), or a whole Department (whose head
+ * Director then turns it into a real team-or-individual "implementation task", one level
+ * deeper, via the same "Add subtask" flow). createdById is always the logged-in
+ * Director-or-above, not a picker.
+ *
+ * The CEO seat (role EXECUTIVE, as opposed to Super Admin, who keeps every option for
+ * system-level flexibility) only ever hands work to a whole Department — never straight to
+ * a team or a person, that's a Director's call once the Department has it — so she never
+ * even sees the Team/Individual choice, just goes straight to picking a department.
  */
 export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFormProps) {
   const { currentUser, isExecutive } = useAuth()
@@ -61,9 +66,14 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
   const peopleQuery = usePeople()
   const departmentsQuery = useDepartments()
 
-  const assigneeKindOptions = isExecutive ? [...ASSIGNEE_KIND_OPTIONS, DEPARTMENT_OPTION] : ASSIGNEE_KIND_OPTIONS
+  const isCeo = currentUser?.role === 'EXECUTIVE'
+  const assigneeKindOptions = isCeo
+    ? [DEPARTMENT_OPTION]
+    : isExecutive
+      ? [...ASSIGNEE_KIND_OPTIONS, DEPARTMENT_OPTION]
+      : ASSIGNEE_KIND_OPTIONS
 
-  const [assigneeKind, setAssigneeKind] = useState<AssigneeKind>('TEAM')
+  const [assigneeKind, setAssigneeKind] = useState<AssigneeKind>(() => (isCeo ? 'DEPARTMENT' : 'TEAM'))
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [assignedTeamId, setAssignedTeamId] = useState('')
@@ -123,10 +133,12 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
 
       <TextField label="Description" value={description} onChange={setDescription} placeholder="Optional detail" />
 
-      <div className={styles.field}>
-        <span className={styles.label}>Assign to</span>
-        <SegmentedControl options={assigneeKindOptions} value={assigneeKind} onChange={handleAssigneeKindChange} />
-      </div>
+      {!isCeo && (
+        <div className={styles.field}>
+          <span className={styles.label}>Assign to</span>
+          <SegmentedControl options={assigneeKindOptions} value={assigneeKind} onChange={handleAssigneeKindChange} />
+        </div>
+      )}
 
       {assigneeKind === 'TEAM' && (
         <SelectField

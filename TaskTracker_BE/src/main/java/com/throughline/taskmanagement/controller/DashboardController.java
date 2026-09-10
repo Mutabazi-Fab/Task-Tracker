@@ -63,4 +63,15 @@ public class DashboardController {
         Long directorId = currentPersonResolver.resolveId(authentication);
         return ResponseEntity.ok(dashboardService.getDirectorTasks(directorId, pageable));
     }
+
+    /** The Executive's Dashboard view: every CRITICAL task org-wide plus every task an
+     *  Executive/Super Admin personally assigned (not depth-scoped — see DashboardService.
+     *  getExecutiveTasks) — Executive-or-above only (Super Admin sees the literal same view,
+     *  not a separate lookalike). viewerId is never accepted from the client, same "always
+     *  the caller's own real identity" pattern as getDirectorTasks above. */
+    @GetMapping("/executive/tasks")
+    public ResponseEntity<Page<TaskListResponse>> getExecutiveTasks(Pageable pageable, Authentication authentication) {
+        Long viewerId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(dashboardService.getExecutiveTasks(viewerId, pageable));
+    }
 }

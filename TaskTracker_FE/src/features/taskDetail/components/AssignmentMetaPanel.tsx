@@ -1,6 +1,7 @@
 import { Card } from '../../../components/ui/Card'
 import { StatusChip } from '../../../components/ui/StatusChip'
 import { formatDate } from '../../../lib/formatDate'
+import { useAuth } from '../../auth/useAuth'
 import { useTeam } from '../../teams/hooks/useTeam'
 import { useTeamMembers } from '../../teams/hooks/useTeamMembers'
 import { TeamMemberChip } from '../../teams/components/TeamMemberChip'
@@ -14,8 +15,15 @@ import styles from './AssignmentMetaPanel.module.css'
  *  exactly what this panel exists to answer. The full roster below it answers the natural
  *  follow-up — "who's actually on that team" — without a click away to the Teams page;
  *  read-only here (no onMakeLeader/onRemove), same chip Teams itself uses so the leader
- *  reads the same green "Leader" tag everywhere in the app. */
+ *  reads the same green "Leader" tag everywhere in the app.
+ *
+ *  The CEO seat (role EXECUTIVE) doesn't get the roster, on this task or any team task she
+ *  drills into from a Department's implementation-task list — she's meant to see the task,
+ *  its progress, and be able to comment, not who's on which team. The "Team leader" fact
+ *  above stays visible even for her (it's who's accountable, not team composition). */
 export function AssignmentMetaPanel({ task }: { task: TaskDetail }) {
+  const { currentUser } = useAuth()
+  const isCeo = currentUser?.role === 'EXECUTIVE'
   const isTeamAssigned = task.assigneeType === 'TEAM'
   const isDepartmentAssigned = task.assigneeType === 'DEPARTMENT'
   const teamQuery = useTeam(isTeamAssigned ? task.assigneeId ?? NaN : NaN)
@@ -69,7 +77,7 @@ export function AssignmentMetaPanel({ task }: { task: TaskDetail }) {
         </div>
       </div>
 
-      {isTeamAssigned && (
+      {isTeamAssigned && !isCeo && (
         <div className={styles.members}>
           <span className={styles.label}>{task.assigneeName} team</span>
           <div className={styles.memberList}>

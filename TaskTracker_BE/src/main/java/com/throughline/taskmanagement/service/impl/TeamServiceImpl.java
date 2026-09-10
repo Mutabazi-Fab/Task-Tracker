@@ -70,6 +70,17 @@ public class TeamServiceImpl implements TeamService {
                 .orElseThrow(() -> new ResourceNotFoundException("createdById not found"));
         requireDirector(createdBy, "Only a Director can create a team.");
 
+        // A plain Director (not Executive/Super Admin) can only ever stand up a team inside
+        // their own department — same split as GET /tasks' department scoping
+        // (TaskController.departmentScopeForViewer). Checked server-side, not just hidden
+        // by the frontend defaulting the picker away for them.
+        if (createdBy.getRole() == Role.DIRECTOR) {
+            Long ownDepartmentId = createdBy.getDepartment() != null ? createdBy.getDepartment().getId() : null;
+            if (ownDepartmentId == null || !ownDepartmentId.equals(request.departmentId())) {
+                throw new ForbiddenActionException("A Director can only create a team inside their own department.");
+            }
+        }
+
         if (!request.memberIds().contains(request.leaderId())) {
             throw new InvalidAssignmentException("leaderId must be one of memberIds.");
         }

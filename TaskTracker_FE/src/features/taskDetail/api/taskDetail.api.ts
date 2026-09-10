@@ -6,6 +6,7 @@ import type { SetPinnedRequest, TaskDetail } from '../../../types/task.types'
 import type {
   DecideDeadlineExtensionRequest,
   ExtendDeadlineRequest,
+  PendingExtensionRequest,
   RequestDeadlineExtensionRequest,
 } from '../../../types/deadlineExtension.types'
 
@@ -47,6 +48,14 @@ export async function decideDeadlineExtension(
 
 export async function extendDeadlineDirectly(taskId: number, payload: ExtendDeadlineRequest): Promise<TaskDetail> {
   const { data } = await axiosClient.put<TaskDetail>(endpoints.tasks.deadline(taskId), payload)
+  return data
+}
+
+/** The "Requests" inbox — every deadline-extension request still waiting on the caller's
+ *  own decision, across every task. deciderId is resolved server-side from the JWT, same
+ *  as everywhere else — nothing to pass here. */
+export async function fetchPendingExtensionRequests(): Promise<PendingExtensionRequest[]> {
+  const { data } = await axiosClient.get<PendingExtensionRequest[]>(endpoints.tasks.pendingDeadlineExtensions())
   return data
 }
 

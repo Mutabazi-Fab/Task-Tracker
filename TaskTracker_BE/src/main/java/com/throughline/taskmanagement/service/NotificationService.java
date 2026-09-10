@@ -4,6 +4,7 @@ import com.throughline.taskmanagement.dto.response.NotificationResponse;
 import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
+import com.throughline.taskmanagement.model.TaskComment;
 import com.throughline.taskmanagement.model.TaskDeadlineExtensionRequest;
 import com.throughline.taskmanagement.model.TaskReassignment;
 import com.throughline.taskmanagement.model.TeamMembershipChange;
@@ -83,6 +84,20 @@ public interface NotificationService {
      *  approval round-trip). Notifies the task's accountable person — the same recipient
      *  notifyTaskAssigned/notifyTaskStalled would resolve to. */
     void notifyDeadlineExtended(Task task, LocalDate previousDeadline, Person extendedBy);
+
+    /** Called by TaskServiceImpl right after a new TOP-LEVEL discussion message (no
+     *  parentComment) is posted. Notifies whoever's accountable for the task the same way
+     *  a subtask assignment does: every member of the owning team when there is one (this
+     *  task's own team if it's TEAM-assigned, or its parent's team for an ordinary leaf
+     *  subtask — so a Director commenting on one member's subtask reaches the whole team,
+     *  not just that one assignee), the individual assignee for a standalone INDIVIDUAL
+     *  task, or the Department's head Director for a DEPARTMENT task. Never notifies the
+     *  comment's own author. */
+    void notifyDiscussionCommentPosted(TaskComment comment);
+
+    /** Called by TaskServiceImpl right after a reply (parentComment set) is posted.
+     *  Notifies whoever wrote the comment being replied to — never the replier themself. */
+    void notifyDiscussionReplyPosted(TaskComment reply);
 
     Page<NotificationResponse> getNotifications(Long recipientId, Pageable pageable);
 

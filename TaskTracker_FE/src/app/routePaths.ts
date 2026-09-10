@@ -23,6 +23,7 @@ export const ROUTES = {
   // beyond just tasks, NavLink's prefix match would light up the Tasks item too, the same
   // way it already correctly does for /tasks/:taskId.
   activity: '/activity',
+  requests: '/requests',
   people: '/people',
   personProfile: (personId: number | string) => `/people/${personId}`,
   teams: '/teams',

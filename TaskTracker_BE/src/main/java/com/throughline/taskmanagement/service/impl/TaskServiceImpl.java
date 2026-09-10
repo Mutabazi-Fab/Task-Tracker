@@ -12,6 +12,7 @@ import com.throughline.taskmanagement.dto.request.SetPinnedRequest;
 import com.throughline.taskmanagement.dto.request.UpdateTaskRequest;
 import com.throughline.taskmanagement.dto.response.CommentResponse;
 import com.throughline.taskmanagement.dto.response.DeadlineExtensionResponse;
+import com.throughline.taskmanagement.dto.response.PendingExtensionRequestResponse;
 import com.throughline.taskmanagement.dto.response.ReassignmentResponse;
 import com.throughline.taskmanagement.dto.response.TaskActivityResponse;
 import com.throughline.taskmanagement.dto.response.TaskDetailResponse;
@@ -358,13 +359,17 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public Page<TaskListResponse> getAllTasks(TaskStatus status, Long assignedPersonId, Pageable pageable) {
+    public Page<TaskListResponse> getAllTasks(TaskStatus status, Long assignedPersonId, Long departmentId, Pageable pageable) {
         Pageable pinnedFirst = withPinnedFirst(pageable);
         Page<Task> tasks;
         if (assignedPersonId != null && status != null) {
             tasks = taskRepository.findVisibleToPersonAndStatus(assignedPersonId, status, pinnedFirst);
         } else if (assignedPersonId != null) {
             tasks = taskRepository.findVisibleToPerson(assignedPersonId, pinnedFirst);
+        } else if (departmentId != null && status != null) {
+            tasks = taskRepository.findByDepartmentIdAndStatus(departmentId, status, pinnedFirst);
+        } else if (departmentId != null) {
+            tasks = taskRepository.findByDepartmentId(departmentId, pinnedFirst);
         } else if (status != null) {
             tasks = taskRepository.findByStatus(status, pinnedFirst);
         } else {
@@ -485,6 +490,12 @@ public class TaskServiceImpl implements TaskService {
 
         taskCommentRepository.save(comment);
         task.getComments().add(comment);
+
+        if (parent != null) {
+            notificationService.notifyDiscussionReplyPosted(comment);
+        } else {
+            notificationService.notifyDiscussionCommentPosted(comment);
+        }
 
         return taskMapper.toDetailResponse(task);
     }
@@ -680,11 +691,13 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public Page<TaskListResponse> searchTasks(String q, Long assignedPersonId, Pageable pageable) {
+    public Page<TaskListResponse> searchTasks(String q, Long assignedPersonId, Long departmentId, Pageable pageable) {
         Pageable pinnedFirst = withPinnedFirst(pageable);
         Page<Task> results = assignedPersonId != null
                 ? taskRepository.searchVisibleToPerson(q, assignedPersonId, pinnedFirst)
-                : taskRepository.search(q, pinnedFirst);
+                : departmentId != null
+                        ? taskRepository.searchByDepartmentId(q, departmentId, pinnedFirst)
+                        : taskRepository.search(q, pinnedFirst);
         return results.map(t -> {
             TaskComment lastComment = taskCommentRepository.findFirstByTaskIdOrderByCreatedAtDesc(t.getId()).orElse(null);
             return taskMapper.toListResponse(t, lastComment);
@@ -920,6 +933,15 @@ public class TaskServiceImpl implements TaskService {
     public Page<DeadlineExtensionResponse> getDeadlineHistory(Long taskId, Pageable pageable) {
         return taskDeadlineExtensionRequestRepository.findByTaskIdOrderByRequestedAtDesc(taskId, pageable)
                 .map(taskMapper::toDeadlineExtensionResponse);
+    }
+
+    @Override
+    public List<PendingExtensionRequestResponse> getPendingExtensionRequests(Long deciderId) {
+        return taskDeadlineExtensionRequestRepository.findByStatusOrderByRequestedAtDesc(ExtensionRequestStatus.PENDING)
+                .stream()
+                .filter(request -> resolveDeadlineDecider(request.getTask()).getId().equals(deciderId))
+                .map(taskMapper::toPendingExtensionResponse)
+                .toList();
     }
 
     @Override

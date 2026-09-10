@@ -50,3 +50,14 @@ export async function fetchDirectorTasks(
   })
   return data
 }
+
+/** Every CRITICAL-severity task org-wide (any depth) plus every task an Executive/Super
+ *  Admin personally assigned — not top-level tasks any more, not scoped to just this
+ *  particular Executive's own. Executive/Super Admin only; the backend rejects anyone else.
+ *  No viewer id to pass — unlike fetchDirectorTasks, there's no "whose" to scope this to. */
+export async function fetchExecutiveTasks(page: number, size: number, sort: TaskSortValue): Promise<Page<TaskListItem>> {
+  const { data } = await axiosClient.get<Page<TaskListItem>>(endpoints.dashboard.executiveTasks(), {
+    params: { page, size, sort: sort === 'none' ? undefined : sort },
+  })
+  return data
+}

@@ -47,3 +47,21 @@ export interface ExtendDeadlineRequest {
   reason?: string
   extendedById: number
 }
+
+/** One row of the cross-task "Requests" inbox (GET /tasks/deadline-extensions/pending) —
+ *  every deadline-extension request still awaiting a decision from the viewer specifically,
+ *  wherever it lives across the org, not just one already-open task's own history. Always
+ *  PENDING by construction (the backend only ever returns undecided ones here), so unlike
+ *  DeadlineExtension there's no status/decidedBy — and it carries the task's own identity,
+ *  since the viewer isn't already looking at one particular task. */
+export interface PendingExtensionRequest {
+  id: number
+  taskId: number
+  taskCode: string
+  taskTitle: string
+  currentDeadline: string | null
+  requestedDeadline: string
+  justification: string
+  requestedByName: string
+  requestedAt: string
+}

@@ -28,11 +28,14 @@ const BASE_NAV_ITEMS: NavItem[] = [
  *  deactivation, all gated at that same tier (see ActivityPage). Departments is likewise
  *  Director-or-above — read access to the org chart is open to Director/Executive/Super
  *  Admin (writes stay Super-Admin-only, enforced in DepartmentAdminControls/the backend),
- *  a plain Member has no use for it since they can't act on anything there. */
+ *  a plain Member has no use for it since they can't act on anything there. Requests is the
+ *  same tier again — a plain Member is never a deadline-extension decider (see
+ *  resolveDeadlineDecider on the backend), so the inbox would always read empty for them. */
 export function getNavItems(isDirector: boolean): NavItem[] {
   const items = [...BASE_NAV_ITEMS]
   if (isDirector) {
     items.push({ to: ROUTES.departments, label: 'Departments', icon: 'departments' })
+    items.push({ to: ROUTES.requests, label: 'Requests', icon: 'mail' })
     items.push({ to: ROUTES.activity, label: 'Activity', icon: 'shield' })
   }
   return items

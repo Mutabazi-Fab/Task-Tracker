@@ -20,6 +20,13 @@
   color: var(--muted);
 }
 
+.readOnlyValue {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
 .memberList {
   display: flex;
   flex-direction: column;

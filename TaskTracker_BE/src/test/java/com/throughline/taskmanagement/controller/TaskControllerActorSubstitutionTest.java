@@ -5,6 +5,7 @@ import com.throughline.taskmanagement.dto.request.CreateTaskRequest;
 import com.throughline.taskmanagement.dto.request.ReassignTaskRequest;
 import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.enums.TaskStatus;
+import com.throughline.taskmanagement.model.Department;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.security.CurrentPersonResolver;
 import com.throughline.taskmanagement.service.TaskService;
@@ -101,12 +102,12 @@ class TaskControllerActorSubstitutionTest {
         member.setId(REAL_ACTOR_ID);
         member.setRole(Role.MEMBER);
         when(currentPersonResolver.resolve(authentication)).thenReturn(member);
-        when(taskService.getAllTasks(null, REAL_ACTOR_ID, Pageable.unpaged())).thenReturn(Page.empty());
+        when(taskService.getAllTasks(null, REAL_ACTOR_ID, null, Pageable.unpaged())).thenReturn(Page.empty());
 
         // Asking for someone else's tasks (id 99) by leaving the door open in the query param.
         controller.getAllTasks(null, 99L, Pageable.unpaged(), authentication);
 
-        verify(taskService).getAllTasks(null, REAL_ACTOR_ID, Pageable.unpaged());
+        verify(taskService).getAllTasks(null, REAL_ACTOR_ID, null, Pageable.unpaged());
     }
 
     @Test
@@ -115,23 +116,61 @@ class TaskControllerActorSubstitutionTest {
         director.setId(1L);
         director.setRole(Role.DIRECTOR);
         when(currentPersonResolver.resolve(authentication)).thenReturn(director);
-        when(taskService.getAllTasks(null, 99L, Pageable.unpaged())).thenReturn(Page.empty());
+        when(taskService.getAllTasks(null, 99L, null, Pageable.unpaged())).thenReturn(Page.empty());
 
         controller.getAllTasks(null, 99L, Pageable.unpaged(), authentication);
 
-        verify(taskService).getAllTasks(null, 99L, Pageable.unpaged());
+        verify(taskService).getAllTasks(null, 99L, null, Pageable.unpaged());
     }
 
+    // This Director has no department set (never assigned one, an edge case — see
+    // TaskController.departmentScopeForViewer), so they fall back to seeing everything
+    // rather than being scoped to nothing. getAllTasks_scopesAPlainDirectorToTheirOwnDepartment
+    // below covers the normal case, where a department IS set.
     @Test
     void getAllTasks_directorSeesEverythingWhenNoFilterIsGiven() {
         Person director = new Person();
         director.setId(1L);
         director.setRole(Role.DIRECTOR);
         when(currentPersonResolver.resolve(authentication)).thenReturn(director);
-        when(taskService.getAllTasks(TaskStatus.ONGOING, null, Pageable.unpaged())).thenReturn(Page.empty());
+        when(taskService.getAllTasks(TaskStatus.ONGOING, null, null, Pageable.unpaged())).thenReturn(Page.empty());
 
         controller.getAllTasks(TaskStatus.ONGOING, null, Pageable.unpaged(), authentication);
 
-        verify(taskService).getAllTasks(TaskStatus.ONGOING, null, Pageable.unpaged());
+        verify(taskService).getAllTasks(TaskStatus.ONGOING, null, null, Pageable.unpaged());
+    }
+
+    @Test
+    void getAllTasks_scopesAPlainDirectorToTheirOwnDepartment() {
+        Department itDepartment = new Department();
+        itDepartment.setId(7L);
+        Person director = new Person();
+        director.setId(1L);
+        director.setRole(Role.DIRECTOR);
+        director.setDepartment(itDepartment);
+        when(currentPersonResolver.resolve(authentication)).thenReturn(director);
+        when(taskService.getAllTasks(null, null, 7L, Pageable.unpaged())).thenReturn(Page.empty());
+
+        // No assignedPersonId asked for — a plain Director never gets "see everything"
+        // any more, they get their own department's id passed through instead.
+        controller.getAllTasks(null, null, Pageable.unpaged(), authentication);
+
+        verify(taskService).getAllTasks(null, null, 7L, Pageable.unpaged());
+    }
+
+    @Test
+    void getAllTasks_neverDepartmentScopesAnExecutiveOrSuperAdmin() {
+        Department itDepartment = new Department();
+        itDepartment.setId(7L);
+        Person executive = new Person();
+        executive.setId(20L);
+        executive.setRole(Role.EXECUTIVE);
+        executive.setDepartment(itDepartment); // even if one happened to be set
+        when(currentPersonResolver.resolve(authentication)).thenReturn(executive);
+        when(taskService.getAllTasks(null, null, null, Pageable.unpaged())).thenReturn(Page.empty());
+
+        controller.getAllTasks(null, null, Pageable.unpaged(), authentication);
+
+        verify(taskService).getAllTasks(null, null, null, Pageable.unpaged());
     }
 }

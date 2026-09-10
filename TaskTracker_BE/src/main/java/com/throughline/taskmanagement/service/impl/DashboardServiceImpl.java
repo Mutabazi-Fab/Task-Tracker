@@ -2,6 +2,7 @@ package com.throughline.taskmanagement.service.impl;
 
 import com.throughline.taskmanagement.dto.response.*;
 import com.throughline.taskmanagement.enums.Role;
+import com.throughline.taskmanagement.enums.TaskSeverity;
 import com.throughline.taskmanagement.enums.TaskStatus;
 import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
@@ -175,6 +176,27 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         return taskRepository.findByParentTaskIsNullAndAssignedById(directorId, pageable)
+                .map(t -> {
+                    TaskComment lastComment = taskCommentRepository.findFirstByTaskIdOrderByCreatedAtDesc(t.getId()).orElse(null);
+                    return taskMapper.toListResponse(t, lastComment);
+                });
+    }
+
+    @Override
+    public Page<TaskListResponse> getExecutiveTasks(Long viewerId, Pageable pageable) {
+        Person viewer = personRepository.findById(viewerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+        if (!Role.isAtLeastExecutive(viewer.getRole())) {
+            throw new ForbiddenActionException("Only an Executive or Super Admin has an Executive Dashboard.");
+        }
+
+        // Not "every top-level task" any more — depth alone doesn't say what actually
+        // deserves an Executive's attention. Shows anything CRITICAL (at any depth — a
+        // CRITICAL subtask matters just as much as a CRITICAL Department task) plus
+        // anything an Executive/Super Admin personally assigned, org-wide, not just this
+        // particular viewer's own (unlike getDirectorTasks' "my initiatives" scoping above).
+        return taskRepository.findBySeverityOrAssignedByRoleIn(
+                        TaskSeverity.CRITICAL, List.of(Role.EXECUTIVE, Role.SUPER_ADMIN), pageable)
                 .map(t -> {
                     TaskComment lastComment = taskCommentRepository.findFirstByTaskIdOrderByCreatedAtDesc(t.getId()).orElse(null);
                     return taskMapper.toListResponse(t, lastComment);

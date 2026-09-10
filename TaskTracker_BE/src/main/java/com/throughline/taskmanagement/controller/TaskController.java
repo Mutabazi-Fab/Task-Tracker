@@ -12,6 +12,7 @@ import com.throughline.taskmanagement.dto.request.SetPinnedRequest;
 import com.throughline.taskmanagement.dto.request.UpdateTaskRequest;
 import com.throughline.taskmanagement.dto.response.CommentResponse;
 import com.throughline.taskmanagement.dto.response.DeadlineExtensionResponse;
+import com.throughline.taskmanagement.dto.response.PendingExtensionRequestResponse;
 import com.throughline.taskmanagement.dto.response.ReassignmentResponse;
 import com.throughline.taskmanagement.dto.response.TaskActivityResponse;
 import com.throughline.taskmanagement.dto.response.TaskDetailResponse;
@@ -30,6 +31,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * Every "who's doing this" field (createdById/authorId/reassignedById) is re-derived from
@@ -77,8 +80,10 @@ public class TaskController {
             @RequestParam(required = false) Long assignedPersonId,
             Pageable pageable,
             Authentication authentication) {
-        Long scopedPersonId = scopeToSelfUnlessDirector(assignedPersonId, authentication);
-        return ResponseEntity.ok(taskService.getAllTasks(status, scopedPersonId, pageable));
+        Person viewer = currentPersonResolver.resolve(authentication);
+        Long scopedPersonId = scopeToSelfUnlessDirector(assignedPersonId, viewer);
+        Long departmentId = departmentScopeForViewer(viewer);
+        return ResponseEntity.ok(taskService.getAllTasks(status, scopedPersonId, departmentId, pageable));
     }
 
     @GetMapping("/{id}")
@@ -97,8 +102,10 @@ public class TaskController {
             @RequestParam(required = false) Long assignedPersonId,
             Pageable pageable,
             Authentication authentication) {
-        Long scopedPersonId = scopeToSelfUnlessDirector(assignedPersonId, authentication);
-        return ResponseEntity.ok(taskService.searchTasks(q, scopedPersonId, pageable));
+        Person viewer = currentPersonResolver.resolve(authentication);
+        Long scopedPersonId = scopeToSelfUnlessDirector(assignedPersonId, viewer);
+        Long departmentId = departmentScopeForViewer(viewer);
+        return ResponseEntity.ok(taskService.searchTasks(q, scopedPersonId, departmentId, pageable));
     }
 
     @PutMapping("/{id}")
@@ -209,6 +216,16 @@ public class TaskController {
         return ResponseEntity.ok(taskService.getDeadlineHistory(id, pageable));
     }
 
+    /** The "Requests" inbox — every deadline-extension request still waiting on the
+     *  caller's own decision, across every task, not just one task's own history panel.
+     *  deciderId is the caller's real, JWT-resolved identity, same as every other
+     *  "who's asking" field in this controller. */
+    @GetMapping("/deadline-extensions/pending")
+    public ResponseEntity<List<PendingExtensionRequestResponse>> getPendingExtensionRequests(Authentication authentication) {
+        Long deciderId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(taskService.getPendingExtensionRequests(deciderId));
+    }
+
     @PutMapping("/{id}/pin")
     public ResponseEntity<TaskDetailResponse> setPinned(
             @PathVariable Long id,
@@ -219,13 +236,26 @@ public class TaskController {
         return ResponseEntity.ok(taskService.setPinned(id, verified));
     }
 
-    /** A Director/Super Admin may pass any assignedPersonId (or none, to see everything);
-     *  anyone else always gets scoped to themself, regardless of what was asked for. */
-    private Long scopeToSelfUnlessDirector(Long requestedPersonId, Authentication authentication) {
-        Person viewer = currentPersonResolver.resolve(authentication);
+    /** A Director/Executive/Super Admin may pass any assignedPersonId (or none, to skip
+     *  person-scoping entirely — a plain Director still gets department-scoped instead, see
+     *  departmentScopeForViewer); anyone else always gets scoped to themself, regardless of
+     *  what was asked for. */
+    private Long scopeToSelfUnlessDirector(Long requestedPersonId, Person viewer) {
         if (Role.isAtLeastDirector(viewer.getRole())) {
             return requestedPersonId;
         }
         return viewer.getId();
+    }
+
+    /** A plain Director (role DIRECTOR exactly — Executive/Super Admin stay fully
+     *  unrestricted) only ever sees tasks that belong to their own department; this is what
+     *  actually enforces that once assignedPersonId comes back null from
+     *  scopeToSelfUnlessDirector above. Null for anyone else, including a Director with no
+     *  department set at all — that's a data-hygiene gap, not a reason to show them nothing. */
+    private Long departmentScopeForViewer(Person viewer) {
+        if (viewer.getRole() != Role.DIRECTOR) {
+            return null;
+        }
+        return viewer.getDepartment() != null ? viewer.getDepartment().getId() : null;
     }
 }

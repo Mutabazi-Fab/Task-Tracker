@@ -74,6 +74,26 @@ public class TaskMapper {
         );
     }
 
+    /** Same source row as toDeadlineExtensionResponse, but carrying the task's own
+     *  identity — the "Requests" inbox is aggregated across tasks, so the viewer needs to
+     *  know which task each row belongs to; a single task's own history panel already knows
+     *  that from context and doesn't. */
+    public PendingExtensionRequestResponse toPendingExtensionResponse(TaskDeadlineExtensionRequest request) {
+        if (request == null) return null;
+        Task task = request.getTask();
+        return new PendingExtensionRequestResponse(
+                request.getId(),
+                task.getId(),
+                task.getTaskCode(),
+                task.getTitle(),
+                request.getCurrentDeadline(),
+                request.getRequestedDeadline(),
+                request.getJustification(),
+                request.getRequestedBy().getFullName(),
+                request.getRequestedAt()
+        );
+    }
+
     public TaskTimelineResponse toTimelineResponse(TaskComment comment) {
         if (comment == null) return null;
         return new TaskTimelineResponse(

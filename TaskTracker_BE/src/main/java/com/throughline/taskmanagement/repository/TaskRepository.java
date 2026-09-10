@@ -1,5 +1,7 @@
 package com.throughline.taskmanagement.repository;
 
+import com.throughline.taskmanagement.enums.Role;
+import com.throughline.taskmanagement.enums.TaskSeverity;
 import com.throughline.taskmanagement.enums.TaskStatus;
 import com.throughline.taskmanagement.model.Task;
 import org.springframework.data.domain.Page;
@@ -46,6 +48,66 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     // created, not the whole org's tasks. assignedBy doubles as "creator" for top-level
     // tasks (see TaskServiceImpl.createTask).
     Page<Task> findByParentTaskIsNullAndAssignedById(Long assignedById, Pageable pageable);
+
+    // Backs Director-tier department scoping on GET /tasks and /tasks/search — a plain
+    // Director (not Executive/Super Admin, who stay unrestricted) only sees tasks that
+    // belong to their own department. "Belongs to" is derived per assignee type, not a
+    // stored column: a DEPARTMENT-assigned task's own assignedDepartment, a TEAM-assigned
+    // task's team's department, or an INDIVIDUAL-assigned task's assignee's own department
+    // — exactly one of these three associations is ever non-null per task (the
+    // createTask/createSubtask XOR invariant). Every hop below is an EXPLICIT LEFT JOIN,
+    // not path navigation (t.assignedTeam.department.id) — that looks equivalent but isn't:
+    // Hibernate compiles a bare path expression through a to-one association as an INNER
+    // join, so with three mutually-exclusive nullable associations ANDed together in one
+    // FROM clause, at most one of the three joins could ever succeed and EVERY row would
+    // get silently dropped, no matter how the OR conditions read. Caught via a real-DB
+    // repository test (TaskRepositoryDepartmentScopingTest), not by inspection — it
+    // returned zero rows for every department despite matching data existing.
+    @Query("SELECT t FROM Task t "
+            + "LEFT JOIN t.assignedDepartment dept "
+            + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
+            + "LEFT JOIN t.assignedPerson person LEFT JOIN person.department personDept "
+            + "WHERE dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId")
+    Page<Task> findByDepartmentId(@Param("departmentId") Long departmentId, Pageable pageable);
+
+    @Query("SELECT t FROM Task t "
+            + "LEFT JOIN t.assignedDepartment dept "
+            + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
+            + "LEFT JOIN t.assignedPerson person LEFT JOIN person.department personDept "
+            + "WHERE (dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId) "
+            + "AND t.status = :status")
+    Page<Task> findByDepartmentIdAndStatus(@Param("departmentId") Long departmentId,
+                                            @Param("status") TaskStatus status, Pageable pageable);
+
+    // Same department scope (and same explicit-LEFT-JOIN reasoning) as findByDepartmentId,
+    // applied to search — mirrors searchVisibleToPerson's own explicit countQuery reasoning.
+    @Query(value = "SELECT t FROM Task t "
+                  + "LEFT JOIN t.assignedDepartment dept "
+                  + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
+                  + "LEFT JOIN t.assignedPerson person LEFT JOIN person.department personDept "
+                  + "WHERE (dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId) AND "
+                  + "(LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%')))",
+           countQuery = "SELECT COUNT(t) FROM Task t "
+                  + "LEFT JOIN t.assignedDepartment dept "
+                  + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
+                  + "LEFT JOIN t.assignedPerson person LEFT JOIN person.department personDept "
+                  + "WHERE (dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId) AND "
+                  + "(LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<Task> searchByDepartmentId(@Param("q") String q, @Param("departmentId") Long departmentId, Pageable pageable);
+
+    // Backs the Executive Dashboard's task grid: not "every top-level task" any more (see
+    // findByParentTaskIsNull, now unused by that view but left in place — depth-based
+    // top-level browsing still makes sense elsewhere, e.g. a future "initiatives" filter),
+    // but the two things actually worth an Executive's attention regardless of depth —
+    // anything flagged CRITICAL, and anything an Executive/Super Admin personally assigned
+    // (a Department task today, but not assumed to stay that way forever). Deliberately not
+    // depth-scoped: a CRITICAL subtask (Super Admin can set severity at any depth, unlike a
+    // plain Director) belongs here just as much as a CRITICAL Department task does.
+    @Query("SELECT t FROM Task t WHERE t.severity = :severity OR t.assignedBy.role IN :executiveRoles")
+    Page<Task> findBySeverityOrAssignedByRoleIn(
+            @Param("severity") TaskSeverity severity,
+            @Param("executiveRoles") List<Role> executiveRoles,
+            Pageable pageable);
 
     long countByStatus(TaskStatus status);
     

@@ -8,6 +8,30 @@
   border-bottom: 2px solid var(--accent-strong);
 }
 
+.leftGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  color: var(--ink);
+  transition: background 120ms ease;
+}
+
+.backButton:hover {
+  background: var(--hover);
+}
+
 .breadcrumb {
   font-family: var(--font-mono);
   font-size: 10px;

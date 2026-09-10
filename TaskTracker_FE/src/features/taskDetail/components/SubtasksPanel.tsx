@@ -21,13 +21,18 @@ import styles from './SubtasksPanel.module.css'
  *
  * "Add subtask" itself is shown to a Director/Super Admin, to whoever leads the team this
  * task is assigned to (the ordinary leaf case), or — for a Department task — to that
- * Department's own head Director or an Executive/Super Admin, the same tiers the backend
- * itself enforces.
+ * Department's own head Director or Super Admin.
+ *
+ * The CEO seat (role EXECUTIVE) never gets this button, on a Department task or anywhere
+ * else: her job is handing work to a Department and then watching progress/commenting —
+ * turning that into real team-or-individual work is the Department's own Director's call,
+ * not hers. Super Admin is a separate, unrestricted system-governance seat and keeps it.
  */
 export function SubtasksPanel({ task }: { task: TaskDetail }) {
   const { currentUser, isDirector, isExecutive } = useAuth()
   const [createOpen, setCreateOpen] = useState(false)
 
+  const isCeo = currentUser?.role === 'EXECUTIVE'
   const isDepartmentTask = task.assigneeType === 'DEPARTMENT'
   const departmentQuery = useDepartment(isDepartmentTask ? (task.assigneeId ?? NaN) : NaN)
 
@@ -36,8 +41,8 @@ export function SubtasksPanel({ task }: { task: TaskDetail }) {
     isDepartmentTask && departmentQuery.data?.headDirectorId === currentUser?.id
 
   const canCreate = isDepartmentTask
-    ? isExecutive || isThisDepartmentsHead
-    : isDirector || isThisTeamsLeader
+    ? (isExecutive && !isCeo) || isThisDepartmentsHead
+    : (isDirector && !isCeo) || isThisTeamsLeader
 
   return (
     <>

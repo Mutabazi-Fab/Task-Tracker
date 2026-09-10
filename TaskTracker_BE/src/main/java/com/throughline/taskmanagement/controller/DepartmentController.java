@@ -16,10 +16,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /** Read access (list/detail) is open to any authenticated caller — a Director/Executive
- *  needs to see departments to pick one when creating a task. Every write is Super-Admin-
- *  only, enforced server-side in DepartmentServiceImpl, not just hidden client-side. Every
- *  "who's doing this" field is re-derived from the caller's real login, same pattern as
- *  every other controller in this app. */
+ *  needs to see departments to pick one when creating a task. Creating a department is
+ *  Executive-or-above (the CEO can stand a new one up herself); renaming and reassigning a
+ *  department's head stay Super-Admin-only. Every write is enforced server-side in
+ *  DepartmentServiceImpl, not just hidden client-side. Every "who's doing this" field is
+ *  re-derived from the caller's real login, same pattern as every other controller in this
+ *  app. */
 @RestController
 @RequestMapping("/api/v1/departments")
 @RequiredArgsConstructor

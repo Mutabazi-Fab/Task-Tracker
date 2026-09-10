@@ -10,6 +10,7 @@ import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.model.Notification;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
+import com.throughline.taskmanagement.model.TaskComment;
 import com.throughline.taskmanagement.model.TaskDeadlineExtensionRequest;
 import com.throughline.taskmanagement.model.TaskReassignment;
 import com.throughline.taskmanagement.model.Team;
@@ -342,6 +343,61 @@ public class NotificationServiceImpl implements NotificationService {
         String message = String.format("%s extended the deadline on \"%s\" (%s) from %s to %s.",
                 extendedBy.getFullName(), task.getTitle(), task.getTaskCode(), previous, task.getDeadline());
         send(recipient, NotificationType.DEADLINE_EXTENDED, message, task.getId());
+    }
+
+    @Override
+    public void notifyDiscussionCommentPosted(TaskComment comment) {
+        Task task = comment.getTask();
+        Person author = comment.getAuthor();
+
+        // Resolve the "owning team" the same way TaskMapper.owningTeamId does: this task's
+        // own team if it's TEAM-assigned, or its parent's team for an ordinary leaf
+        // subtask — so a comment on one member's subtask reaches the whole team it belongs
+        // to, not just that one assignee.
+        Team owningTeam = task.getAssigneeType() == AssigneeType.TEAM
+                ? task.getAssignedTeam()
+                : (task.getParentTask() != null ? task.getParentTask().getAssignedTeam() : null);
+
+        String message = String.format("%s commented on \"%s\" (%s): %s",
+                author.getFullName(), task.getTitle(), task.getTaskCode(), comment.getBody());
+
+        if (owningTeam != null) {
+            for (TeamMember member : teamMemberRepository.findByTeamId(owningTeam.getId())) {
+                Person recipient = member.getPerson();
+                if (!recipient.getId().equals(author.getId())) {
+                    send(recipient, NotificationType.DISCUSSION_COMMENT_POSTED, message, task.getId());
+                }
+            }
+            return;
+        }
+
+        // No owning team — a standalone INDIVIDUAL task/subtask, or a DEPARTMENT task.
+        Person recipient = switch (task.getAssigneeType()) {
+            case INDIVIDUAL -> task.getAssignedPerson();
+            case DEPARTMENT -> task.getAssignedDepartment() != null ? task.getAssignedDepartment().getHeadDirector() : null;
+            case TEAM -> null; // unreachable — TEAM always resolves an owningTeam above
+        };
+        if (recipient != null && !recipient.getId().equals(author.getId())) {
+            send(recipient, NotificationType.DISCUSSION_COMMENT_POSTED, message, task.getId());
+        }
+    }
+
+    @Override
+    public void notifyDiscussionReplyPosted(TaskComment reply) {
+        TaskComment parent = reply.getParentComment();
+        if (parent == null) {
+            return; // Defensive — a top-level comment goes through notifyDiscussionCommentPosted instead.
+        }
+        Person originalAuthor = parent.getAuthor();
+        Person replier = reply.getAuthor();
+        if (originalAuthor.getId().equals(replier.getId())) {
+            return;
+        }
+
+        Task task = reply.getTask();
+        String message = String.format("%s replied to your comment on \"%s\" (%s): %s",
+                replier.getFullName(), task.getTitle(), task.getTaskCode(), reply.getBody());
+        send(originalAuthor, NotificationType.DISCUSSION_REPLY_POSTED, message, task.getId());
     }
 
     private void send(Person recipient, NotificationType type, String message, Long relatedEntityId) {

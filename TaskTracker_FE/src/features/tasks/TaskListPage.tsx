@@ -18,17 +18,26 @@ import styles from './TaskListPage.module.css'
 const PAGE_SIZE = 10
 
 /** A Member only ever sees tasks assigned directly to them — this page never shows them
- *  "all tasks" the way it does for a Director/Super Admin. assignedPersonId scopes every
- *  query on this page (list, lanes, and search) the same way; there's no client-side
- *  filtering of a wider result set, since that would still ship the wider set to them. */
+ *  "all tasks" the way it does for a Director/Executive/Super Admin. assignedPersonId
+ *  scopes every query on this page (list, lanes, and search) the same way; there's no
+ *  client-side filtering of a wider result set, since that would still ship the wider set
+ *  to them.
+ *
+ *  A plain Director isn't unrestricted any more either, just scoped differently: leaving
+ *  assignedPersonId unset (same as before) now makes the backend fall back to their own
+ *  department instead of "everything" — see TaskController.departmentScopeForViewer.
+ *  Nothing needs passing from here for that; it's resolved server-side off the JWT. Only
+ *  Executive/Super Admin still see literally every task. isPlainDirector below exists
+ *  purely for the page's own copy (title/placeholder), so it's honest about that scope. */
 export function TaskListPage() {
-  const { currentUser, isDirector } = useAuth()
+  const { currentUser, isDirector, isExecutive } = useAuth()
   const [status, setStatus] = useState<TaskStatusFilterValue>('ALL')
   const [layout, setLayout] = useState<TaskLayout>('table')
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
 
+  const isPlainDirector = isDirector && !isExecutive
   const scopeToPersonId = isDirector ? undefined : currentUser?.id
   const statusParam = status === 'ALL' ? undefined : status
   const tableQuery = useTasks({ status: statusParam, assignedPersonId: scopeToPersonId, page, size: PAGE_SIZE, sort: 'none' })
@@ -42,7 +51,7 @@ export function TaskListPage() {
     <>
       <PageHeader
         breadcrumb="Throughline"
-        title={isDirector ? 'Tasks' : 'My Tasks'}
+        title={isPlainDirector ? `${currentUser?.departmentName ?? 'Department'} Tasks` : isDirector ? 'Tasks' : 'My Tasks'}
         right={isDirector ? <Button onClick={() => setCreateOpen(true)}>New task</Button> : undefined}
       />
 
@@ -58,7 +67,7 @@ export function TaskListPage() {
           <TextField
             value={search}
             onChange={setSearch}
-            placeholder={isDirector ? 'Search code or title…' : 'Search your tasks…'}
+            placeholder={isPlainDirector ? "Search your department's tasks…" : isDirector ? 'Search code or title…' : 'Search your tasks…'}
             aria-label="Search tasks"
           />
           <TaskLayoutToggle value={layout} onChange={setLayout} />

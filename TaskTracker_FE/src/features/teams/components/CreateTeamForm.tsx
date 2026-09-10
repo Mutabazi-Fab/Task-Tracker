@@ -15,16 +15,24 @@ interface CreateTeamFormProps {
 }
 
 /** Director creates the team, picks its roster, and names one member as Team Leader —
- *  all in one request (leaderId must be one of memberIds). */
+ *  all in one request (leaderId must be one of memberIds).
+ *
+ *  A plain Director only ever heads one department, so they never get a department picker
+ *  at all — it's silently their own, same as GET /tasks' department scoping. Only
+ *  Executive/Super Admin (who aren't tied to a single department) get to choose, since
+ *  they're the only ones actually able to stand up a team for someone else's department —
+ *  enforced server-side in TeamServiceImpl.createTeam, not just hidden here. */
 export function CreateTeamForm({ onSubmit, onCancel, submitting }: CreateTeamFormProps) {
-  const { currentUser } = useAuth()
+  const { currentUser, isExecutive } = useAuth()
   const peopleQuery = usePeople()
   const departmentsQuery = useDepartments()
 
   const [name, setName] = useState('')
   const [memberIds, setMemberIds] = useState<number[]>([])
   const [leaderId, setLeaderId] = useState('')
-  const [departmentId, setDepartmentId] = useState('')
+  const [departmentId, setDepartmentId] = useState(() =>
+    !isExecutive && currentUser?.departmentId ? String(currentUser.departmentId) : '',
+  )
 
   function toggleMember(id: number) {
     setMemberIds((prev) => {
@@ -56,13 +64,20 @@ export function CreateTeamForm({ onSubmit, onCancel, submitting }: CreateTeamFor
     <form className={styles.form} onSubmit={handleSubmit}>
       <TextField label="Team name" value={name} onChange={setName} placeholder="e.g. Auditing App" required />
 
-      <SelectField
-        label="Department"
-        value={departmentId}
-        onChange={setDepartmentId}
-        placeholder="Select a department"
-        options={(departmentsQuery.data ?? []).map((d) => ({ label: d.name, value: String(d.id) }))}
-      />
+      {isExecutive ? (
+        <SelectField
+          label="Department"
+          value={departmentId}
+          onChange={setDepartmentId}
+          placeholder="Select a department"
+          options={(departmentsQuery.data ?? []).map((d) => ({ label: d.name, value: String(d.id) }))}
+        />
+      ) : (
+        <div className={styles.field}>
+          <span className={styles.label}>Department</span>
+          <span className={styles.readOnlyValue}>{currentUser?.departmentName ?? 'No department set'}</span>
+        </div>
+      )}
 
       <div className={styles.field}>
         <span className={styles.label}>Members</span>

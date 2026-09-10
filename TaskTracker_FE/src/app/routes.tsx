@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { TaskListPage } from '../features/tasks/TaskListPage'
 import { ActivityPage } from '../features/tasks/ActivityPage'
+import { RequestsPage } from '../features/dashboard/RequestsPage'
 import { TaskDetailPage } from '../features/taskDetail/TaskDetailPage'
 import { PeopleListPage } from '../features/people/PeopleListPage'
 import { PersonProfilePage } from '../features/people/PersonProfilePage'
@@ -95,6 +96,7 @@ export function AppRoutes() {
       <Route path={ROUTES.tasks} element={protectedPage(<TaskListPage />)} />
       <Route path="/tasks/:taskId" element={protectedPage(<TaskDetailPage />)} />
       <Route path={ROUTES.activity} element={protectedPage(<ActivityPage />)} />
+      <Route path={ROUTES.requests} element={protectedPage(<RequestsPage />)} />
       <Route path={ROUTES.people} element={protectedPage(<PeopleListPage />)} />
       <Route path="/people/:personId" element={protectedPage(<PersonProfilePage />)} />
       <Route path={ROUTES.teams} element={protectedPage(<TeamsListPage />)} />

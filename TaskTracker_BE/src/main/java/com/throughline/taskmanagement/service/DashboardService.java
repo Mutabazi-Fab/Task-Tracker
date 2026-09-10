@@ -18,4 +18,11 @@ public interface DashboardService {
     /** The Director's Dashboard default view: only the top-level tasks THIS Director
      *  created, not the whole org's tasks. */
     Page<TaskListResponse> getDirectorTasks(Long directorId, Pageable pageable);
+
+    /** The Executive's Dashboard view: every CRITICAL-severity task org-wide plus every task
+     *  an Executive/Super Admin personally assigned, not just the ones this particular
+     *  Executive created and not scoped to top-level depth (see TaskRepository.
+     *  findBySeverityOrAssignedByRoleIn). Executive-or-above only (Super Admin sees the
+     *  literal same view, not a separate lookalike). */
+    Page<TaskListResponse> getExecutiveTasks(Long viewerId, Pageable pageable);
 }

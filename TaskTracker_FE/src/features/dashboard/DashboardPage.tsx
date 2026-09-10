@@ -1,7 +1,7 @@
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { useAuth } from '../auth/useAuth'
-import { DirectorInitiativesSection } from './components/DirectorInitiativesSection'
+import { TopLevelTasksSection } from './components/TopLevelTasksSection'
 import { MyDashboardSummary } from './components/MyDashboardSummary'
 import { KpiRow } from './components/KpiRow'
 import { ProgressOverTimeChart } from './components/ProgressOverTimeChart'
@@ -19,7 +19,7 @@ import styles from './DashboardPage.module.css'
  * isn't theirs to see.
  */
 export function DashboardPage() {
-  const { isDirector } = useAuth()
+  const { isDirector, isExecutive } = useAuth()
 
   if (!isDirector) {
     return (
@@ -49,7 +49,12 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      <DirectorInitiativesSection />
+      {/* An Executive/Super Admin sees every CRITICAL task org-wide plus everything they
+          personally assigned — the literal same view for both, not a separate lookalike,
+          and not scoped to top-level depth (see TopLevelTasksSection's own doc comment). A
+          plain Director still gets the classic "my initiatives" scoping: only the top-level
+          tasks they created themselves. */}
+      <TopLevelTasksSection scope={isExecutive ? 'org-wide' : 'mine'} />
 
       <Card>
         <div className={styles.sectionHeadingLg}>Team leaderboard</div>

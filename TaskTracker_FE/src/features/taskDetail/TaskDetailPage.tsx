@@ -85,19 +85,23 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
     : task.assigneeType === 'TEAM'
       ? (currentUser?.teams.some((t) => t.teamId === task.assigneeId && t.isLeader) ?? false)
       : task.assigneeId === currentUser?.id
-  // Requesting an extension: this task's own accountable person, or the override tier.
-  const canRequestExtension = isDeadlineOverrideTier || isAccountablePerson
   // Deciding a request, or extending directly: this task's own deadline decider — a
   // Director-or-above, chain-of-command resolved, NOT necessarily assignedById (a Team
   // Leader can be a leaf subtask's assignedBy but has no authority over its deadline) —
   // or the override tier. Mirrors TaskServiceImpl.requireCanDecideDeadline/resolveDeadlineDecider.
   const canDecideDeadline = isDeadlineOverrideTier || task.deadlineDeciderId === currentUser?.id
+  // Requesting an extension: this task's own accountable person, or the override tier —
+  // but never when that's the same person who'd also decide it (an Executive on her own
+  // Department task, or a Director who's also this task's own assignedBy). Asking yourself
+  // for more time makes no sense — that's exactly what "Extend deadline" is for instead.
+  const canRequestExtension = (isDeadlineOverrideTier || isAccountablePerson) && !canDecideDeadline
 
   return (
     <>
       <PageHeader
         breadcrumb="Throughline / Tasks"
         title={task.taskCode}
+        onBack={() => navigate(-1)}
         right={
           <div className={styles.headerActions}>
             {canPin && (
