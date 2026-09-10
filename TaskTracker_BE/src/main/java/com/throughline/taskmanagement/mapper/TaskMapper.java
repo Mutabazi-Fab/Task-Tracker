@@ -13,7 +13,11 @@ import com.throughline.taskmanagement.model.TaskReassignment;
 import com.throughline.taskmanagement.model.Team;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.TreeSet;
 
 @Component
 public class TaskMapper {
@@ -101,6 +105,66 @@ public class TaskMapper {
                 comment.getCreatedAt(),
                 comment.getId()
         );
+    }
+
+    /** A rollup task (TEAM/DEPARTMENT) never carries its own PROGRESS comments — its
+     *  percentage is purely derived from its children (see TaskServiceImpl.
+     *  recalculateParentRollup) — so without this, its Trend chart on the task detail page
+     *  is always empty, even though its rollup value genuinely does move over time as those
+     *  children log progress. Reconstructs that history by replaying every descendant leaf's
+     *  own comment timeline in chronological order, recomputing this task's rollup value at
+     *  each event the exact same way recalculateParentRollup computes it live — average of
+     *  the direct children's value — just evaluated at every historical instant instead of
+     *  only "now" (the reconstruction's value at the latest instant always matches the
+     *  task's actual stored progressPercentage, by construction).
+     *
+     *  An individually-logged task (its own PROGRESS comments non-empty) is the base case —
+     *  its real history, unchanged from before. A task with neither its own comments nor any
+     *  children (a fresh task nobody's touched yet) yields an empty timeline, same as always. */
+    private List<TaskTimelineResponse> buildRollupTimeline(Task task) {
+        List<TaskTimelineResponse> ownProgress = task.getComments() == null ? List.of()
+                : task.getComments().stream()
+                        .filter(c -> c.getType() == CommentType.PROGRESS)
+                        .sorted(Comparator.comparing(TaskComment::getCreatedAt))
+                        .map(this::toTimelineResponse)
+                        .toList();
+        if (!ownProgress.isEmpty()) {
+            return ownProgress;
+        }
+
+        List<Task> children = task.getSubtasks() == null ? List.of() : task.getSubtasks();
+        if (children.isEmpty()) {
+            return List.of();
+        }
+
+        List<List<TaskTimelineResponse>> childTimelines = children.stream()
+                .map(this::buildRollupTimeline)
+                .toList();
+        if (childTimelines.stream().allMatch(List::isEmpty)) {
+            return List.of();
+        }
+
+        // Every distinct instant any child (or descendant) logged something, in order.
+        TreeSet<LocalDateTime> instants = new TreeSet<>();
+        childTimelines.forEach(timeline -> timeline.forEach(point -> instants.add(point.date())));
+
+        // A running cursor per child into its own (already chronological) timeline.
+        int[] cursors = new int[children.size()];
+        List<TaskTimelineResponse> result = new ArrayList<>();
+        for (LocalDateTime instant : instants) {
+            double sum = 0;
+            for (int i = 0; i < children.size(); i++) {
+                List<TaskTimelineResponse> childTimeline = childTimelines.get(i);
+                while (cursors[i] < childTimeline.size() && !childTimeline.get(cursors[i]).date().isAfter(instant)) {
+                    cursors[i]++;
+                }
+                // This child's value as of `instant`: its latest point at or before it, or 0
+                // if it hadn't logged anything yet by then.
+                sum += cursors[i] == 0 ? 0 : childTimeline.get(cursors[i] - 1).percentage();
+            }
+            result.add(new TaskTimelineResponse((int) Math.round(sum / children.size()), instant, null));
+        }
+        return result;
     }
 
     private String assigneeNameOf(Task task) {
@@ -202,11 +266,10 @@ public class TaskMapper {
         List<ReassignmentResponse> reassignments = task.getReassignments() != null ?
                 task.getReassignments().stream().map(this::toReassignmentResponse).toList() : List.of();
         // DISCUSSION comments never carry a real percentage reading (see CommentType) —
-        // excluded here so the trend chart only ever plots genuine progress updates.
-        List<TaskTimelineResponse> timeline = task.getComments() != null ?
-                task.getComments().stream()
-                        .filter(c -> c.getType() == CommentType.PROGRESS)
-                        .map(this::toTimelineResponse).toList() : List.of();
+        // excluded here so the trend chart only ever plots genuine progress updates. A
+        // rollup task (TEAM/DEPARTMENT) has none of its own, so its history is reconstructed
+        // from its children instead — see buildRollupTimeline.
+        List<TaskTimelineResponse> timeline = buildRollupTimeline(task);
         List<SubtaskSummaryResponse> subtasks = task.getSubtasks() != null ?
                 task.getSubtasks().stream().map(this::toSubtaskSummary).toList() : List.of();
         List<DeadlineExtensionResponse> deadlineExtensions = task.getDeadlineExtensionRequests() != null ?
