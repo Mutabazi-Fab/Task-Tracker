@@ -1,5 +1,14 @@
 package com.throughline.taskmanagement.service.impl;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.throughline.taskmanagement.dto.request.AddTeamMemberRequest;
 import com.throughline.taskmanagement.dto.request.CreateTeamRequest;
 import com.throughline.taskmanagement.dto.request.RemoveTeamMemberRequest;
@@ -34,15 +43,8 @@ import com.throughline.taskmanagement.repository.TeamMembershipChangeRepository;
 import com.throughline.taskmanagement.repository.TeamRepository;
 import com.throughline.taskmanagement.service.NotificationService;
 import com.throughline.taskmanagement.service.TeamService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional
@@ -70,10 +72,7 @@ public class TeamServiceImpl implements TeamService {
                 .orElseThrow(() -> new ResourceNotFoundException("createdById not found"));
         requireDirector(createdBy, "Only a Director can create a team.");
 
-        // A plain Director (not Executive/Super Admin) can only ever stand up a team inside
-        // their own department — same split as GET /tasks' department scoping
-        // (TaskController.departmentScopeForViewer). Checked server-side, not just hidden
-        // by the frontend defaulting the picker away for them.
+        
         if (createdBy.getRole() == Role.DIRECTOR) {
             Long ownDepartmentId = createdBy.getDepartment() != null ? createdBy.getDepartment().getId() : null;
             if (ownDepartmentId == null || !ownDepartmentId.equals(request.departmentId())) {
