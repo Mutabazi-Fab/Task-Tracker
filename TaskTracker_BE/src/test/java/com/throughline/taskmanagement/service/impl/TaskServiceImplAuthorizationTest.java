@@ -162,8 +162,9 @@ class TaskServiceImplAuthorizationTest {
     // ---- deleteTask ----
 
     @Test
-    void deleteTask_directorMayDelete() {
+    void deleteTask_directorMayDeleteATaskTheyCreatedThemselves() {
         Person director = personWithRole(1L, Role.DIRECTOR);
+        topLevelTask.setAssignedBy(director);
         when(personRepository.findById(1L)).thenReturn(Optional.of(director));
         when(taskRepository.findWithDetailsById(13L)).thenReturn(Optional.of(topLevelTask));
 
@@ -173,12 +174,43 @@ class TaskServiceImplAuthorizationTest {
     }
 
     @Test
-    void deleteTask_superAdminMayDelete() {
+    void deleteTask_directorMayNotDeleteATaskSomeoneElseCreated() {
+        // A Department task an Executive assigned, say — the receiving Director didn't
+        // create it, just had it handed to them, so they can't delete it even though
+        // they're Director-or-above.
+        Person director = personWithRole(1L, Role.DIRECTOR);
+        Person executive = personWithRole(20L, Role.EXECUTIVE);
+        topLevelTask.setAssignedBy(executive);
+        when(personRepository.findById(1L)).thenReturn(Optional.of(director));
+        when(taskRepository.findWithDetailsById(13L)).thenReturn(Optional.of(topLevelTask));
+
+        assertThrows(ForbiddenActionException.class, () -> taskService.deleteTask(13L, 1L));
+
+        verify(taskRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteTask_superAdminMayDeleteRegardlessOfWhoCreatedIt() {
         Person superAdmin = personWithRole(19L, Role.SUPER_ADMIN);
+        Person someoneElse = personWithRole(1L, Role.DIRECTOR);
+        topLevelTask.setAssignedBy(someoneElse);
         when(personRepository.findById(19L)).thenReturn(Optional.of(superAdmin));
         when(taskRepository.findWithDetailsById(13L)).thenReturn(Optional.of(topLevelTask));
 
         assertDoesNotThrow(() -> taskService.deleteTask(13L, 19L));
+
+        verify(taskRepository).delete(topLevelTask);
+    }
+
+    @Test
+    void deleteTask_executiveMayDeleteRegardlessOfWhoCreatedIt() {
+        Person executive = personWithRole(20L, Role.EXECUTIVE);
+        Person someoneElse = personWithRole(1L, Role.DIRECTOR);
+        topLevelTask.setAssignedBy(someoneElse);
+        when(personRepository.findById(20L)).thenReturn(Optional.of(executive));
+        when(taskRepository.findWithDetailsById(13L)).thenReturn(Optional.of(topLevelTask));
+
+        assertDoesNotThrow(() -> taskService.deleteTask(13L, 20L));
 
         verify(taskRepository).delete(topLevelTask);
     }

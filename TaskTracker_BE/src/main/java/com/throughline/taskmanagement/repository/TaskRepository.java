@@ -21,6 +21,11 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     
     Page<Task> findByStatus(TaskStatus status, Pageable pageable);
 
+    // Backs GET /tasks' unfiltered-by-department, status-filtered case, scoped to top-level
+    // tasks only — see the parentTaskIsNull reasoning on findByDepartmentId below; this is
+    // the same idea for the plain "just a status filter" branch of getAllTasks.
+    Page<Task> findByStatusAndParentTaskIsNull(TaskStatus status, Pageable pageable);
+
     List<Task> findByAssignedPersonId(Long personId);
 
     // Backs "my tasks" — a Member's scoped view of GET /tasks: everything they're currently
@@ -63,11 +68,21 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     // get silently dropped, no matter how the OR conditions read. Caught via a real-DB
     // repository test (TaskRepositoryDepartmentScopingTest), not by inspection — it
     // returned zero rows for every department despite matching data existing.
+    //
+    // t.parentTask IS NULL scopes this to top-level tasks only, same as
+    // findByStatusAndParentTaskIsNull/findByParentTaskIsNull below — the org-wide/
+    // department-wide Tasks list is meant to read as "what are the initiatives", not every
+    // individual leaf subtask mixed in; a subtask's own page already shows it (as a row in
+    // its parent's Subtasks panel) without it needing to also appear here. Only reachable
+    // when getAllTasks has no assignedPersonId to scope by — a Member's own "My Tasks" is
+    // untouched by this (findVisibleToPerson*, below), since their assigned work is very
+    // often exactly a leaf subtask, not a top-level task at all.
     @Query("SELECT t FROM Task t "
             + "LEFT JOIN t.assignedDepartment dept "
             + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
             + "LEFT JOIN t.assignedPerson person LEFT JOIN person.department personDept "
-            + "WHERE dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId")
+            + "WHERE (dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId) "
+            + "AND t.parentTask IS NULL")
     Page<Task> findByDepartmentId(@Param("departmentId") Long departmentId, Pageable pageable);
 
     @Query("SELECT t FROM Task t "
@@ -75,7 +90,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
             + "LEFT JOIN t.assignedPerson person LEFT JOIN person.department personDept "
             + "WHERE (dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId) "
-            + "AND t.status = :status")
+            + "AND t.status = :status AND t.parentTask IS NULL")
     Page<Task> findByDepartmentIdAndStatus(@Param("departmentId") Long departmentId,
                                             @Param("status") TaskStatus status, Pageable pageable);
 

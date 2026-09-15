@@ -9,6 +9,7 @@ import { useTeamMembers } from '../../teams/hooks/useTeamMembers'
 import { useTeams } from '../../teams/hooks/useTeams'
 import { usePeople } from '../../people/hooks/usePeople'
 import { maxAssignableDate } from '../../../lib/dateLimits'
+import { InlineSubtasksField, type InlineSubtaskRow } from '../../tasks/components/InlineSubtasksField'
 import type { CreateSubtaskRequest, TaskSeverity, TaskSource } from '../../../types/task.types'
 import styles from '../../tasks/components/CreateTaskForm.module.css'
 
@@ -42,10 +43,21 @@ interface CreateSubtaskFormProps {
    *  anyone outside it, and always individual. */
   teamId: number
   /** True only when the parent is a Department-assigned Executive task — this is its
-   *  "implementation task", team- or individual-assigned, org-wide, exactly like creating
-   *  a brand-new top-level task (see CreateTaskForm). teamId above is unused in this mode. */
+   *  "implementation task", team- or individual-assigned, exactly like creating a
+   *  brand-new top-level task (see CreateTaskForm), except the team picker stays scoped to
+   *  that same Department (see departmentId) rather than every team org-wide. teamId above
+   *  is unused in this mode. */
   isDepartmentImplementation?: boolean
-  onSubmit: (payload: CreateSubtaskRequest) => void
+  /** The parent Department task's own Department id — scopes the team picker to that
+   *  Department's teams only, so e.g. a task assigned to Cybersecurity only offers
+   *  Cybersecurity's own teams, never Finance's or IT's. */
+  departmentId?: number
+  /** subtasks is whatever InlineSubtasksField collected when assigneeKind is TEAM
+   *  (department-implementation case only — the ordinary leaf case has nobody left to
+   *  break the work down further into) — possibly empty. The caller (CreateSubtaskModal)
+   *  creates this implementation task first, then loops over these to create one leaf
+   *  subtask per filled row underneath it. */
+  onSubmit: (payload: CreateSubtaskRequest, subtasks: InlineSubtaskRow[]) => void
   onCancel: () => void
   submitting: boolean
 }
@@ -57,6 +69,7 @@ interface CreateSubtaskFormProps {
 export function CreateSubtaskForm({
   teamId,
   isDepartmentImplementation = false,
+  departmentId,
   onSubmit,
   onCancel,
   submitting,
@@ -65,6 +78,8 @@ export function CreateSubtaskForm({
   const membersQuery = useTeamMembers(teamId, !isDepartmentImplementation)
   const teamsQuery = useTeams()
   const peopleQuery = usePeople()
+  const departmentTeams = (teamsQuery.data ?? []).filter((team) => team.departmentId === departmentId)
+  const departmentPeople = (peopleQuery.data ?? []).filter((person) => person.departmentId === departmentId)
 
   const [assigneeKind, setAssigneeKind] = useState<AssigneeKind>('TEAM')
   const [title, setTitle] = useState('')
@@ -77,11 +92,20 @@ export function CreateSubtaskForm({
   const [sourceLabel, setSourceLabel] = useState('')
   const [severity, setSeverity] = useState<TaskSeverity | ''>('')
   const [openingNote, setOpeningNote] = useState('')
+  const [subtaskRows, setSubtaskRows] = useState<InlineSubtaskRow[]>([])
 
   function handleAssigneeKindChange(next: AssigneeKind) {
     setAssigneeKind(next)
     setAssignedPersonId('')
     setAssignedTeamId('')
+    setSubtaskRows([])
+  }
+
+  function handleTeamChange(next: string) {
+    setAssignedTeamId(next)
+    // A different team means a different roster — any rows picked against the old one
+    // would point at people who aren't even on this team.
+    setSubtaskRows([])
   }
 
   const hasTarget = isDepartmentImplementation
@@ -101,20 +125,27 @@ export function CreateSubtaskForm({
     e.preventDefault()
     if (!isValid || !currentUser) return
 
-    onSubmit({
-      title: title.trim(),
-      description: description.trim() || undefined,
-      createdById: currentUser.id,
-      assignedPersonId:
-        !isDepartmentImplementation || assigneeKind === 'INDIVIDUAL' ? Number(assignedPersonId) || undefined : undefined,
-      assignedTeamId: isDepartmentImplementation && assigneeKind === 'TEAM' ? Number(assignedTeamId) : undefined,
-      dateAssigned,
-      deadline,
-      source: source || undefined,
-      sourceLabel: source && sourceLabel.trim() ? sourceLabel.trim() : undefined,
-      severity: isExecutive && severity ? severity : undefined,
-      openingNote: openingNote.trim(),
-    })
+    const isTeamImplementation = isDepartmentImplementation && assigneeKind === 'TEAM'
+
+    onSubmit(
+      {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        createdById: currentUser.id,
+        assignedPersonId:
+          !isDepartmentImplementation || assigneeKind === 'INDIVIDUAL' ? Number(assignedPersonId) || undefined : undefined,
+        assignedTeamId: isTeamImplementation ? Number(assignedTeamId) : undefined,
+        dateAssigned,
+        deadline,
+        source: source || undefined,
+        sourceLabel: source && sourceLabel.trim() ? sourceLabel.trim() : undefined,
+        severity: isExecutive && severity ? severity : undefined,
+        openingNote: openingNote.trim(),
+      },
+      // Only meaningful for a Team-assigned implementation task — a half-filled row
+      // (missing either the person or the title) is dropped rather than blocking submission.
+      isTeamImplementation ? subtaskRows.filter((r) => r.personId !== '' && r.title.trim() !== '') : [],
+    )
   }
 
   return (
@@ -130,20 +161,25 @@ export function CreateSubtaskForm({
             <SegmentedControl options={ASSIGNEE_KIND_OPTIONS} value={assigneeKind} onChange={handleAssigneeKindChange} />
           </div>
           {assigneeKind === 'TEAM' ? (
-            <SelectField
-              label="Assigned team"
-              value={assignedTeamId}
-              onChange={setAssignedTeamId}
-              placeholder={teamsQuery.isLoading ? 'Loading…' : 'Select a team'}
-              options={(teamsQuery.data ?? []).map((team) => ({ label: team.name, value: String(team.id) }))}
-            />
+            <>
+              <SelectField
+                label="Assigned team"
+                value={assignedTeamId}
+                onChange={handleTeamChange}
+                placeholder={teamsQuery.isLoading ? 'Loading…' : 'Select a team'}
+                options={departmentTeams.map((team) => ({ label: team.name, value: String(team.id) }))}
+              />
+              {assignedTeamId !== '' && (
+                <InlineSubtasksField teamId={Number(assignedTeamId)} rows={subtaskRows} onChange={setSubtaskRows} />
+              )}
+            </>
           ) : (
             <SelectField
               label="Assigned person"
               value={assignedPersonId}
               onChange={setAssignedPersonId}
               placeholder={peopleQuery.isLoading ? 'Loading…' : 'Select a person'}
-              options={(peopleQuery.data ?? []).map((person) => ({ label: person.fullName, value: String(person.id) }))}
+              options={departmentPeople.map((person) => ({ label: person.fullName, value: String(person.id) }))}
             />
           )}
         </>

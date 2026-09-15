@@ -89,6 +89,9 @@ export interface TaskListItem {
   // 0 for a real top-level task (plain or Department-assigned), 1 for a direct child, 2
   // for a grandchild (only possible under a Department-rooted hierarchy).
   depth: number
+  // Backs the "New" badge (see isRecentlyCreated) — compared against "now" at render time
+  // rather than a precomputed boolean, so the badge disappears on its own as time passes.
+  createdAt: string
 }
 
 /** Full detail — complete comment + reassignment history, oldest first. */

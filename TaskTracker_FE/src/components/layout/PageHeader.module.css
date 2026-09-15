@@ -42,6 +42,12 @@
   margin-bottom: var(--space-1);
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .title {
   font-family: var(--font-sans);
   font-size: 23px;

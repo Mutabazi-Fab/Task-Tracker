@@ -3,8 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { NewBadge } from '../../components/ui/NewBadge'
 import { QueryBoundary } from '../../components/feedback/QueryBoundary'
 import { ROUTES } from '../../app/routes'
+import { isRecentlyCreated } from '../../lib/isRecentlyCreated'
 import { useAuth } from '../auth/useAuth'
 import { useDepartment } from '../departments/hooks/useDepartment'
 import { useTaskDetail } from './hooks/useTaskDetail'
@@ -57,10 +59,13 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
   // has nobody behind it to break work down further — a dead end either way, so it gets no
   // Subtasks panel at all.
   const canHaveSubtasks = (task.assigneeType === 'TEAM' && task.depth < 2) || isDepartmentAssigned
-  // Mirrors the backend check in TaskServiceImpl.deleteTask: Director/Super Admin only,
-  // the same authority that creates a top-level task — a Team Leader can't delete even
-  // their own team's tasks (unlike reassign, just below).
-  const canDelete = isDirector
+  // Mirrors the backend check in TaskServiceImpl.deleteTask/requireCanDelete: Executive/
+  // Super Admin can always delete anything, but a plain Director may only delete a task
+  // they personally created (assignedById === them) — not one just handed to their
+  // department (a Department task is always the Executive's own doing), and not another
+  // Director's task either. A Team Leader can't delete even their own team's tasks
+  // (unlike reassign, just below) — that floor is unconditional, not ownership-based.
+  const canDelete = isDirector && (isExecutive || task.assignedById === currentUser?.id)
   // Mirrors the backend check in TaskServiceImpl.setPinned: Director-or-above, same tier
   // as delete — a manual, independently-editable toggle, not derived from severity.
   const canPin = isDirector
@@ -102,6 +107,7 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
         breadcrumb="Throughline / Tasks"
         title={task.taskCode}
         onBack={() => navigate(-1)}
+        titleBadge={isRecentlyCreated(task.createdAt) ? <NewBadge /> : undefined}
         right={
           <div className={styles.headerActions}>
             {canPin && (

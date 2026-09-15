@@ -223,7 +223,8 @@ public class TaskMapper {
                 task.getParentTask() != null ? task.getParentTask().getTaskCode() : null,
                 task.getCreatedByRole(),
                 subtasks,
-                task.getDepth()
+                task.getDepth(),
+                task.getCreatedAt()
         );
     }
 

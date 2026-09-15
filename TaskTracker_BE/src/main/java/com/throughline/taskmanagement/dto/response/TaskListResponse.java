@@ -6,6 +6,7 @@ import com.throughline.taskmanagement.enums.TaskSeverity;
 import com.throughline.taskmanagement.enums.TaskSource;
 import com.throughline.taskmanagement.enums.TaskStatus;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record TaskListResponse(
@@ -40,5 +41,9 @@ public record TaskListResponse(
     // 0 for a real top-level task (plain or Department-assigned), 1 for a direct child
     // (an ordinary subtask, or a Department's implementation task), 2 for a grandchild
     // (only possible under a Department-rooted hierarchy).
-    int depth
+    int depth,
+    // Backs the "New" badge on a task list row — the frontend compares this against "now"
+    // itself rather than the backend precomputing a boolean, so the badge disappears on its
+    // own as time passes without needing a fresh fetch to notice.
+    LocalDateTime createdAt
 ) {}

@@ -9,6 +9,12 @@
   margin-bottom: var(--space-2);
 }
 
+.codeGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .code {
   font-family: var(--font-mono);
   font-size: 11px;

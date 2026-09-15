@@ -19,6 +19,11 @@ import styles from './SubtasksPanel.module.css'
  * task case, team-or-individual, org-wide). See TaskDetailPage's canHaveSubtasks, which
  * mirrors this exactly so the panel is never rendered when it'd have nothing to offer.
  *
+ * A Department task can have more than one implementation task under it (e.g. TSK-0001 has
+ * both a Digital Banking and a Mobile Banking one, two teams working different slices of
+ * the same CEO mandate in parallel) — this never converts the Department task itself, it
+ * only ever adds a new child underneath it.
+ *
  * "Add subtask" itself is shown to a Director/Super Admin, to whoever leads the team this
  * task is assigned to (the ordinary leaf case), or — for a Department task — to that
  * Department's own head Director or Super Admin.
@@ -82,6 +87,7 @@ export function SubtasksPanel({ task }: { task: TaskDetail }) {
           parentTaskId={task.id}
           teamId={task.assigneeId ?? NaN}
           isDepartmentImplementation={isDepartmentTask}
+          departmentId={isDepartmentTask ? (task.assigneeId ?? undefined) : undefined}
           open={createOpen}
           onClose={() => setCreateOpen(false)}
         />

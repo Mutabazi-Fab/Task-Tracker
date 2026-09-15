@@ -2,9 +2,11 @@ import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../app/routes'
 import { Card } from '../../../components/ui/Card'
 import { Icon } from '../../../components/ui/Icon'
+import { NewBadge } from '../../../components/ui/NewBadge'
 import { ProgressBar } from '../../../components/ui/ProgressBar'
 import { SeverityBadge } from '../../../components/ui/SeverityBadge'
 import { formatPercentage } from '../../../lib/formatPercentage'
+import { isRecentlyCreated } from '../../../lib/isRecentlyCreated'
 import type { TaskListItem } from '../../../types/task.types'
 import { TaskLastCommentCell } from './TaskLastCommentCell'
 import styles from './TaskCard.module.css'
@@ -15,7 +17,10 @@ export function TaskCard({ task }: { task: TaskListItem }) {
     <Link to={ROUTES.taskDetail(task.id)} className={styles.link}>
       <Card padding="sm">
         <div className={styles.top}>
-          <span className={styles.code}>{task.taskCode}</span>
+          <span className={styles.codeGroup}>
+            <span className={styles.code}>{task.taskCode}</span>
+            {isRecentlyCreated(task.createdAt) && <NewBadge />}
+          </span>
           <div className={styles.badges}>
             {task.pinned && <Icon name="pin" size={12} className={styles.pinIcon} />}
             {task.severity && <SeverityBadge severity={task.severity} />}

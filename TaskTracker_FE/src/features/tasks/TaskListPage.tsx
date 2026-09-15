@@ -40,7 +40,12 @@ export function TaskListPage() {
   const isPlainDirector = isDirector && !isExecutive
   const scopeToPersonId = isDirector ? undefined : currentUser?.id
   const statusParam = status === 'ALL' ? undefined : status
-  const tableQuery = useTasks({ status: statusParam, assignedPersonId: scopeToPersonId, page, size: PAGE_SIZE, sort: 'none' })
+  // 'createdAt,desc' rather than 'none' — pinned tasks still float to the top either way
+  // (the backend composes DESC-pinned as a leading sort key onto whatever's requested, see
+  // TaskServiceImpl.withPinnedFirst), but 'none' left everything else in undefined database
+  // order. This makes the rest genuinely newest-created-first, so a task made today lands
+  // right after the pinned ones and ahead of yesterday's, and so on.
+  const tableQuery = useTasks({ status: statusParam, assignedPersonId: scopeToPersonId, page, size: PAGE_SIZE, sort: 'createdAt,desc' })
   const { searchQuery, debouncedQuery } = useTaskSearch(search, scopeToPersonId)
   // Keyed off the SAME debounced value the query itself is enabled/disabled on — see
   // useTaskSearch's doc comment for why using the raw `search` state here crashed
@@ -87,7 +92,7 @@ export function TaskListPage() {
           )}
         </>
       ) : (
-        <TaskLanesBoard assignedPersonId={scopeToPersonId} status={status} sort="none" />
+        <TaskLanesBoard assignedPersonId={scopeToPersonId} status={status} sort="createdAt,desc" />
       )}
 
       {isDirector && <CreateTaskModal open={createOpen} onClose={() => setCreateOpen(false)} />}

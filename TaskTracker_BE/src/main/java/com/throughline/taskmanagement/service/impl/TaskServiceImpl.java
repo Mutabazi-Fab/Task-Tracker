@@ -270,11 +270,17 @@ public class TaskServiceImpl implements TaskService {
         if (hasTeam) {
             Team assignedTeam = teamRepository.findById(request.assignedTeamId())
                     .orElseThrow(() -> new ResourceNotFoundException("assignedTeamId not found"));
+            if (assignedTeam.getDepartment() == null || !assignedTeam.getDepartment().getId().equals(department.getId())) {
+                throw new InvalidAssignmentException("Assigned team must belong to this task's own Department.");
+            }
             task.setAssigneeType(AssigneeType.TEAM);
             task.setAssignedTeam(assignedTeam);
         } else {
             Person assignedPerson = personRepository.findById(request.assignedPersonId())
                     .orElseThrow(() -> new ResourceNotFoundException("assignedPersonId not found"));
+            if (assignedPerson.getDepartment() == null || !assignedPerson.getDepartment().getId().equals(department.getId())) {
+                throw new InvalidAssignmentException("Assigned person must belong to this task's own Department.");
+            }
             task.setAssigneeType(AssigneeType.INDIVIDUAL);
             task.setAssignedPerson(assignedPerson);
         }
@@ -371,9 +377,13 @@ public class TaskServiceImpl implements TaskService {
         } else if (departmentId != null) {
             tasks = taskRepository.findByDepartmentId(departmentId, pinnedFirst);
         } else if (status != null) {
-            tasks = taskRepository.findByStatus(status, pinnedFirst);
+            // Top-level tasks only, same reasoning as findByDepartmentId/AndStatus just
+            // above — this branch (and the plain findByParentTaskIsNull one right below)
+            // only ever runs when assignedPersonId is absent, i.e. never for a Member's own
+            // "My Tasks", where hiding subtasks would often leave them with nothing to see.
+            tasks = taskRepository.findByStatusAndParentTaskIsNull(status, pinnedFirst);
         } else {
-            tasks = taskRepository.findAll(pinnedFirst);
+            tasks = taskRepository.findByParentTaskIsNull(pinnedFirst);
         }
         return tasks.map(t -> {
             TaskComment lastComment = taskCommentRepository.findFirstByTaskIdOrderByCreatedAtDesc(t.getId()).orElse(null);
@@ -591,6 +601,25 @@ public class TaskServiceImpl implements TaskService {
      *  task" is the task's OWN team when it's top-level-shaped (a real depth-0 task, or a
      *  depth-1 Department implementation task — see isTopLevelShaped), or its parent's team
      *  for an ordinary leaf subtask. */
+    /** Deleting is narrower than "any Director" — called only once the caller is already
+     *  confirmed Director-or-above (see deleteTask's own role floor). A Director may only
+     *  delete a task they personally created (assignedBy == them): their own top-level
+     *  task, or a subtask/implementation task they added underneath something else. A task
+     *  an Executive/Super Admin created — most notably a Department-assigned task, always
+     *  their own doing — can only be deleted by Executive-or-above, even by the Director
+     *  whose own department it was handed to; the receiving Director isn't its creator,
+     *  just its recipient. Executive/Super Admin can always delete anything, regardless of
+     *  who created it — the same override tier used everywhere else in this app
+     *  (reassignment, deadline decisions). */
+    private void requireCanDelete(Person actor, Task task) {
+        if (Role.isAtLeastExecutive(actor.getRole())) {
+            return;
+        }
+        if (!task.getAssignedBy().getId().equals(actor.getId())) {
+            throw new ForbiddenActionException("A Director can only delete a task they created themselves.");
+        }
+    }
+
     private void requireCanReassign(Person actor, Task task) {
         if (Role.isAtLeastDirector(actor.getRole())) {
             return;
@@ -775,6 +804,8 @@ public class TaskServiceImpl implements TaskService {
 
         Task task = taskRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        requireCanDelete(actor, task);
+
         Task parent = task.getParentTask();
 
         // Recorded before the delete, not after — recordActivity reads taskCode/title/
