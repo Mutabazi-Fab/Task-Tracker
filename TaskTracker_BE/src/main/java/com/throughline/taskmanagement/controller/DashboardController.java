@@ -74,4 +74,19 @@ public class DashboardController {
         Long viewerId = currentPersonResolver.resolveId(authentication);
         return ResponseEntity.ok(dashboardService.getExecutiveTasks(viewerId, pageable));
     }
+
+    /** The Executive Dashboard's department traffic-light roll-up — Executive-or-above only,
+     *  same viewerId-from-JWT pattern as every other endpoint here. */
+    @GetMapping("/executive/department-health")
+    public ResponseEntity<List<DepartmentHealthResponse>> getExecutiveDepartmentHealth(Authentication authentication) {
+        Long viewerId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(dashboardService.getExecutiveDepartmentHealth(viewerId));
+    }
+
+    /** The Executive Dashboard's four org-health KPI tiles — Executive-or-above only. */
+    @GetMapping("/executive/kpis")
+    public ResponseEntity<ExecutiveKpiResponse> getExecutiveKpis(Authentication authentication) {
+        Long viewerId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(dashboardService.getExecutiveKpis(viewerId));
+    }
 }

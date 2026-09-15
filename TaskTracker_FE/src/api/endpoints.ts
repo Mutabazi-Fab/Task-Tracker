@@ -97,5 +97,7 @@ export const endpoints = {
     search: () => `${BASE}/dashboard/search`,
     directorTasks: () => `${BASE}/dashboard/director/tasks`,
     executiveTasks: () => `${BASE}/dashboard/executive/tasks`,
+    executiveDepartmentHealth: () => `${BASE}/dashboard/executive/department-health`,
+    executiveKpis: () => `${BASE}/dashboard/executive/kpis`,
   },
 } as const

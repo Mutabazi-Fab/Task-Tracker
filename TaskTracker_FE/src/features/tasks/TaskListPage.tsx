@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Button } from '../../components/ui/Button'
 import { Pagination } from '../../components/ui/Pagination'
 import { TextField } from '../../components/ui/TextField'
 import { QueryBoundary } from '../../components/feedback/QueryBoundary'
 import { useAuth } from '../auth/useAuth'
+import { useMarkCategoryRead } from '../notifications/hooks/useMarkCategoryRead'
 import { useTasks } from './hooks/useTasks'
 import { useTaskSearch } from './hooks/useTaskSearch'
 import { TaskStatusFilter, type TaskStatusFilterValue } from './components/TaskStatusFilter'
@@ -36,6 +37,14 @@ export function TaskListPage() {
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
+  const markCategoryRead = useMarkCategoryRead()
+
+  // Clears the Sidebar's Tasks badge — every logged-in person can get this one, a Member
+  // included (they're notified the same way a Director is when a task lands on them), so
+  // unlike Teams/Departments/Activity this runs unconditionally, not gated to isDirector.
+  useEffect(() => {
+    markCategoryRead.mutate(['TASK_ASSIGNED', 'SUBTASK_ASSIGNED', 'TASK_REASSIGNED', 'SUBTASK_REASSIGNED'])
+  }, [])
 
   const isPlainDirector = isDirector && !isExecutive
   const scopeToPersonId = isDirector ? undefined : currentUser?.id

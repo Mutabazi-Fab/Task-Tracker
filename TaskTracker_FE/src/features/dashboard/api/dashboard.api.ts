@@ -2,6 +2,8 @@ import { axiosClient } from '../../../api/axiosClient'
 import { endpoints } from '../../../api/endpoints'
 import type {
   DashboardOverview,
+  DepartmentHealth,
+  ExecutiveKpi,
   PersonSummary,
   ProgressPoint,
   StatusMix,
@@ -59,5 +61,17 @@ export async function fetchExecutiveTasks(page: number, size: number, sort: Task
   const { data } = await axiosClient.get<Page<TaskListItem>>(endpoints.dashboard.executiveTasks(), {
     params: { page, size, sort: sort === 'none' ? undefined : sort },
   })
+  return data
+}
+
+/** The Executive Dashboard's department traffic-light roll-up. Executive/Super Admin only. */
+export async function fetchExecutiveDepartmentHealth(): Promise<DepartmentHealth[]> {
+  const { data } = await axiosClient.get<DepartmentHealth[]>(endpoints.dashboard.executiveDepartmentHealth())
+  return data
+}
+
+/** The Executive Dashboard's four org-health KPI tiles. Executive/Super Admin only. */
+export async function fetchExecutiveKpis(): Promise<ExecutiveKpi> {
+  const { data } = await axiosClient.get<ExecutiveKpi>(endpoints.dashboard.executiveKpis())
   return data
 }

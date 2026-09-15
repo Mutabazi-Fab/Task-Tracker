@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -110,6 +111,20 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
                   + "(LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%')))")
     Page<Task> searchByDepartmentId(@Param("q") String q, @Param("departmentId") Long departmentId, Pageable pageable);
 
+    // Same department scope/explicit-LEFT-JOIN reasoning as the paged findByDepartmentId
+    // above — an unpaged variant for DashboardServiceImpl.buildDepartmentHealth, which needs
+    // every one of a department's top-level tasks in one shot to aggregate in Java, the same
+    // way getTeamLeaderboard/getPeopleSummary already do per-team/per-person. Same method
+    // name as the paged version, resolved fine since both are explicit @Query (no derivation
+    // ambiguity).
+    @Query("SELECT t FROM Task t "
+            + "LEFT JOIN t.assignedDepartment dept "
+            + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
+            + "LEFT JOIN t.assignedPerson person LEFT JOIN person.department personDept "
+            + "WHERE (dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId) "
+            + "AND t.parentTask IS NULL")
+    List<Task> findByDepartmentId(@Param("departmentId") Long departmentId);
+
     // Backs the Executive Dashboard's task grid: not "every top-level task" any more (see
     // findByParentTaskIsNull, now unused by that view but left in place — depth-based
     // top-level browsing still makes sense elsewhere, e.g. a future "initiatives" filter),
@@ -125,7 +140,18 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             Pageable pageable);
 
     long countByStatus(TaskStatus status);
-    
+
+    // Backs the Executive Dashboard's org-health KPI tile and (implicitly) the
+    // department-health roll-up's own overdueCount column — top-level only (parentTask IS
+    // NULL), same scoping as findByDepartmentId, so the KPI tile's total is meant to
+    // reconcile with the sum of the department table's own overdueCount values.
+    long countByDeadlineBeforeAndStatusNotAndParentTaskIsNull(LocalDate date, TaskStatus status);
+
+    // Backs the Executive Dashboard's "critical, not complete" KPI tile. Deliberately NOT
+    // parentTask-scoped — mirrors findBySeverityOrAssignedByRoleIn's precedent that a
+    // CRITICAL subtask matters exactly as much as a CRITICAL Department task.
+    long countBySeverityAndStatusNot(TaskSeverity severity, TaskStatus status);
+
     // List-returning: used internally by DashboardService.globalSearch, which stays
     // unpaginated per the "leave the low-risk/bounded dashboard endpoints as-is" decision.
     @Query("SELECT t FROM Task t WHERE LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%'))")

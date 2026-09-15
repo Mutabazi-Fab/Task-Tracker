@@ -6,14 +6,11 @@ import { usePeopleSummary } from '../hooks/usePeopleSummary'
 import { PersonSummaryCard } from './PersonSummaryCard'
 import styles from './PeopleSummaryGrid.module.css'
 
-// The grid itself is fluid (auto-fill, minmax(200px, 1fr) — see PeopleSummaryGrid.module.css),
-// so its column count shifts with viewport width; there's no page size that guarantees a
-// full last row at every width, and that's fine — a partial trailing row is normal grid
-// behaviour. What actually matters here is not paginating away an org that already fits on
-// one screen: 24 comfortably covers a small-to-mid organization with zero pages at all
-// (Pagination renders nothing when totalPages <= 1), while still capping the DOM if
-// headcount ever grows well past that.
-const PAGE_SIZE = 24
+// The grid is a fixed 4 columns on desktop (see PeopleSummaryGrid.module.css) so a page size
+// of 16 is exactly 4 rows before pagination kicks in — narrower widths reflow to fewer
+// columns, so "4 rows" only holds exactly at the 4-column width, but the bound stays 16
+// either way.
+const PAGE_SIZE = 16
 
 /** The backend returns every person in one unpaginated list (bounded by org headcount,
  *  not transactional volume) — so pagination here is a client-side slice of an

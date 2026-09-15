@@ -44,21 +44,31 @@ export function getNavItems(isDirector: boolean): NavItem[] {
 }
 
 /** Every count > 0 shown as a small badge on the nav item itself — "something new happened
- *  here since you last looked." Teams/Departments/Activity ride on the notification system
- *  (see NotificationServiceImpl.notifyTeamCreated/notifyDepartmentCreated/notifyTaskDeleted,
- *  a fresh unread notification for each), cleared when the corresponding page is opened
- *  (see each page's own useMarkCategoryRead call). Requests is different — its badge is
- *  simply "how many pending extension requests currently need a decision", the exact same
- *  count the Requests page itself would show; it self-clears as requests get decided,
- *  nothing to separately mark read. Only ever fetched for a Director-or-above — a plain
- *  Member never sees these nav items in the first place. */
-function useNavBadgeCounts(isDirector: boolean) {
-  const typeCounts = useUnreadCountsByType(isDirector)
+ *  here since you last looked." Tasks/Teams/Departments/Activity all ride on the
+ *  notification system (see NotificationServiceImpl.notifyTaskAssigned/
+ *  notifySubtaskAssigned/notifyTaskReassigned/notifySubtaskReassigned/notifyTeamCreated/
+ *  notifyDepartmentCreated/notifyTaskDeleted), cleared when the corresponding page is
+ *  opened (see each page's own useMarkCategoryRead call). Requests is different — its badge
+ *  is simply "how many pending extension requests currently need a decision", the exact
+ *  same count the Requests page itself would show; it self-clears as requests get decided,
+ *  nothing to separately mark read.
+ *
+ *  Tasks is the one badge every logged-in person can get, Member included (a Member gets
+ *  notified when a task is assigned to them the same as a Director does) — the type-counts
+ *  fetch itself always runs for anyone logged in; Teams/Departments/Activity/Requests just
+ *  never have a nav item to attach to for a plain Member, so their counts go unused for one. */
+function useNavBadgeCounts(hasUser: boolean, isDirector: boolean) {
+  const typeCounts = useUnreadCountsByType(hasUser)
   const pendingRequests = usePendingExtensionRequests(isDirector)
 
   function countFor(routeTo: string): number | undefined {
     const raw =
-      routeTo === ROUTES.teams ? typeCounts.data?.TEAM_CREATED
+      routeTo === ROUTES.tasks
+        ? (typeCounts.data?.TASK_ASSIGNED ?? 0) +
+          (typeCounts.data?.SUBTASK_ASSIGNED ?? 0) +
+          (typeCounts.data?.TASK_REASSIGNED ?? 0) +
+          (typeCounts.data?.SUBTASK_REASSIGNED ?? 0)
+      : routeTo === ROUTES.teams ? typeCounts.data?.TEAM_CREATED
       : routeTo === ROUTES.departments ? typeCounts.data?.DEPARTMENT_CREATED
       : routeTo === ROUTES.activity ? typeCounts.data?.TASK_DELETED
       : routeTo === ROUTES.requests ? pendingRequests.data?.length
@@ -72,7 +82,7 @@ function useNavBadgeCounts(isDirector: boolean) {
 export function Sidebar() {
   const { currentUser, isDirector, logout } = useAuth()
   const navItems = getNavItems(isDirector)
-  const countFor = useNavBadgeCounts(isDirector)
+  const countFor = useNavBadgeCounts(!!currentUser, isDirector)
 
   return (
     <aside className={styles.sidebar}>

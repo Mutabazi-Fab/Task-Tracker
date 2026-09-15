@@ -25,4 +25,13 @@ public interface DashboardService {
      *  findBySeverityOrAssignedByRoleIn). Executive-or-above only (Super Admin sees the
      *  literal same view, not a separate lookalike). */
     Page<TaskListResponse> getExecutiveTasks(Long viewerId, Pageable pageable);
+
+    /** The Executive Dashboard's department traffic-light roll-up — one row per department,
+     *  replacing the task-card list an Executive used to see. Same viewer-gating pattern as
+     *  getExecutiveTasks (Executive-or-above only). */
+    List<DepartmentHealthResponse> getExecutiveDepartmentHealth(Long viewerId);
+
+    /** The Executive Dashboard's four org-health KPI tiles. Same viewer-gating pattern as
+     *  getExecutiveTasks. */
+    ExecutiveKpiResponse getExecutiveKpis(Long viewerId);
 }
