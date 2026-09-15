@@ -1,14 +1,30 @@
+/* A single row, always — flex-wrap: nowrap rather than CSS Grid's auto-fit, which was
+   liable to drop items onto a second row once any one value got wide (exactly what
+   happened trying to fit "Fabiola Ikirezi (Executive)"). Every item sizes to its own
+   content by default (flex-basis: auto, no grow) rather than an equal 1fr share — "0"
+   (Reassignments) or a status chip don't need nearly as much room as a name-plus-role, so
+   they no longer get squeezed to the same width as everything else. .itemWide (Assigned
+   to/Assigned by specifically) gets flex-grow instead, so whatever row space the compact
+   items don't need goes to the two that actually want it. min-width: 0 is what lets an item
+   shrink below its content's natural size at all if the row ever does get tight; .value's
+   text-overflow: ellipsis then truncates gracefully instead of wrapping or overflowing. */
 .grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
   gap: var(--space-4);
 }
 
 .item {
   display: flex;
+  flex: 0 1 auto;
   flex-direction: column;
   gap: var(--space-1);
   align-items: flex-start;
+  min-width: 0;
+}
+
+.itemWide {
+  flex: 2 1 auto;
 }
 
 .label {
@@ -24,6 +40,13 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--ink);
+  /* "Fabiola Ikirezi (Executive)" and the like stay on one line — truncates with an
+     ellipsis instead of wrapping the role onto its own line if a column ever gets too
+     narrow. The full text is still available on hover via the title attribute. */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Who's actually accountable stands out from the rest of these at-a-glance facts. */
@@ -53,4 +76,16 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+/* The one-row layout above is a deliberate desktop choice — on a narrow phone screen,
+   7-8 equally-squeezed columns would truncate everything, which is worse than wrapping. */
+@media (max-width: 640px) {
+  .grid {
+    flex-wrap: wrap;
+  }
+
+  .item {
+    flex: 1 1 140px;
+  }
 }

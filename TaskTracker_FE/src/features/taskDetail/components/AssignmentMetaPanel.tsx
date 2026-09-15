@@ -7,7 +7,19 @@ import { useTeamMembers } from '../../teams/hooks/useTeamMembers'
 import { TeamMemberChip } from '../../teams/components/TeamMemberChip'
 import { useDepartment } from '../../departments/hooks/useDepartment'
 import type { TaskDetail } from '../../../types/task.types'
+import type { Role } from '../../../types/person.types'
 import styles from './AssignmentMetaPanel.module.css'
+
+/** Same labels as RoleBadge/PeopleListPage's ROLE_LABEL, just plain text here rather than a
+ *  colored badge — "Assigned by" sits among plain value spans (date, deadline, ...), so a
+ *  loud badge would stand out for the wrong reason. Answers "was this from the CEO or a
+ *  Director?" without a click into the person's own profile to check their role. */
+const ASSIGNED_BY_ROLE_LABEL: Record<Role, string> = {
+  SUPER_ADMIN: 'Super Admin',
+  EXECUTIVE: 'Executive',
+  DIRECTOR: 'Director',
+  MEMBER: 'Member',
+}
 
 /** Assigned to / by / date / status / reassign count — the at-a-glance ownership facts.
  *  When the task is team-assigned, task.assigneeId is that team's id, so its leader is one
@@ -33,9 +45,9 @@ export function AssignmentMetaPanel({ task }: { task: TaskDetail }) {
   return (
     <Card>
       <div className={styles.grid}>
-        <div className={styles.item}>
+        <div className={`${styles.item} ${styles.itemWide}`}>
           <span className={styles.label}>Assigned to</span>
-          <span className={styles.value}>
+          <span className={styles.value} title={`${task.assigneeName} (${task.assigneeType})`}>
             {task.assigneeName} <span className={styles.type}>({task.assigneeType})</span>
           </span>
         </div>
@@ -55,9 +67,21 @@ export function AssignmentMetaPanel({ task }: { task: TaskDetail }) {
             </span>
           </div>
         )}
-        <div className={styles.item}>
+        <div className={`${styles.item} ${styles.itemWide}`}>
           <span className={styles.label}>Assigned by</span>
-          <span className={styles.value}>{task.assignedByName}</span>
+          <span
+            className={styles.value}
+            title={
+              task.assignedByRole
+                ? `${task.assignedByName} (${ASSIGNED_BY_ROLE_LABEL[task.assignedByRole]})`
+                : task.assignedByName
+            }
+          >
+            {task.assignedByName}
+            {task.assignedByRole && (
+              <span className={styles.type}> ({ASSIGNED_BY_ROLE_LABEL[task.assignedByRole]})</span>
+            )}
+          </span>
         </div>
         <div className={styles.item}>
           <span className={styles.label}>Date assigned</span>

@@ -15,7 +15,12 @@ import { CreatePersonModal } from './components/CreatePersonModal'
 import { MyTeammatesGrid } from './components/MyTeammatesGrid'
 import styles from './PeopleListPage.module.css'
 
-const PAGE_SIZE = 12
+// usePeople fetches the whole org roster unpaginated (bounded by headcount, not
+// transactional volume — same reasoning as PeopleSummaryGrid), so this is a client-side
+// slice of an already-fetched array. 24 comfortably covers a small-to-mid organization
+// with zero pages at all (Pagination renders nothing when totalPages <= 1) instead of
+// splitting a barely-over-12-person roster into an almost-empty second page.
+const PAGE_SIZE = 24
 
 /** Always resolves to something — a null role (a legacy account) is treated as Member
  *  everywhere else in the app, so it reads the same way here. */

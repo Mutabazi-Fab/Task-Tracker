@@ -2,6 +2,7 @@ package com.throughline.taskmanagement.dto.response;
 
 import com.throughline.taskmanagement.enums.AssigneeType;
 import com.throughline.taskmanagement.enums.CreatedByRole;
+import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.enums.TaskSeverity;
 import com.throughline.taskmanagement.enums.TaskSource;
 import com.throughline.taskmanagement.enums.TaskStatus;
@@ -41,6 +42,11 @@ public record TaskDetailResponse(
     boolean pinned,
     String assignedByName,
     Long assignedById,
+    // Whoever set this task's deadline/scope — a plain Director, an Executive/CEO, or a
+    // Super Admin — shown on the task detail page next to their name so it's clear at a
+    // glance which tier this task actually came from (e.g. "Théogène Habimana · Director"
+    // vs "Fabiola Ikirezi · Executive"), not just who, without a second lookup.
+    Role assignedByRole,
     // Who actually decides a deadline extension on this task — a Director-or-above,
     // always, even when assignedById is a mere Team Leader (who can create a leaf subtask
     // — see TaskServiceImpl.createLeafSubtask — but has no authority over its deadline).

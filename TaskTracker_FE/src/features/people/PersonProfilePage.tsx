@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { QueryBoundary } from '../../components/feedback/QueryBoundary'
@@ -17,6 +17,7 @@ export function PersonProfilePage() {
   const { personId } = useParams<{ personId: string }>()
   const id = Number(personId)
   const { isSuperAdmin } = useAuth()
+  const navigate = useNavigate()
 
   const personQuery = usePerson(id)
   const statsQuery = usePersonStatistics(id)
@@ -26,7 +27,7 @@ export function PersonProfilePage() {
     <QueryBoundary query={personQuery}>
       {(person) => (
         <>
-          <PageHeader breadcrumb="Throughline / People" title={person.fullName} />
+          <PageHeader breadcrumb="Throughline / People" title={person.fullName} onBack={() => navigate(-1)} />
 
           <Card>
             <PersonProfileHeader person={person} />

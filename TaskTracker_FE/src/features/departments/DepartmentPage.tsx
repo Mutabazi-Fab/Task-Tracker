@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ROUTES } from '../../app/routes'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
@@ -19,6 +19,7 @@ export function DepartmentPage() {
   const departmentQuery = useDepartment(id)
   const teamsQuery = useTeams()
   const { isSuperAdmin } = useAuth()
+  const navigate = useNavigate()
 
   return (
     <QueryBoundary query={departmentQuery}>
@@ -27,7 +28,7 @@ export function DepartmentPage() {
 
         return (
           <>
-            <PageHeader breadcrumb="Throughline / Departments" title={department.name} />
+            <PageHeader breadcrumb="Throughline / Departments" title={department.name} onBack={() => navigate(-1)} />
 
             <Card>
               <div className={styles.header}>

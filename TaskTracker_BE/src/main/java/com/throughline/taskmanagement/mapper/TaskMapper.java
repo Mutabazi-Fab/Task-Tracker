@@ -294,6 +294,7 @@ public class TaskMapper {
                 task.isPinned(),
                 task.getAssignedBy().getFullName(),
                 task.getAssignedBy().getId(),
+                task.getAssignedBy().getRole(),
                 deadlineDecider.getFullName(),
                 deadlineDecider.getId(),
                 task.getParentTask() != null ? task.getParentTask().getId() : null,

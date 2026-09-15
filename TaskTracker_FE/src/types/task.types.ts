@@ -1,6 +1,7 @@
 import type { TaskComment } from './comment.types'
 import type { TaskReassignment } from './reassignment.types'
 import type { DeadlineExtension } from './deadlineExtension.types'
+import type { Role } from './person.types'
 
 /** DEPARTMENT is Executive-only, and only ever at depth 0 — a whole Department's head
  *  Director then turns it into a real TEAM- or INDIVIDUAL-assigned "implementation task"
@@ -120,6 +121,9 @@ export interface TaskDetail {
   pinned: boolean
   assignedByName: string
   assignedById: number
+  // Whoever set this task's deadline/scope — shown next to their name (e.g. "· Director"
+  // vs "· Executive") so it's clear at a glance which tier a task actually came from.
+  assignedByRole: Role | null
   // Who actually decides a deadline extension on this task — a Director-or-above,
   // always, even when assignedById is a mere Team Leader (who can create a leaf subtask
   // but has no authority over its deadline). Usually the same as assignedById/

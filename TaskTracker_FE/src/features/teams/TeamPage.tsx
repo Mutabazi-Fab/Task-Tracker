@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -29,6 +29,7 @@ export function TeamPage() {
 
   const teamQuery = useTeam(id)
   const { isDirector, currentUser } = useAuth()
+  const navigate = useNavigate()
 
   const isMemberOfThisTeam = currentUser?.teams.some((t) => t.teamId === id) ?? false
   const isThisTeamsLeader = currentUser?.teams.some((t) => t.teamId === id && t.isLeader) ?? false
@@ -45,6 +46,7 @@ export function TeamPage() {
           <PageHeader
             breadcrumb="Throughline / Teams"
             title={team.name}
+            onBack={() => navigate(-1)}
             right={canManage ? <Button onClick={() => setAddMemberOpen(true)}>Add member</Button> : undefined}
           />
 
