@@ -1,17 +1,22 @@
 package com.throughline.taskmanagement.service;
 
 import com.throughline.taskmanagement.dto.response.NotificationResponse;
+import com.throughline.taskmanagement.enums.NotificationType;
 import com.throughline.taskmanagement.enums.Role;
+import com.throughline.taskmanagement.model.Department;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.TaskComment;
 import com.throughline.taskmanagement.model.TaskDeadlineExtensionRequest;
 import com.throughline.taskmanagement.model.TaskReassignment;
+import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.model.TeamMembershipChange;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 public interface NotificationService {
     /** Called by TeamServiceImpl right after a membership change is persisted — never
@@ -99,10 +104,39 @@ public interface NotificationService {
      *  Notifies whoever wrote the comment being replied to — never the replier themself. */
     void notifyDiscussionReplyPosted(TaskComment reply);
 
+    /** Called by TeamServiceImpl right after a new team is created. Broadcasts to every
+     *  Director-or-above except whoever created it — backs the Teams nav item's "new"
+     *  badge (see getUnreadCountsByType). */
+    void notifyTeamCreated(Team team, Person createdBy);
+
+    /** Called by DepartmentServiceImpl right after a new department is created. Broadcasts
+     *  to every Director-or-above except whoever created it — backs the Departments nav
+     *  item's "new" badge. */
+    void notifyDepartmentCreated(Department department, Person createdBy);
+
+    /** Called by TaskServiceImpl right BEFORE a task is actually deleted (its identity
+     *  needs to exist to read from — same ordering as recordActivity's own DELETED entry).
+     *  Broadcasts to every Director-or-above except whoever deleted it — backs the
+     *  Activity nav item's "new" badge. */
+    void notifyTaskDeleted(Task task, Person deletedBy);
+
     Page<NotificationResponse> getNotifications(Long recipientId, Pageable pageable);
 
     /** requesterId must match the notification's recipient — enforced here, not just trusted. */
     NotificationResponse markAsRead(Long notificationId, Long requesterId);
 
     long getUnreadCount(Long recipientId);
+
+    /** Every NotificationType this person has at least one unread notification of, mapped
+     *  to that count — backs the sidebar's per-section badges. A type with zero unread
+     *  notifications simply isn't a key in the map; callers default missing keys to 0
+     *  rather than this returning every type unconditionally. */
+    Map<NotificationType, Long> getUnreadCountsByType(Long recipientId);
+
+    /** Marks every unread notification of any of these types read in one batch — called
+     *  when the viewer opens the page a badge points at (Teams/Departments/Activity), so
+     *  the badge clears the same way the bell's own per-notification read does, just for a
+     *  whole category at once instead of one click per row. requesterId scopes this to the
+     *  caller's own notifications, same as markAsRead. */
+    void markCategoryRead(Long requesterId, List<NotificationType> types);
 }

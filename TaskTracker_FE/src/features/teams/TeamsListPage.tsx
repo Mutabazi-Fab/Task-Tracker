@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../../app/routes'
 import { PageHeader } from '../../components/layout/PageHeader'
@@ -7,6 +7,7 @@ import { Card } from '../../components/ui/Card'
 import { QueryBoundary } from '../../components/feedback/QueryBoundary'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useAuth } from '../auth/useAuth'
+import { useMarkCategoryRead } from '../notifications/hooks/useMarkCategoryRead'
 import { useTeams } from './hooks/useTeams'
 import { CreateTeamModal } from './components/CreateTeamModal'
 import styles from './TeamsListPage.module.css'
@@ -15,6 +16,14 @@ export function TeamsListPage() {
   const query = useTeams()
   const { isDirector } = useAuth()
   const [createOpen, setCreateOpen] = useState(false)
+  const markCategoryRead = useMarkCategoryRead()
+
+  // Clears the Sidebar's "new team" badge the moment this page is actually opened — a
+  // plain Member never has that badge to begin with (it's never shown to them), so this is
+  // a no-op call for them rather than something worth gating out entirely.
+  useEffect(() => {
+    if (isDirector) markCategoryRead.mutate(['TEAM_CREATED'])
+  }, [isDirector])
 
   return (
     <>

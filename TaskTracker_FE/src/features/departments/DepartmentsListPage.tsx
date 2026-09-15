@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../../app/routes'
 import { PageHeader } from '../../components/layout/PageHeader'
@@ -7,6 +7,7 @@ import { Card } from '../../components/ui/Card'
 import { QueryBoundary } from '../../components/feedback/QueryBoundary'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useAuth } from '../auth/useAuth'
+import { useMarkCategoryRead } from '../notifications/hooks/useMarkCategoryRead'
 import { useDepartments } from './hooks/useDepartments'
 import { CreateDepartmentModal } from './components/CreateDepartmentModal'
 import styles from './DepartmentsListPage.module.css'
@@ -17,8 +18,16 @@ import styles from './DepartmentsListPage.module.css'
  *  reassigning its head stays Super-Admin-only (see DepartmentAdminControls on DepartmentPage). */
 export function DepartmentsListPage() {
   const query = useDepartments()
-  const { isExecutive } = useAuth()
+  const { isDirector, isExecutive } = useAuth()
   const [createOpen, setCreateOpen] = useState(false)
+  const markCategoryRead = useMarkCategoryRead()
+
+  // Clears the Sidebar's "new department" badge — only Director-or-above ever sees that
+  // badge in the first place (see Sidebar's getNavItems), so this is a no-op for anyone
+  // else who happens to land on this otherwise-open-to-everyone page.
+  useEffect(() => {
+    if (isDirector) markCategoryRead.mutate(['DEPARTMENT_CREATED'])
+  }, [isDirector])
 
   return (
     <>

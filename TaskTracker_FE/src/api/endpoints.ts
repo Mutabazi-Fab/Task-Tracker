@@ -85,6 +85,8 @@ export const endpoints = {
     list: () => `${BASE}/notifications`,
     markRead: (id: number | string) => `${BASE}/notifications/${id}/read`,
     unreadCount: () => `${BASE}/notifications/unread-count`,
+    unreadCountsByType: () => `${BASE}/notifications/unread-counts-by-type`,
+    markCategoryRead: () => `${BASE}/notifications/mark-category-read`,
   },
   dashboard: {
     overview: () => `${BASE}/dashboard/overview`,

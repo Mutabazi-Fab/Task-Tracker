@@ -7,6 +7,7 @@ import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.enums.TeamMembershipChangeAction;
 import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
+import com.throughline.taskmanagement.model.Department;
 import com.throughline.taskmanagement.model.Notification;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
@@ -27,6 +28,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -400,6 +404,41 @@ public class NotificationServiceImpl implements NotificationService {
         send(originalAuthor, NotificationType.DISCUSSION_REPLY_POSTED, message, task.getId());
     }
 
+    @Override
+    public void notifyTeamCreated(Team team, Person createdBy) {
+        String message = String.format("%s created a new team, \"%s\"%s.",
+                createdBy.getFullName(), team.getName(),
+                team.getDepartment() != null ? " in " + team.getDepartment().getName() : "");
+        broadcastToDirectorsExcept(createdBy, NotificationType.TEAM_CREATED, message, team.getId());
+    }
+
+    @Override
+    public void notifyDepartmentCreated(Department department, Person createdBy) {
+        String message = String.format("%s created a new department, \"%s\".",
+                createdBy.getFullName(), department.getName());
+        broadcastToDirectorsExcept(createdBy, NotificationType.DEPARTMENT_CREATED, message, department.getId());
+    }
+
+    @Override
+    public void notifyTaskDeleted(Task task, Person deletedBy) {
+        String message = String.format("%s deleted the task \"%s\" (%s).",
+                deletedBy.getFullName(), task.getTitle(), task.getTaskCode());
+        broadcastToDirectorsExcept(deletedBy, NotificationType.TASK_DELETED, message, task.getId());
+    }
+
+    /** Every Director-or-above except whoever just did the thing being announced — backs
+     *  the three broadcast notifications above. Not scoped to a department/team the way
+     *  task notifications are, on purpose: a new team, a new department, or a deleted task
+     *  is org-wide-governance-shaped news, the same tier that already sees the Activity
+     *  feed and the Departments admin controls. */
+    private void broadcastToDirectorsExcept(Person exclude, NotificationType type, String message, Long relatedEntityId) {
+        for (Person recipient : personRepository.findByRoleIn(List.of(Role.DIRECTOR, Role.EXECUTIVE, Role.SUPER_ADMIN))) {
+            if (!recipient.getId().equals(exclude.getId())) {
+                send(recipient, type, message, relatedEntityId);
+            }
+        }
+    }
+
     private void send(Person recipient, NotificationType type, String message, Long relatedEntityId) {
         Notification notification = new Notification();
         notification.setRecipient(recipient);
@@ -437,6 +476,25 @@ public class NotificationServiceImpl implements NotificationService {
             throw new ResourceNotFoundException("Person not found");
         }
         return notificationRepository.countByRecipientIdAndIsReadFalse(recipientId);
+    }
+
+    @Override
+    public Map<NotificationType, Long> getUnreadCountsByType(Long recipientId) {
+        if (!personRepository.existsById(recipientId)) {
+            throw new ResourceNotFoundException("Person not found");
+        }
+        Map<NotificationType, Long> counts = new EnumMap<>(NotificationType.class);
+        for (Object[] row : notificationRepository.countUnreadByType(recipientId)) {
+            counts.put((NotificationType) row[0], (Long) row[1]);
+        }
+        return counts;
+    }
+
+    @Override
+    public void markCategoryRead(Long requesterId, List<NotificationType> types) {
+        List<Notification> unread = notificationRepository.findByRecipientIdAndTypeInAndIsReadFalse(requesterId, types);
+        unread.forEach(n -> n.setRead(true));
+        notificationRepository.saveAll(unread);
     }
 
     private NotificationResponse toResponse(Notification n) {

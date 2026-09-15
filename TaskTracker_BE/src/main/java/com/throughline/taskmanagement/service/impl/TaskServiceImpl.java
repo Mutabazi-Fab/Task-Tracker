@@ -813,6 +813,9 @@ public class TaskServiceImpl implements TaskService {
         // Only this one task gets a DELETED entry, not each subtask a cascade takes with
         // it — the log is "what did a Director/Super Admin just do", not a full cascade trace.
         recordActivity(task, TaskActivityAction.DELETED, actor);
+        // Same "before it's gone" timing as recordActivity, and the same reasoning —
+        // notifyTaskDeleted reads the task's own title/code off the entity too.
+        notificationService.notifyTaskDeleted(task, actor);
 
         // Deleting a top-level task cascades to its subtasks (Task.subtasks is
         // CascadeType.ALL + orphanRemoval). Deleting a subtask needs the parent's rollup
@@ -967,10 +970,25 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<PendingExtensionRequestResponse> getPendingExtensionRequests(Long deciderId) {
-        return taskDeadlineExtensionRequestRepository.findByStatusOrderByRequestedAtDesc(ExtensionRequestStatus.PENDING)
-                .stream()
-                .filter(request -> resolveDeadlineDecider(request.getTask()).getId().equals(deciderId))
+    public List<PendingExtensionRequestResponse> getPendingExtensionRequests(Long viewerId) {
+        Person viewer = personRepository.findById(viewerId)
+                .orElseThrow(() -> new ResourceNotFoundException("viewerId not found"));
+
+        List<TaskDeadlineExtensionRequest> pending =
+                taskDeadlineExtensionRequestRepository.findByStatusOrderByRequestedAtDesc(ExtensionRequestStatus.PENDING);
+
+        // A Super Admin's override authority (see requireCanDecideDeadline/isDeadlineOverrideTier)
+        // means they CAN decide any request, but resolveDeadlineDecider never actually
+        // resolves TO them — a Super Admin doesn't create tasks in the normal flow, so
+        // they'd never naturally show up as anyone's decider and this inbox would always
+        // read empty for them even though the authority is real. Show every pending
+        // request, org-wide, instead — the one tier that genuinely oversees all of it.
+        if (viewer.getRole() == Role.SUPER_ADMIN) {
+            return pending.stream().map(taskMapper::toPendingExtensionResponse).toList();
+        }
+
+        return pending.stream()
+                .filter(request -> resolveDeadlineDecider(request.getTask()).getId().equals(viewerId))
                 .map(taskMapper::toPendingExtensionResponse)
                 .toList();
     }

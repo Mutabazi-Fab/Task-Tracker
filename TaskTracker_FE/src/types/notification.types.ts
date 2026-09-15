@@ -18,6 +18,11 @@ export type NotificationType =
   | 'DEADLINE_EXTENDED'
   | 'DISCUSSION_COMMENT_POSTED'
   | 'DISCUSSION_REPLY_POSTED'
+  // Broadcast to every Director-or-above except whoever did it — back the sidebar's
+  // per-section "new" badges (Teams/Departments/Activity). See useUnreadCountsByType.
+  | 'TEAM_CREATED'
+  | 'DEPARTMENT_CREATED'
+  | 'TASK_DELETED'
 
 export interface Notification {
   id: number

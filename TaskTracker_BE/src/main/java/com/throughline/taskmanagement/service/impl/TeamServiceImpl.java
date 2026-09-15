@@ -105,7 +105,9 @@ public class TeamServiceImpl implements TeamService {
             saved.getMembers().add(teamMember);
         }
 
-        return teamMapper.toResponse(teamRepository.save(saved));
+        Team persisted = teamRepository.save(saved);
+        notificationService.notifyTeamCreated(persisted, createdBy);
+        return teamMapper.toResponse(persisted);
     }
 
     @Override

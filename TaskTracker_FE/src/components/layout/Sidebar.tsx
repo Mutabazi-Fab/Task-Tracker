@@ -5,6 +5,8 @@
 import { ROUTES } from '../../app/routePaths'
 import { ThemeToggle } from '../../features/theme/ThemeToggle'
 import { useAuth } from '../../features/auth/useAuth'
+import { useUnreadCountsByType } from '../../features/notifications/hooks/useUnreadCountsByType'
+import { usePendingExtensionRequests } from '../../features/taskDetail/hooks/usePendingExtensionRequests'
 import { Avatar } from '../ui/Avatar'
 import { Icon } from '../ui/Icon'
 import { RoleBadge, resolveBadgeRole } from '../ui/RoleBadge'
@@ -41,16 +43,50 @@ export function getNavItems(isDirector: boolean): NavItem[] {
   return items
 }
 
+/** Every count > 0 shown as a small badge on the nav item itself — "something new happened
+ *  here since you last looked." Teams/Departments/Activity ride on the notification system
+ *  (see NotificationServiceImpl.notifyTeamCreated/notifyDepartmentCreated/notifyTaskDeleted,
+ *  a fresh unread notification for each), cleared when the corresponding page is opened
+ *  (see each page's own useMarkCategoryRead call). Requests is different — its badge is
+ *  simply "how many pending extension requests currently need a decision", the exact same
+ *  count the Requests page itself would show; it self-clears as requests get decided,
+ *  nothing to separately mark read. Only ever fetched for a Director-or-above — a plain
+ *  Member never sees these nav items in the first place. */
+function useNavBadgeCounts(isDirector: boolean) {
+  const typeCounts = useUnreadCountsByType(isDirector)
+  const pendingRequests = usePendingExtensionRequests(isDirector)
+
+  function countFor(routeTo: string): number | undefined {
+    const raw =
+      routeTo === ROUTES.teams ? typeCounts.data?.TEAM_CREATED
+      : routeTo === ROUTES.departments ? typeCounts.data?.DEPARTMENT_CREATED
+      : routeTo === ROUTES.activity ? typeCounts.data?.TASK_DELETED
+      : routeTo === ROUTES.requests ? pendingRequests.data?.length
+      : undefined
+    return raw && raw > 0 ? raw : undefined
+  }
+
+  return countFor
+}
+
 export function Sidebar() {
   const { currentUser, isDirector, logout } = useAuth()
   const navItems = getNavItems(isDirector)
+  const countFor = useNavBadgeCounts(isDirector)
 
   return (
     <aside className={styles.sidebar}>
       <SidebarLogo />
       <nav className={styles.nav}>
         {navItems.map((item) => (
-          <SidebarNavItem key={item.to} to={item.to} label={item.label} icon={item.icon} end={item.end ?? false} />
+          <SidebarNavItem
+            key={item.to}
+            to={item.to}
+            label={item.label}
+            icon={item.icon}
+            end={item.end ?? false}
+            count={countFor(item.to)}
+          />
         ))}
       </nav>
       <div className={styles.footer}>

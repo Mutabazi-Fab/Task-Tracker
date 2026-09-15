@@ -23,5 +23,11 @@ public enum NotificationType {
     DEADLINE_EXTENSION_REJECTED,
     DEADLINE_EXTENDED,
     DISCUSSION_COMMENT_POSTED,
-    DISCUSSION_REPLY_POSTED
+    DISCUSSION_REPLY_POSTED,
+    // Broadcast to every Director-or-above except whoever did it — back the sidebar's
+    // per-section "new activity" badges (Teams/Departments/Activity), see
+    // NotificationService.getUnreadCountsByType and Sidebar's own badge wiring.
+    TEAM_CREATED,
+    DEPARTMENT_CREATED,
+    TASK_DELETED
 }

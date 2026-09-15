@@ -251,7 +251,7 @@ export function CreateSubtaskForm({
           Cancel
         </Button>
         <Button type="submit" variant="primary" disabled={!isValid || submitting}>
-          {submitting ? 'Creating…' : 'Create subtask'}
+          {submitting ? 'Creating…' : isDepartmentImplementation ? 'Create implementation task' : 'Create subtask'}
         </Button>
       </div>
     </form>

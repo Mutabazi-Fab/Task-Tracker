@@ -20,6 +20,11 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
     // left, since nobody would then be able to ever grant that role again.
     long countByRoleAndActiveTrue(Role role);
 
+    // Backs the org-wide broadcasts (a new team/department created, a task deleted) that
+    // notify every Director-or-above person except whoever did it — pass
+    // List.of(Role.DIRECTOR, Role.EXECUTIVE, Role.SUPER_ADMIN).
+    List<Person> findByRoleIn(List<Role> roles);
+
     // No findByTeamId — a person can belong to multiple teams now, so "which team is this
     // person in" is no longer a single-valued question. Look up via TeamMemberRepository instead.
 

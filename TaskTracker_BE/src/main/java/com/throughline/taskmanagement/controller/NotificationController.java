@@ -8,13 +8,18 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.throughline.taskmanagement.dto.response.NotificationResponse;
+import com.throughline.taskmanagement.enums.NotificationType;
 import com.throughline.taskmanagement.security.CurrentPersonResolver;
 import com.throughline.taskmanagement.service.NotificationService;
 
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Notifications are inherently personal, so personId is never accepted from the client —
@@ -46,5 +51,22 @@ public class NotificationController {
     public ResponseEntity<Long> getUnreadCount(Authentication authentication) {
         Long personId = currentPersonResolver.resolveId(authentication);
         return ResponseEntity.ok(notificationService.getUnreadCount(personId));
+    }
+
+    /** Backs the sidebar's per-section badges (Teams/Departments/Activity) — one call
+     *  covering every type at once. A type with zero unread simply isn't a key. */
+    @GetMapping("/unread-counts-by-type")
+    public ResponseEntity<Map<NotificationType, Long>> getUnreadCountsByType(Authentication authentication) {
+        Long personId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(notificationService.getUnreadCountsByType(personId));
+    }
+
+    /** Called when the viewer opens the page a badge points at, to clear it — e.g.
+     *  ?types=TEAM_CREATED when the Teams page mounts. */
+    @PutMapping("/mark-category-read")
+    public ResponseEntity<Void> markCategoryRead(@RequestParam List<NotificationType> types, Authentication authentication) {
+        Long personId = currentPersonResolver.resolveId(authentication);
+        notificationService.markCategoryRead(personId, types);
+        return ResponseEntity.noContent().build();
     }
 }

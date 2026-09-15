@@ -15,6 +15,7 @@ import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.repository.DepartmentRepository;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.service.DepartmentService;
+import com.throughline.taskmanagement.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class DepartmentServiceImpl implements DepartmentService {
     private final DepartmentRepository departmentRepository;
     private final PersonRepository personRepository;
     private final DepartmentMapper departmentMapper;
+    private final NotificationService notificationService;
 
     @Override
     public DepartmentResponse createDepartment(CreateDepartmentRequest request) {
@@ -53,7 +55,9 @@ public class DepartmentServiceImpl implements DepartmentService {
         department.setHeadDirector(headDirector);
         department.setCreatedBy(createdBy);
 
-        return departmentMapper.toResponse(departmentRepository.save(department));
+        Department saved = departmentRepository.save(department);
+        notificationService.notifyDepartmentCreated(saved, createdBy);
+        return departmentMapper.toResponse(saved);
     }
 
     @Override

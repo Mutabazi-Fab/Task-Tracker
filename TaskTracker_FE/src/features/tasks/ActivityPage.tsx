@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
@@ -12,6 +12,7 @@ import { formatDateTime } from '../../lib/formatDate'
 import { useAuth } from '../auth/useAuth'
 import { useRoleChangeActivity } from '../people/hooks/useRoleChangeActivity'
 import { useAccountStatusChangeActivity } from '../people/hooks/useAccountStatusChangeActivity'
+import { useMarkCategoryRead } from '../notifications/hooks/useMarkCategoryRead'
 import { useTaskActivity } from './hooks/useTaskActivity'
 import styles from './ActivityPage.module.css'
 
@@ -52,6 +53,15 @@ export function ActivityPage() {
   const taskQuery = useTaskActivity(0, FETCH_SIZE)
   const roleQuery = useRoleChangeActivity(currentUser?.id ?? NaN)
   const statusQuery = useAccountStatusChangeActivity(currentUser?.id ?? NaN)
+  const markCategoryRead = useMarkCategoryRead()
+
+  // Clears the Sidebar's "new activity" badge (currently just TASK_DELETED — see
+  // NotificationServiceImpl.notifyTaskDeleted) the moment this page is opened. Runs
+  // unconditionally: this whole component only ever renders for a Director-or-above, the
+  // redirect below happens first for anyone else.
+  useEffect(() => {
+    markCategoryRead.mutate(['TASK_DELETED'])
+  }, [])
 
   const rows = useMemo<Row[] | undefined>(() => {
     if (!taskQuery.data || !roleQuery.data || !statusQuery.data) return undefined

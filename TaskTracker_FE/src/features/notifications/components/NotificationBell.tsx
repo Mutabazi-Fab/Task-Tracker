@@ -39,6 +39,11 @@ function resolveNotificationRoute(notification: Notification): string | null {
   if (notification.relatedEntityId == null) return null
   if (TASK_NOTIFICATION_TYPES.has(notification.type)) return ROUTES.taskDetail(notification.relatedEntityId)
   if (PERSON_NOTIFICATION_TYPES.has(notification.type)) return ROUTES.personProfile(notification.relatedEntityId)
+  // TEAM_CREATED/DEPARTMENT_CREATED carry the new team's/department's own id — unlike
+  // TASK_DELETED (deliberately excluded here: the task it points at no longer exists by
+  // the time anyone could click it, so there's nowhere real to send them).
+  if (notification.type === 'TEAM_CREATED') return ROUTES.team(notification.relatedEntityId)
+  if (notification.type === 'DEPARTMENT_CREATED') return ROUTES.department(notification.relatedEntityId)
   return null
 }
 

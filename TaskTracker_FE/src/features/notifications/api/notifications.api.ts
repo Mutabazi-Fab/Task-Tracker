@@ -1,7 +1,7 @@
 import { axiosClient } from '../../../api/axiosClient'
 import { endpoints } from '../../../api/endpoints'
 import type { Page } from '../../../types/task.types'
-import type { Notification } from '../../../types/notification.types'
+import type { Notification, NotificationType } from '../../../types/notification.types'
 
 /** Flattened, same trade-off as elsewhere — this is a compact dropdown list, not a paged
  *  view (yet). */
@@ -24,4 +24,20 @@ export async function markNotificationRead(id: number, personId: number): Promis
     params: { personId },
   })
   return data
+}
+
+/** Backs the sidebar's per-section badges — one call covering every NotificationType's
+ *  unread count at once. A type with zero unread simply isn't a key in the response. */
+export async function fetchUnreadCountsByType(): Promise<Partial<Record<NotificationType, number>>> {
+  const { data } = await axiosClient.get<Partial<Record<NotificationType, number>>>(
+    endpoints.notifications.unreadCountsByType(),
+  )
+  return data
+}
+
+/** Called when the viewer opens the page a badge points at, to clear it. Comma-joined into
+ *  one query param rather than relying on axios's array serialization, which Spring's
+ *  @RequestParam List<NotificationType> binding accepts natively either way. */
+export async function markCategoryRead(types: NotificationType[]): Promise<void> {
+  await axiosClient.put(endpoints.notifications.markCategoryRead(), null, { params: { types: types.join(',') } })
 }
