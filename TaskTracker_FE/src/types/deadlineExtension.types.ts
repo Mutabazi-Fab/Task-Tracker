@@ -64,4 +64,16 @@ export interface PendingExtensionRequest {
   justification: string
   requestedByName: string
   requestedAt: string
+  /** Specific to the viewer this row was fetched for — everyone who sees a row can reject
+   *  it, but on a task chain that originated from the CEO's own mandate, only an Executive/
+   *  Super Admin can approve it. false here means this viewer (e.g. the Director the
+   *  request first landed on) can still reject it, just not approve it themselves — see
+   *  PendingExtensionRequestItem. */
+  canApprove: boolean
+  /** Not viewer-specific — an objective fact about the request. false on a CEO-mandated
+   *  chain means it hasn't been sent to the CEO/Super Admin's own inbox yet (only the
+   *  Director it landed on sees it so far) — see PendingExtensionRequestItem's "Send to
+   *  CEO for approval" action. Effectively always true for an ordinary Director-originated
+   *  task, where canApprove is already true for the one person who sees it. */
+  forwardedToApprover: boolean
 }

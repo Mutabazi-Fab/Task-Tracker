@@ -72,6 +72,15 @@ public interface TaskService {
      *  it untouched. Fails if the request is already decided or belongs to a different task. */
     TaskDetailResponse decideDeadlineExtension(Long taskId, Long extensionRequestId, DecideDeadlineExtensionRequest request);
 
+    /** Only meaningful on a CEO-mandated chain (see TaskServiceImpl.isCeoMandated), where
+     *  the Director a request lands on can reject it themselves but can't approve it —
+     *  forwardedById must have that same rejecting standing. Sends the request into the
+     *  true approver's (the CEO/Super Admin's) own "Requests" inbox from this point on —
+     *  before this call, only the Director sees it there. Fails if already forwarded,
+     *  already decided, belongs to a different task, or the task doesn't actually need CEO
+     *  approval in the first place. */
+    TaskDetailResponse forwardExtensionRequestToApprover(Long taskId, Long extensionRequestId, Long forwardedById);
+
     /** Same authority as deciding a request — moves the deadline immediately, no approval
      *  round-trip, but still logs a self-approved TaskDeadlineExtensionRequest row so the
      *  audit trail has no gap. */

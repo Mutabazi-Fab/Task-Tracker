@@ -116,7 +116,7 @@ public class Task {
     @Enumerated(EnumType.STRING)
     private TaskSource source;
 
-    /** Free text alongside source (e.g. "Director Musoni", "GPO", "E&Y", "Board of
+    /** Free text alongside source (e.g. "Director Maj. Musoni", "GPO", "E&Y", "Board of
      *  Directors") — not a Person FK, since these are often external/organizational, not
      *  app users. Null unless source is also set. */
     @Column(length = 200)

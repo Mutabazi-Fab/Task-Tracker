@@ -82,7 +82,7 @@ public class TaskMapper {
      *  identity — the "Requests" inbox is aggregated across tasks, so the viewer needs to
      *  know which task each row belongs to; a single task's own history panel already knows
      *  that from context and doesn't. */
-    public PendingExtensionRequestResponse toPendingExtensionResponse(TaskDeadlineExtensionRequest request) {
+    public PendingExtensionRequestResponse toPendingExtensionResponse(TaskDeadlineExtensionRequest request, boolean canApprove) {
         if (request == null) return null;
         Task task = request.getTask();
         return new PendingExtensionRequestResponse(
@@ -94,7 +94,9 @@ public class TaskMapper {
                 request.getRequestedDeadline(),
                 request.getJustification(),
                 request.getRequestedBy().getFullName(),
-                request.getRequestedAt()
+                request.getRequestedAt(),
+                canApprove,
+                request.getForwardedAt() != null
         );
     }
 

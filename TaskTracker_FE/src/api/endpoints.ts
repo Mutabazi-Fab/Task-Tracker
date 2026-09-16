@@ -36,6 +36,8 @@ export const endpoints = {
     deadlineExtensions: (id: number | string) => `${BASE}/tasks/${id}/deadline-extensions`,
     decideDeadlineExtension: (id: number | string, extensionId: number | string) =>
       `${BASE}/tasks/${id}/deadline-extensions/${extensionId}`,
+    forwardDeadlineExtension: (id: number | string, extensionId: number | string) =>
+      `${BASE}/tasks/${id}/deadline-extensions/${extensionId}/forward`,
     pendingDeadlineExtensions: () => `${BASE}/tasks/deadline-extensions/pending`,
     pin: (id: number | string) => `${BASE}/tasks/${id}/pin`,
     discussionComments: (id: number | string) => `${BASE}/tasks/${id}/discussion-comments`,

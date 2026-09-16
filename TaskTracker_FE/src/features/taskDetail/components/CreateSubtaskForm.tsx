@@ -8,7 +8,7 @@ import { useAuth } from '../../auth/useAuth'
 import { useTeamMembers } from '../../teams/hooks/useTeamMembers'
 import { useTeams } from '../../teams/hooks/useTeams'
 import { usePeople } from '../../people/hooks/usePeople'
-import { maxAssignableDate } from '../../../lib/dateLimits'
+import { maxAssignableDate, minAssignableDate } from '../../../lib/dateLimits'
 import { InlineSubtasksField, type InlineSubtaskRow } from '../../tasks/components/InlineSubtasksField'
 import type { CreateSubtaskRequest, TaskSeverity, TaskSource } from '../../../types/task.types'
 import styles from '../../tasks/components/CreateTaskForm.module.css'
@@ -52,6 +52,17 @@ interface CreateSubtaskFormProps {
    *  Department's teams only, so e.g. a task assigned to Cybersecurity only offers
    *  Cybersecurity's own teams, never Finance's or IT's. */
   departmentId?: number
+  /** The immediate parent task's own source/sourceLabel — when it has one (either the
+   *  CEO's own, set directly on a Department task, or whatever an implementation task
+   *  itself carries — its own, or already inherited one level up from the CEO), the new
+   *  task being created here inherits it rather than asking whoever's creating it to
+   *  re-enter it: the fields are pre-filled and locked (see sourceInherited below), so the
+   *  chain of custody stays visible without letting anyone overwrite a record set higher
+   *  up. Applies to both the implementation-task case and the ordinary leaf-subtask case —
+   *  undefined/null (the parent never had a source) falls back to the normal editable
+   *  Source picker either way. */
+  parentSource?: TaskSource | null
+  parentSourceLabel?: string | null
   /** subtasks is whatever InlineSubtasksField collected when assigneeKind is TEAM
    *  (department-implementation case only — the ordinary leaf case has nobody left to
    *  break the work down further into) — possibly empty. The caller (CreateSubtaskModal)
@@ -70,6 +81,8 @@ export function CreateSubtaskForm({
   teamId,
   isDepartmentImplementation = false,
   departmentId,
+  parentSource,
+  parentSourceLabel,
   onSubmit,
   onCancel,
   submitting,
@@ -88,8 +101,12 @@ export function CreateSubtaskForm({
   const [assignedTeamId, setAssignedTeamId] = useState('')
   const [dateAssigned, setDateAssigned] = useState('')
   const [deadline, setDeadline] = useState('')
-  const [source, setSource] = useState<TaskSource | ''>('')
-  const [sourceLabel, setSourceLabel] = useState('')
+  // Locked once the immediate parent already carries a source — whoever's creating this
+  // task sees where it came from but can't overwrite that record here. Applies whether the
+  // parent is the CEO's own Department task or an implementation task one level down.
+  const sourceInherited = !!parentSource
+  const [source, setSource] = useState<TaskSource | ''>(parentSource ?? '')
+  const [sourceLabel, setSourceLabel] = useState(parentSourceLabel ?? '')
   const [severity, setSeverity] = useState<TaskSeverity | ''>('')
   const [openingNote, setOpeningNote] = useState('')
   const [subtaskRows, setSubtaskRows] = useState<InlineSubtaskRow[]>([])
@@ -198,6 +215,7 @@ export function CreateSubtaskForm({
         type="date"
         value={dateAssigned}
         onChange={setDateAssigned}
+        min={minAssignableDate()}
         max={maxAssignableDate()}
         required
       />
@@ -213,18 +231,20 @@ export function CreateSubtaskForm({
       {isDeadlineBeforeAssignment && <ErrorMessage message="Deadline can't be before the date assigned." />}
 
       <SelectField
-        label="Source (optional)"
+        label={sourceInherited ? 'Source (set by the CEO)' : 'Source (optional)'}
         value={source}
         onChange={(v) => setSource(v as TaskSource)}
         placeholder="Where this came from"
         options={SOURCE_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+        disabled={sourceInherited}
       />
       {source && (
         <TextField
-          label="Source detail"
+          label={sourceInherited ? 'Source detail (set by the CEO)' : 'Source detail'}
           value={sourceLabel}
           onChange={setSourceLabel}
-          placeholder="e.g. Director Musoni, GPO, E&Y, Board of Directors"
+          placeholder="e.g. Director Maj. Musoni, GPO, E&Y, Board of Directors"
+          disabled={sourceInherited}
         />
       )}
 

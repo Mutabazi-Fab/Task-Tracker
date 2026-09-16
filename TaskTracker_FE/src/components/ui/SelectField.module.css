@@ -27,3 +27,9 @@
   outline: none;
   border-color: var(--accent);
 }
+
+.select:disabled {
+  background: var(--track);
+  color: var(--muted);
+  cursor: not-allowed;
+}

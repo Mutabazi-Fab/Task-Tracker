@@ -746,14 +746,19 @@ public class TaskServiceImpl implements TaskService {
         return taskMapper.toDetailResponse(taskRepository.save(task));
     }
 
-    /** A typo guard only (e.g. picking 2036 instead of 2026), not a real business rule —
-     *  see maxAssignableDate on the frontend, which keeps the date picker from offering the
-     *  mistake in the first place. Past dates are never rejected: backfilling a real
-     *  assignment that happened before anyone got around to entering it is normal, and
-     *  there's no due-date/deadline concept here for a future date to violate either way. */
+    /** Bounds dateAssigned on both sides — mirrors maxAssignableDate/minAssignableDate on
+     *  the frontend, which keep the date picker from offering either mistake in the first
+     *  place, but this is the authoritative check. Forward: a typo guard only (e.g. picking
+     *  2036 instead of 2026). Backward: a real integrity rule, not just a typo guard — real
+     *  backfilling (recording a task that actually started last quarter, before anyone got
+     *  around to entering it) fits comfortably inside 3 months; anything older reads as a
+     *  fat-fingered date and skews "how old is this task" reporting/audit history. */
     private void requireReasonableDate(LocalDate dateAssigned) {
         if (dateAssigned.isAfter(LocalDate.now().plusYears(1))) {
             throw new InvalidAssignmentException("dateAssigned can't be more than a year in the future.");
+        }
+        if (dateAssigned.isBefore(LocalDate.now().minusMonths(3))) {
+            throw new InvalidAssignmentException("dateAssigned can't be more than 3 months in the past.");
         }
     }
 
@@ -907,7 +912,11 @@ public class TaskServiceImpl implements TaskService {
 
         Person decidedBy = personRepository.findById(request.decidedById())
                 .orElseThrow(() -> new ResourceNotFoundException("decidedById not found"));
-        requireCanDecideDeadline(decidedBy, task);
+        if (request.approve()) {
+            requireCanApprove(decidedBy, task);
+        } else {
+            requireCanReject(decidedBy, task);
+        }
 
         extensionRequest.setStatus(request.approve() ? ExtensionRequestStatus.APPROVED : ExtensionRequestStatus.REJECTED);
         extensionRequest.setDecidedBy(decidedBy);
@@ -927,12 +936,50 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    public TaskDetailResponse forwardExtensionRequestToApprover(Long taskId, Long extensionRequestId, Long forwardedById) {
+        Task task = taskRepository.findWithDetailsById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        TaskDeadlineExtensionRequest extensionRequest = taskDeadlineExtensionRequestRepository.findById(extensionRequestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Deadline extension request not found"));
+        if (!extensionRequest.getTask().getId().equals(taskId)) {
+            throw new InvalidAssignmentException("This extension request doesn't belong to this task.");
+        }
+        if (extensionRequest.getStatus() != ExtensionRequestStatus.PENDING) {
+            throw new InvalidAssignmentException("This extension request has already been decided.");
+        }
+        if (extensionRequest.getForwardedAt() != null) {
+            throw new InvalidAssignmentException("This extension request has already been sent to the CEO.");
+        }
+        if (!isCeoMandated(task)) {
+            throw new InvalidAssignmentException(
+                    "This task doesn't need the CEO's approval — you can decide it directly.");
+        }
+
+        Person forwardedBy = personRepository.findById(forwardedById)
+                .orElseThrow(() -> new ResourceNotFoundException("forwardedById not found"));
+        // Same authority as rejecting: whoever the request landed on to decide has standing
+        // to send it onward, even though only the CEO/Super Admin can actually grant it.
+        requireCanReject(forwardedBy, task);
+
+        extensionRequest.setForwardedBy(forwardedBy);
+        extensionRequest.setForwardedAt(LocalDateTime.now());
+        taskDeadlineExtensionRequestRepository.save(extensionRequest);
+
+        notificationService.notifyDeadlineExtensionForwarded(extensionRequest, forwardedBy);
+
+        return taskMapper.toDetailResponse(task);
+    }
+
+    @Override
     public TaskDetailResponse extendDeadlineDirectly(Long taskId, ExtendDeadlineRequest request) {
         Task task = taskRepository.findWithDetailsById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
         Person extendedBy = personRepository.findById(request.extendedById())
                 .orElseThrow(() -> new ResourceNotFoundException("extendedById not found"));
-        requireCanDecideDeadline(extendedBy, task);
+        // An immediate, self-approved extension — same authority as approving a pending
+        // request (see requireCanApprove): a Director can't grant themselves one on a
+        // CEO-mandated task any more than they could approve someone else's request on it.
+        requireCanApprove(extendedBy, task);
 
         if (task.getDeadline() != null && !request.newDeadline().isAfter(task.getDeadline())) {
             throw new InvalidAssignmentException("newDeadline must be after the task's current deadline.");
@@ -977,19 +1024,37 @@ public class TaskServiceImpl implements TaskService {
         List<TaskDeadlineExtensionRequest> pending =
                 taskDeadlineExtensionRequestRepository.findByStatusOrderByRequestedAtDesc(ExtensionRequestStatus.PENDING);
 
-        // A Super Admin's override authority (see requireCanDecideDeadline/isDeadlineOverrideTier)
-        // means they CAN decide any request, but resolveDeadlineDecider never actually
-        // resolves TO them — a Super Admin doesn't create tasks in the normal flow, so
-        // they'd never naturally show up as anyone's decider and this inbox would always
-        // read empty for them even though the authority is real. Show every pending
-        // request, org-wide, instead — the one tier that genuinely oversees all of it.
+        // A Super Admin's override authority (see requireCanApprove/requireCanReject/
+        // isDeadlineOverrideTier) means they CAN decide any request, but neither
+        // resolveDeadlineDecider nor resolveDeadlineApprover ever actually resolves TO them
+        // — a Super Admin doesn't create tasks in the normal flow, so they'd never naturally
+        // show up as anyone's decider/approver and this inbox would always read empty for
+        // them even though the authority is real. Show every pending request, org-wide,
+        // instead — the one tier that genuinely oversees all of it.
         if (viewer.getRole() == Role.SUPER_ADMIN) {
-            return pending.stream().map(taskMapper::toPendingExtensionResponse).toList();
+            return pending.stream()
+                    .map(request -> taskMapper.toPendingExtensionResponse(request, true))
+                    .toList();
         }
 
+        // The rejecter always sees it immediately. The approver only sees it once it's been
+        // explicitly forwarded to them (see forwardExtensionRequestToApprover) — on a
+        // CEO-mandated chain that's a distinct person from the rejecter, and the whole point
+        // of forwarding is that the CEO's inbox doesn't fill up with every request the
+        // moment it's made, only the ones a Director actually decided are worth escalating.
+        // On an ordinary Director-originated chain, rejecter and approver are the same
+        // person, so this is unaffected — they see their own requests right away either way.
         return pending.stream()
-                .filter(request -> resolveDeadlineDecider(request.getTask()).getId().equals(viewerId))
-                .map(taskMapper::toPendingExtensionResponse)
+                .filter(request -> {
+                    Task task = request.getTask();
+                    boolean isDecider = resolveDeadlineDecider(task).getId().equals(viewerId);
+                    boolean isApprover = resolveDeadlineApprover(task).getId().equals(viewerId);
+                    return isDecider || (isApprover && request.getForwardedAt() != null);
+                })
+                // canApproveDeadline tells the frontend which action(s) this particular
+                // viewer actually has on each row, so a Director who's only the rejecter
+                // doesn't get shown an Approve button that would just fail.
+                .map(request -> taskMapper.toPendingExtensionResponse(request, canApproveDeadline(viewer, request.getTask())))
                 .toList();
     }
 
@@ -1044,16 +1109,84 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    /** Deciding a request, or extending directly: this task's own deadline decider (see
-     *  resolveDeadlineDecider), or the override tier. */
-    private void requireCanDecideDeadline(Person actor, Task task) {
-        if (isDeadlineOverrideTier(task, actor)) {
-            return;
-        }
-        if (!resolveDeadlineDecider(task).getId().equals(actor.getId())) {
+    /** Rejecting a request: this task's own deadline decider (see resolveDeadlineDecider),
+     *  or the override tier. A "no" changes nothing the mandate above this task depended on,
+     *  so — unlike approving, see canApproveDeadline — this is never escalated further even
+     *  on a CEO-mandated chain (see isCeoMandated): the Director a request lands on doesn't
+     *  need the CEO's sign-off just to decline it. */
+    private boolean canRejectDeadline(Person actor, Task task) {
+        return isDeadlineOverrideTier(task, actor) || resolveDeadlineDecider(task).getId().equals(actor.getId());
+    }
+
+    private void requireCanReject(Person actor, Task task) {
+        if (!canRejectDeadline(actor, task)) {
             throw new ForbiddenActionException("Only whoever set this task's deadline, or a Director/Super Admin "
                     + "(Executive/Super Admin for a Department task), can decide a deadline extension.");
         }
+    }
+
+    /** Approving a request, or extending directly (an implicit, immediate approval — see
+     *  extendDeadlineDirectly): changes the deadline that whatever mandate sits above this
+     *  task was built around, so on a CEO-mandated chain (its root task was assigned by an
+     *  Executive/Super Admin — see isCeoMandated) only an Executive-or-above may grant it,
+     *  no matter how far down the hierarchy this particular task sits or who directly
+     *  created it — a Director who made this task an implementation task under the CEO's
+     *  own Department task can still reject a request on it (see canRejectDeadline), but
+     *  can't be the one to say yes. Everywhere else (an ordinary Director-originated
+     *  hierarchy), unchanged: same authority as rejecting. Also backs
+     *  PendingExtensionRequestResponse.canApprove, so the "Requests" inbox can hide/disable
+     *  the Approve action for a viewer who can only ever reject a given request instead of
+     *  showing a button that would just fail. */
+    private boolean canApproveDeadline(Person actor, Task task) {
+        if (isCeoMandated(task) && !Role.isAtLeastExecutive(actor.getRole())) {
+            return false;
+        }
+        return canRejectDeadline(actor, task);
+    }
+
+    private void requireCanApprove(Person actor, Task task) {
+        if (!canApproveDeadline(actor, task)) {
+            throw new ForbiddenActionException("This task originated from the CEO's own mandate — only an "
+                    + "Executive or Super Admin can approve a deadline extension on it.");
+        }
+    }
+
+    /** Walks up to this task's own root (depth 0 — the top of whatever hierarchy it sits
+     *  in). Every hierarchy is rooted in something a Director-or-above created (see
+     *  createTask's own role floor), so this always terminates. */
+    private Task findRoot(Task task) {
+        Task current = task;
+        while (current.getParentTask() != null) {
+            current = current.getParentTask();
+        }
+        return current;
+    }
+
+    /** True when this task's whole hierarchy originates from an Executive/Super Admin's own
+     *  mandate — i.e. its root is a Department task the CEO (or Super Admin) assigned
+     *  directly, not an ordinary top-level task a plain Director created on their own
+     *  initiative. Everything below such a root — the Director's implementation task, and
+     *  any leaf subtask under that — inherits the same "only the CEO actually approves"
+     *  rule (see requireCanApprove), regardless of who directly created each individual
+     *  task along the way. */
+    private boolean isCeoMandated(Task task) {
+        return Role.isAtLeastExecutive(findRoot(task).getAssignedBy().getRole());
+    }
+
+    /** The true approving authority for this task's deadline. Same walk as
+     *  resolveDeadlineDecider below, except it doesn't stop at the first Director-tier
+     *  assignedBy it finds: on a CEO-mandated chain (see isCeoMandated), the actual approver
+     *  is the root's own assignedBy — the CEO (or Super Admin) who set that mandate — even
+     *  though a Director further down is who the request first lands on and who resolves as
+     *  its rejecter. Identical to resolveDeadlineDecider whenever the chain isn't
+     *  CEO-mandated (an ordinary Director-originated hierarchy has only one authority
+     *  either way). */
+    private Person resolveDeadlineApprover(Task task) {
+        Task root = findRoot(task);
+        if (Role.isAtLeastExecutive(root.getAssignedBy().getRole())) {
+            return root.getAssignedBy();
+        }
+        return resolveDeadlineDecider(task);
     }
 
     /** Deadline decisions are a Director's job, not a Team Leader's — a Team Leader can

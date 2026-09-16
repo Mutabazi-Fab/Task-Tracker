@@ -8,7 +8,7 @@ import { useAuth } from '../../auth/useAuth'
 import { usePeople } from '../../people/hooks/usePeople'
 import { useTeams } from '../../teams/hooks/useTeams'
 import { useDepartments } from '../../departments/hooks/useDepartments'
-import { maxAssignableDate } from '../../../lib/dateLimits'
+import { maxAssignableDate, minAssignableDate } from '../../../lib/dateLimits'
 import { InlineSubtasksField, type InlineSubtaskRow } from './InlineSubtasksField'
 import type { CreateTaskRequest, TaskSeverity, TaskSource } from '../../../types/task.types'
 import styles from './CreateTaskForm.module.css'
@@ -196,6 +196,7 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
         type="date"
         value={dateAssigned}
         onChange={setDateAssigned}
+        min={minAssignableDate()}
         max={maxAssignableDate()}
         required
       />
@@ -222,7 +223,7 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
           label="Source detail"
           value={sourceLabel}
           onChange={setSourceLabel}
-          placeholder="e.g. Director Musoni, GPO, E&Y, Board of Directors"
+          placeholder="e.g. Director Maj. Musoni, GPO, E&Y, Board of Directors"
         />
       )}
 

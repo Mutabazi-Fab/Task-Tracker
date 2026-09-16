@@ -88,6 +88,14 @@ export function SubtasksPanel({ task }: { task: TaskDetail }) {
           teamId={task.assigneeId ?? NaN}
           isDepartmentImplementation={isDepartmentTask}
           departmentId={isDepartmentTask ? (task.assigneeId ?? undefined) : undefined}
+          // Whatever source is already recorded on THIS task — the CEO's, if this is her
+          // Department task and the new child is its implementation task, or whatever the
+          // implementation task itself carries (its own, or already inherited from the CEO)
+          // when the new child is one more level down, a plain leaf subtask. Either way the
+          // new task inherits and locks it (see CreateSubtaskForm) rather than asking
+          // whoever's creating it to re-enter something already on record one level up.
+          parentSource={task.source}
+          parentSourceLabel={task.sourceLabel}
           open={createOpen}
           onClose={() => setCreateOpen(false)}
         />

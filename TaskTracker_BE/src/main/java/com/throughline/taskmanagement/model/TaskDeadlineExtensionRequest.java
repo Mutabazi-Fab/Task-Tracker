@@ -73,4 +73,17 @@ public class TaskDeadlineExtensionRequest {
 
     /** Null while PENDING. */
     private LocalDateTime decidedAt;
+
+    /** Null until explicitly forwarded — see TaskServiceImpl.forwardExtensionRequestToApprover.
+     *  Only ever set on a CEO-mandated chain (see TaskServiceImpl.isCeoMandated), where the
+     *  Director a request first lands on can reject it on their own but can't approve it: the
+     *  CEO/Super Admin only gets to see and act on the request in their own "Requests" inbox
+     *  once the Director has deliberately sent it their way — not automatically the moment it
+     *  was made. Always null for an ordinary Director-originated task, where decider and
+     *  approver are the same person and there's nobody to forward it to. */
+    @ManyToOne
+    @JoinColumn(name = "forwarded_by_id")
+    private Person forwardedBy;
+
+    private LocalDateTime forwardedAt;
 }

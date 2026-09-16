@@ -28,6 +28,12 @@
   border-color: var(--accent);
 }
 
+.input:disabled {
+  background: var(--track);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
 /* Validation state — never a --status-* colour, those are reserved for task status. */
 .inputError {
   border-width: 2px;

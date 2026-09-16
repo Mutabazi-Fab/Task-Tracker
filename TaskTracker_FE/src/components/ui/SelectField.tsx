@@ -12,13 +12,20 @@ interface SelectFieldProps {
   options: SelectFieldOption[]
   placeholder?: string
   id?: string
+  disabled?: boolean
 }
 
-export function SelectField({ label, value, onChange, options, placeholder, id }: SelectFieldProps) {
+export function SelectField({ label, value, onChange, options, placeholder, id, disabled }: SelectFieldProps) {
   return (
     <label className={styles.field} htmlFor={id}>
       {label && <span className={styles.label}>{label}</span>}
-      <select id={id} className={styles.select} value={value} onChange={(e) => onChange(e.target.value)}>
+      <select
+        id={id}
+        className={styles.select}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+      >
         {placeholder && (
           <option value="" disabled>
             {placeholder}

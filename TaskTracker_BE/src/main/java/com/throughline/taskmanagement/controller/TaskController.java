@@ -201,6 +201,19 @@ public class TaskController {
         return ResponseEntity.ok(taskService.decideDeadlineExtension(id, extensionId, verified));
     }
 
+    /** Only meaningful on a CEO-mandated chain — sends a request into the true approver's
+     *  (the CEO/Super Admin's) own "Requests" inbox; see TaskService.
+     *  forwardExtensionRequestToApprover. No request body: everything needed is already in
+     *  the path plus the caller's own JWT-resolved identity. */
+    @PutMapping("/{id}/deadline-extensions/{extensionId}/forward")
+    public ResponseEntity<TaskDetailResponse> forwardExtensionRequestToApprover(
+            @PathVariable Long id,
+            @PathVariable Long extensionId,
+            Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(taskService.forwardExtensionRequestToApprover(id, extensionId, actorId));
+    }
+
     @PutMapping("/{id}/deadline")
     public ResponseEntity<TaskDetailResponse> extendDeadlineDirectly(
             @PathVariable Long id,

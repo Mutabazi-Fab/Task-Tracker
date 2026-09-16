@@ -34,6 +34,15 @@ export async function requestDeadlineExtension(
   return data
 }
 
+/** Only meaningful on a CEO-mandated task chain — sends a request into the CEO/Super
+ *  Admin's own "Requests" inbox (see PendingExtensionRequestItem, which shows this action
+ *  in place of Approve for a viewer whose canApprove is false and forwardedToApprover isn't
+ *  set yet). No payload — the backend resolves who's forwarding it from the JWT. */
+export async function forwardDeadlineExtension(taskId: number, extensionId: number): Promise<TaskDetail> {
+  const { data } = await axiosClient.put<TaskDetail>(endpoints.tasks.forwardDeadlineExtension(taskId, extensionId))
+  return data
+}
+
 export async function decideDeadlineExtension(
   taskId: number,
   extensionId: number,

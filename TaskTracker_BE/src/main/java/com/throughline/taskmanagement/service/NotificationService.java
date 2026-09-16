@@ -74,8 +74,17 @@ public interface NotificationService {
     void notifyDepartmentTaskReassigned(Task task, TaskReassignment reassignment);
 
     /** Called by TaskServiceImpl right after a deadline extension is requested. Notifies
-     *  whoever set the task's deadline (its assignedBy) — the person who'll decide it. */
+     *  this task's own deadline decider — usually the person who'll decide it outright, but
+     *  on a CEO-mandated chain (see TaskServiceImpl.isCeoMandated) that's the Director the
+     *  request lands on first, not yet the CEO/Super Admin who must actually approve it —
+     *  see notifyDeadlineExtensionForwarded for when they find out. */
     void notifyDeadlineExtensionRequested(TaskDeadlineExtensionRequest request);
+
+    /** Called by TaskServiceImpl right after a Director forwards a CEO-mandated request to
+     *  its true approver. Notifies that approver (the CEO/Super Admin) — the request only
+     *  reaches their "Requests" inbox from this point on, not automatically the moment it
+     *  was made (see TaskServiceImpl.forwardExtensionRequestToApprover). */
+    void notifyDeadlineExtensionForwarded(TaskDeadlineExtensionRequest request, Person forwardedBy);
 
     /** Called by TaskServiceImpl right after an extension request is approved. Notifies
      *  whoever requested it. */

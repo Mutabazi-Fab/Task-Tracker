@@ -60,3 +60,11 @@
   display: flex;
   gap: var(--space-2);
 }
+
+.approvalNote {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--muted);
+  margin-top: var(--space-1);
+  width: 100%;
+}

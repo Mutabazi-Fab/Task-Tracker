@@ -25,7 +25,7 @@ export type TaskStatus = 'PENDING' | 'ONGOING' | 'COMPLETED'
 export type TaskSortValue = 'updatedAt,desc' | 'createdAt,desc' | 'none'
 
 /** Who actually originated a task — open to anyone creating it, at any depth. Paired with
- *  a free-text sourceLabel on the task itself (e.g. "Director Musoni", "GPO", "E&Y",
+ *  a free-text sourceLabel on the task itself (e.g. "Director Maj. Musoni", "GPO", "E&Y",
  *  "Board of Directors"). */
 export type TaskSource = 'INITIATIVE' | 'AUDITOR' | 'REGULATOR' | 'BOARD'
 

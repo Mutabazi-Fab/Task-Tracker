@@ -6,6 +6,7 @@ import { useCreateSubtask } from '../hooks/useCreateSubtask'
 import { createSubtask } from '../../tasks/api/tasks.api'
 import { CreateSubtaskForm } from './CreateSubtaskForm'
 import type { InlineSubtaskRow } from '../../tasks/components/InlineSubtasksField'
+import type { TaskSource } from '../../../types/task.types'
 
 interface CreateSubtaskModalProps {
   parentTaskId: number
@@ -18,6 +19,11 @@ interface CreateSubtaskModalProps {
    *  isDepartmentImplementation, so the team picker can be scoped to that Department's own
    *  teams instead of every team org-wide. */
   departmentId?: number
+  /** The parent Department task's own source/sourceLabel — passed through to
+   *  CreateSubtaskForm so the implementation task can inherit and lock it. See that form's
+   *  own doc comment for the full reasoning. */
+  parentSource?: TaskSource | null
+  parentSourceLabel?: string | null
   open: boolean
   onClose: () => void
 }
@@ -34,6 +40,8 @@ export function CreateSubtaskModal({
   teamId,
   isDepartmentImplementation,
   departmentId,
+  parentSource,
+  parentSourceLabel,
   open,
   onClose,
 }: CreateSubtaskModalProps) {
@@ -99,6 +107,8 @@ export function CreateSubtaskModal({
         teamId={teamId}
         isDepartmentImplementation={isDepartmentImplementation}
         departmentId={departmentId}
+        parentSource={parentSource}
+        parentSourceLabel={parentSourceLabel}
         onSubmit={handleSubmit}
         onCancel={onClose}
         submitting={createImplementationTask.isPending || isCreatingLeafSubtasks}
