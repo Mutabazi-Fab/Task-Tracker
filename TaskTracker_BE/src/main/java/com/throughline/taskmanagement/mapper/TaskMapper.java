@@ -247,6 +247,19 @@ public class TaskMapper {
         return task.getAssignedBy();
     }
 
+    /** Same department-derivation rule as TaskServiceImpl.resolveTaskDepartment: assignedDepartment
+     *  directly for a DEPARTMENT-type task, the team's own department for a TEAM-type one,
+     *  the assignee's own department for an INDIVIDUAL one. */
+    private Long resolveTaskDepartmentId(Task task) {
+        return switch (task.getAssigneeType()) {
+            case DEPARTMENT -> task.getAssignedDepartment() != null ? task.getAssignedDepartment().getId() : null;
+            case TEAM -> task.getAssignedTeam() != null && task.getAssignedTeam().getDepartment() != null
+                    ? task.getAssignedTeam().getDepartment().getId() : null;
+            case INDIVIDUAL -> task.getAssignedPerson() != null && task.getAssignedPerson().getDepartment() != null
+                    ? task.getAssignedPerson().getDepartment().getId() : null;
+        };
+    }
+
     public TaskDetailResponse toDetailResponse(Task task) {
         if (task == null) return null;
 
@@ -286,6 +299,7 @@ public class TaskMapper {
                 assigneeNameOf(task),
                 assigneeId,
                 task.getAssigneeType(),
+                resolveTaskDepartmentId(task),
                 owningTeamId,
                 task.getStatus(),
                 task.getProgressPercentage(),

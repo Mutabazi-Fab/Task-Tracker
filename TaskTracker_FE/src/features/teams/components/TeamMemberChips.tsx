@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { QueryBoundary } from '../../../components/feedback/QueryBoundary'
 import { EmptyState } from '../../../components/ui/EmptyState'
-import { useAuth } from '../../auth/useAuth'
 import { useTeamMembers } from '../hooks/useTeamMembers'
 import { MakeLeaderModal } from './MakeLeaderModal'
 import { RemoveMemberModal } from './RemoveMemberModal'
@@ -12,14 +11,20 @@ import styles from './TeamMemberChips.module.css'
 interface TeamMemberChipsProps {
   teamId: number
   teamName: string
-  /** Director, or the current leader of THIS team — the only two roles allowed to
-   *  add/remove members (checked server-side too; this only controls whether the
-   *  buttons show up at all). */
+  /** Add/remove authority: Executive/Super Admin, a Director who heads THIS team's own
+   *  department, or the current leader of THIS team. Computed once in TeamPage (see its
+   *  own doc comment). Checked server-side too; this only controls whether the buttons
+   *  show up at all. */
   canManage: boolean
+  /** Reassigning who leads the team is narrower than canManage — never the current leader
+   *  themselves, only Executive/Super Admin or a Director who heads this department
+   *  (mirrors TeamServiceImpl.setTeamLeader, which has no Team-Leader-self-service path).
+   *  Previously this button used its own blanket "any Director" check here, independent of
+   *  canManage — that was the actual bug. */
+  canReassignLeader: boolean
 }
 
-export function TeamMemberChips({ teamId, teamName, canManage }: TeamMemberChipsProps) {
-  const { isDirector } = useAuth()
+export function TeamMemberChips({ teamId, teamName, canManage, canReassignLeader }: TeamMemberChipsProps) {
   const query = useTeamMembers(teamId)
   const [removing, setRemoving] = useState<TeamMember | null>(null)
   // Confirmed with a yes/no modal, not fired straight from the click — changing who leads
@@ -39,7 +44,7 @@ export function TeamMemberChips({ teamId, teamName, canManage }: TeamMemberChips
                 <TeamMemberChip
                   key={member.personId}
                   member={member}
-                  onMakeLeader={isDirector ? () => setMakingLeader(member) : undefined}
+                  onMakeLeader={canReassignLeader ? () => setMakingLeader(member) : undefined}
                   onRemove={canManage ? () => setRemoving(member) : undefined}
                 />
               ))}

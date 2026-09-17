@@ -119,11 +119,13 @@ public class TaskServiceImpl implements TaskService {
         if (hasTeam) {
             Team assignedTeam = teamRepository.findById(request.assignedTeamId())
                     .orElseThrow(() -> new ResourceNotFoundException("assignedTeamId not found"));
+            requireCanAssignWithinDepartment(createdBy, assignedTeam.getDepartment());
             task.setAssigneeType(AssigneeType.TEAM);
             task.setAssignedTeam(assignedTeam);
         } else if (hasPerson) {
             Person assignedPerson = personRepository.findById(request.assignedPersonId())
                     .orElseThrow(() -> new ResourceNotFoundException("assignedPersonId not found"));
+            requireCanAssignWithinDepartment(createdBy, assignedPerson.getDepartment());
             task.setAssigneeType(AssigneeType.INDIVIDUAL);
             task.setAssignedPerson(assignedPerson);
         } else {
@@ -183,15 +185,19 @@ public class TaskServiceImpl implements TaskService {
         }
         Long teamId = parent.getAssignedTeam().getId();
 
-        // isDirector here also covers Super Admin (see Role.isAtLeastDirector) — a
-        // Super-Admin-created subtask is recorded as CreatedByRole.DIRECTOR below, same as
-        // a Director's, rather than adding a third audit value just for this.
-        boolean isDirector = Role.isAtLeastDirector(createdBy.getRole());
+        // isDirectorRole is purely for the CreatedByRole label below (also true for a Super
+        // Admin, recorded the same way as a Director's — no separate audit value just for
+        // that). It's NOT the authorization outcome: a plain Director must additionally
+        // head this team's own department (see isHeadOfDepartment) to actually be allowed
+        // through, same restriction as createTask/createImplementationTask.
+        boolean isDirectorRole = Role.isAtLeastDirector(createdBy.getRole());
+        boolean headsThisDepartment = isHeadOfDepartment(createdBy, parent.getAssignedTeam().getDepartment());
         boolean isThisTeamsLeader = teamMemberRepository.findByTeamIdAndPersonId(teamId, createdBy.getId())
                 .map(TeamMember::isLeader)
                 .orElse(false);
-        if (!isDirector && !isThisTeamsLeader) {
-            throw new ForbiddenActionException("Only the parent task's Team Leader or a Director can create a subtask.");
+        if (!headsThisDepartment && !isThisTeamsLeader) {
+            throw new ForbiddenActionException(
+                    "Only the parent task's Team Leader, or a Director who heads its department (or an Executive/Super Admin), can create a subtask.");
         }
 
         Person assignedPerson = personRepository.findById(request.assignedPersonId())
@@ -211,7 +217,7 @@ public class TaskServiceImpl implements TaskService {
         subtask.setAssignedPerson(assignedPerson);
         subtask.setParentTask(parent);
         subtask.setDepth(parent.getDepth() + 1);
-        subtask.setCreatedByRole(isDirector ? CreatedByRole.DIRECTOR : CreatedByRole.TEAM_LEADER);
+        subtask.setCreatedByRole(isDirectorRole ? CreatedByRole.DIRECTOR : CreatedByRole.TEAM_LEADER);
         subtask.setProgressPercentage(0);
         subtask.setStatus(TaskStatus.PENDING);
         applySourceAndSeverity(subtask, request.source(), request.sourceLabel(), request.severity(), createdBy);
@@ -236,10 +242,7 @@ public class TaskServiceImpl implements TaskService {
      *  who doesn't head this Department has no standing over its Executive-level mandate. */
     private TaskDetailResponse createImplementationTask(Task parent, CreateSubtaskRequest request, Person createdBy) {
         Department department = parent.getAssignedDepartment();
-        boolean isExecutiveOrAbove = Role.isAtLeastExecutive(createdBy.getRole());
-        boolean isThisDepartmentsHead = department.getHeadDirector() != null
-                && department.getHeadDirector().getId().equals(createdBy.getId());
-        if (!isExecutiveOrAbove && !isThisDepartmentsHead) {
+        if (!isHeadOfDepartment(createdBy, department)) {
             throw new ForbiddenActionException(
                     "Only this Department's head Director or an Executive/Super Admin can create its implementation task.");
         }
@@ -596,21 +599,56 @@ public class TaskServiceImpl implements TaskService {
         return task.getParentTask() == null || task.getParentTask().getAssigneeType() == AssigneeType.DEPARTMENT;
     }
 
-    /** Only a Director/Super Admin, or the leader of the team that currently owns this task,
-     *  may reassign it — an ordinary team member cannot. "The team that currently owns this
-     *  task" is the task's OWN team when it's top-level-shaped (a real depth-0 task, or a
-     *  depth-1 Department implementation task — see isTopLevelShaped), or its parent's team
-     *  for an ordinary leaf subtask. */
+    /** Executive/Super Admin always qualifies. A plain DIRECTOR only qualifies when they
+     *  are the actual head of this department (Department.headDirector) — not merely a
+     *  Director who happens to belong to it. "The one they head" is the whole boundary for
+     *  every cross-department write action in this class: creating a task/subtask for a
+     *  team or person outside it, reassigning or deleting a task that lives there, pinning
+     *  one, etc. A Director who doesn't head a department has no more standing over its
+     *  teams/tasks than a Director from a completely unrelated one. */
+    private boolean isHeadOfDepartment(Person person, Department department) {
+        if (Role.isAtLeastExecutive(person.getRole())) {
+            return true;
+        }
+        if (person.getRole() != Role.DIRECTOR) {
+            return false;
+        }
+        return department != null && department.getHeadDirector() != null
+                && department.getHeadDirector().getId().equals(person.getId());
+    }
+
+    /** Same department-derivation rule used elsewhere (e.g. TaskRepository.findByDepartmentId's
+     *  explicit LEFT-JOIN dance in JPQL, here just three fields on an already-loaded Task,
+     *  exactly one of which is ever set): assignedDepartment directly for a DEPARTMENT-type
+     *  task, the team's own department for a TEAM-type one, the assignee's own department
+     *  for an INDIVIDUAL one. */
+    private Department resolveTaskDepartment(Task task) {
+        return switch (task.getAssigneeType()) {
+            case DEPARTMENT -> task.getAssignedDepartment();
+            case TEAM -> task.getAssignedTeam() != null ? task.getAssignedTeam().getDepartment() : null;
+            case INDIVIDUAL -> task.getAssignedPerson() != null ? task.getAssignedPerson().getDepartment() : null;
+        };
+    }
+
+    /** Assigning a brand-new top-level task (createTask) or implementation task to a team or
+     *  person: Executive/Super Admin may target anyone org-wide, a plain Director only a
+     *  team/person within the department they head. */
+    private void requireCanAssignWithinDepartment(Person actor, Department targetDepartment) {
+        if (!isHeadOfDepartment(actor, targetDepartment)) {
+            throw new ForbiddenActionException(
+                    "A Director can only assign a task to a team or person within the department they head.");
+        }
+    }
+
     /** Deleting is narrower than "any Director" — called only once the caller is already
      *  confirmed Director-or-above (see deleteTask's own role floor). A Director may only
-     *  delete a task they personally created (assignedBy == them): their own top-level
-     *  task, or a subtask/implementation task they added underneath something else. A task
-     *  an Executive/Super Admin created — most notably a Department-assigned task, always
-     *  their own doing — can only be deleted by Executive-or-above, even by the Director
-     *  whose own department it was handed to; the receiving Director isn't its creator,
-     *  just its recipient. Executive/Super Admin can always delete anything, regardless of
-     *  who created it — the same override tier used everywhere else in this app
-     *  (reassignment, deadline decisions). */
+     *  delete a task they personally created (assignedBy == them) AND that still lives
+     *  within the department they head — both, not just ownership: createTask/createSubtask
+     *  now already prevent a Director from creating anything outside their own department
+     *  going forward, but this is the defense-in-depth check for older data or any other
+     *  path that might otherwise let it slip through. Executive/Super Admin can always
+     *  delete anything, regardless of who created it or where — the same override tier used
+     *  everywhere else in this app (reassignment, deadline decisions). */
     private void requireCanDelete(Person actor, Task task) {
         if (Role.isAtLeastExecutive(actor.getRole())) {
             return;
@@ -618,10 +656,21 @@ public class TaskServiceImpl implements TaskService {
         if (!task.getAssignedBy().getId().equals(actor.getId())) {
             throw new ForbiddenActionException("A Director can only delete a task they created themselves.");
         }
+        if (!isHeadOfDepartment(actor, resolveTaskDepartment(task))) {
+            throw new ForbiddenActionException("A Director can only delete a task within the department they head.");
+        }
     }
 
+    /** Only a Director who heads this task's own department, an Executive/Super Admin, or
+     *  the leader of the team that currently owns this task, may reassign it — an ordinary
+     *  team member cannot, and a Director from an unrelated department cannot either, even
+     *  though they outrank a plain Member. "The team that currently owns this task" is the
+     *  task's OWN team when it's top-level-shaped (a real depth-0 task, or a depth-1
+     *  Department implementation task — see isTopLevelShaped), or its parent's team for an
+     *  ordinary leaf subtask; "this task's own department" is resolveTaskDepartment's
+     *  derivation off wherever it currently sits, before this reassignment moves it. */
     private void requireCanReassign(Person actor, Task task) {
-        if (Role.isAtLeastDirector(actor.getRole())) {
+        if (isHeadOfDepartment(actor, resolveTaskDepartment(task))) {
             return;
         }
         Team owningTeam = isTopLevelShaped(task)
@@ -632,7 +681,8 @@ public class TaskServiceImpl implements TaskService {
                         .map(tm -> tm.getPerson().getId().equals(actor.getId()))
                         .orElse(false);
         if (!isLeader) {
-            throw new ForbiddenActionException("Only a Director, Super Admin, or this team's leader can reassign this task.");
+            throw new ForbiddenActionException(
+                    "Only a Director who heads this task's department, an Executive/Super Admin, or this team's leader can reassign this task.");
         }
     }
 
@@ -1064,8 +1114,9 @@ public class TaskServiceImpl implements TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
         Person changedBy = personRepository.findById(request.changedById())
                 .orElseThrow(() -> new ResourceNotFoundException("changedById not found"));
-        if (!Role.isAtLeastDirector(changedBy.getRole())) {
-            throw new ForbiddenActionException("Only a Director or Super Admin can pin or unpin a task.");
+        if (!isHeadOfDepartment(changedBy, resolveTaskDepartment(task))) {
+            throw new ForbiddenActionException(
+                    "Only a Director who heads this task's department (or an Executive/Super Admin) can pin or unpin it.");
         }
 
         task.setPinned(request.pinned());

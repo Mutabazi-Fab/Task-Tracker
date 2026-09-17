@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { QueryBoundary } from '../../components/feedback/QueryBoundary'
 import { useAuth } from '../auth/useAuth'
+import { useDepartment } from '../departments/hooks/useDepartment'
 import { useTeam } from './hooks/useTeam'
 import { useTeamStatistics } from './hooks/useTeamStatistics'
 import { useTeamMembers } from './hooks/useTeamMembers'
@@ -28,12 +29,24 @@ export function TeamPage() {
   const [addMemberOpen, setAddMemberOpen] = useState(false)
 
   const teamQuery = useTeam(id)
-  const { isDirector, currentUser } = useAuth()
+  const { isDirector, isExecutive, currentUser } = useAuth()
   const navigate = useNavigate()
+  // Mirrors the backend's TeamServiceImpl.isHeadOfDepartment exactly: Executive/Super Admin
+  // may manage any team org-wide; a plain Director only the team of the department they
+  // actually head, never merely one they belong to. Always called (never skipped) with a
+  // NaN id when the team hasn't loaded yet — same pattern as SubtasksPanel's own
+  // useDepartment call — so this never breaks the rules of hooks.
+  const departmentQuery = useDepartment(teamQuery.data?.departmentId ?? NaN)
 
   const isMemberOfThisTeam = currentUser?.teams.some((t) => t.teamId === id) ?? false
   const isThisTeamsLeader = currentUser?.teams.some((t) => t.teamId === id && t.isLeader) ?? false
-  const canManage = isDirector || isThisTeamsLeader
+  const headsThisTeamsDepartment = isDirector && departmentQuery.data?.headDirectorId === currentUser?.id
+  // Add/remove: this team's own Leader too (mirrors requireDirectorOfTeamsDepartmentOrTeamLeader).
+  const canManage = isExecutive || headsThisTeamsDepartment || isThisTeamsLeader
+  // Reassigning who leads the team is narrower — never the current leader themselves,
+  // only whoever actually has authority OVER the team (mirrors setTeamLeader's own check,
+  // which has no Team-Leader-self-service path).
+  const canReassignLeader = isExecutive || headsThisTeamsDepartment
   const canViewFull = isDirector || isMemberOfThisTeam
 
   const statsQuery = useTeamStatistics(id, canViewFull)
@@ -60,7 +73,12 @@ export function TeamPage() {
 
               <Card>
                 <span className={styles.sectionHeading}>Members</span>
-                <TeamMemberChips teamId={id} teamName={team.name} canManage={canManage} />
+                <TeamMemberChips
+                  teamId={id}
+                  teamName={team.name}
+                  canManage={canManage}
+                  canReassignLeader={canReassignLeader}
+                />
               </Card>
 
               <Card>

@@ -38,11 +38,12 @@ export function DashboardPage() {
     <>
       <PageHeader breadcrumb="Throughline" title="Dashboard" />
 
-      <KpiRow />
-
-      {/* Departments-on-track / overdue / critical / awaiting-decision — Executive and
-          Super Admin only, a plain Director doesn't get this row. */}
-      {isExecutive && <ExecutiveKpiRow />}
+      <div className={styles.kpiStack}>
+        <KpiRow />
+        {/* Departments-on-track / overdue / critical / awaiting-decision — Executive and
+            Super Admin only, a plain Director doesn't get this row. */}
+        {isExecutive && <ExecutiveKpiRow />}
+      </div>
 
       <div className={styles.charts}>
         <Card>

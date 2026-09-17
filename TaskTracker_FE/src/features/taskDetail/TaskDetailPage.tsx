@@ -59,25 +59,35 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
   // has nobody behind it to break work down further — a dead end either way, so it gets no
   // Subtasks panel at all.
   const canHaveSubtasks = (task.assigneeType === 'TEAM' && task.depth < 2) || isDepartmentAssigned
+  // A plain Director's authority never crosses into a department they don't head — same
+  // simplifying comparison CreateTeamForm already relies on (every current Director's own
+  // department membership already matches their headship), reused here for pin/delete/
+  // reassign instead of a second department/headDirector fetch. Executive/Super Admin
+  // bypass this entirely, everywhere below.
+  const headsTasksDepartment = task.taskDepartmentId !== null && task.taskDepartmentId === currentUser?.departmentId
   // Mirrors the backend check in TaskServiceImpl.deleteTask/requireCanDelete: Executive/
   // Super Admin can always delete anything, but a plain Director may only delete a task
-  // they personally created (assignedById === them) — not one just handed to their
-  // department (a Department task is always the Executive's own doing), and not another
-  // Director's task either. A Team Leader can't delete even their own team's tasks
-  // (unlike reassign, just below) — that floor is unconditional, not ownership-based.
-  const canDelete = isDirector && (isExecutive || task.assignedById === currentUser?.id)
-  // Mirrors the backend check in TaskServiceImpl.setPinned: Director-or-above, same tier
-  // as delete — a manual, independently-editable toggle, not derived from severity.
-  const canPin = isDirector
+  // they personally created (assignedById === them) AND that still lives within the
+  // department they head — not one just handed to their department (a Department task is
+  // always the Executive's own doing), and not another Director's task either. A Team
+  // Leader can't delete even their own team's tasks (unlike reassign, just below) — that
+  // floor is unconditional, not ownership-based.
+  const canDelete =
+    isExecutive || (isDirector && task.assignedById === currentUser?.id && headsTasksDepartment)
+  // Mirrors the backend check in TaskServiceImpl.setPinned: a Director who heads this
+  // task's own department (or Executive/Super Admin) — a manual, independently-editable
+  // toggle, not derived from severity.
+  const canPin = isExecutive || (isDirector && headsTasksDepartment)
   // Mirrors the backend check in TaskServiceImpl.reassignTask: a Department-level task
   // moves to a different Department entirely, restricted to Executive/Super Admin — the
   // same authority that assigns one in the first place, not a Director who happens to
-  // lead some unrelated team. Everything else follows requireCanReassign: a Director/
-  // Super Admin, or the Team Leader of the team actually responsible for this task, may
-  // reassign it.
+  // lead some unrelated team. Everything else follows requireCanReassign: a Director who
+  // heads this task's own department, an Executive/Super Admin, or the Team Leader of the
+  // team actually responsible for this task, may reassign it.
   const canReassign = isDepartmentAssigned
     ? isExecutive
-    : isDirector ||
+    : isExecutive ||
+      (isDirector && headsTasksDepartment) ||
       (task.owningTeamId !== null && (currentUser?.teams.some((t) => t.teamId === task.owningTeamId && t.isLeader) ?? false))
 
   // Mirrors TaskServiceImpl.isDeadlineOverrideTier: Executive-or-above for a Department

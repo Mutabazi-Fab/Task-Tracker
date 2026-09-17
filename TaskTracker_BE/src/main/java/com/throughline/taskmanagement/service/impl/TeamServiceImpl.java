@@ -72,22 +72,19 @@ public class TeamServiceImpl implements TeamService {
                 .orElseThrow(() -> new ResourceNotFoundException("createdById not found"));
         requireDirector(createdBy, "Only a Director can create a team.");
 
-        
-        if (createdBy.getRole() == Role.DIRECTOR) {
-            Long ownDepartmentId = createdBy.getDepartment() != null ? createdBy.getDepartment().getId() : null;
-            if (ownDepartmentId == null || !ownDepartmentId.equals(request.departmentId())) {
-                throw new ForbiddenActionException("A Director can only create a team inside their own department.");
-            }
+        // Every team belongs to exactly one Department — no team exists outside the org
+        // chart. Enforced here, not as a DB constraint (same approach as Task's assignee XOR).
+        Department department = departmentRepository.findById(request.departmentId())
+                .orElseThrow(() -> new ResourceNotFoundException("departmentId not found"));
+
+        if (!isHeadOfDepartment(createdBy, department)) {
+            throw new ForbiddenActionException(
+                    "A Director can only create a team inside the department they head.");
         }
 
         if (!request.memberIds().contains(request.leaderId())) {
             throw new InvalidAssignmentException("leaderId must be one of memberIds.");
         }
-
-        // Every team belongs to exactly one Department — no team exists outside the org
-        // chart. Enforced here, not as a DB constraint (same approach as Task's assignee XOR).
-        Department department = departmentRepository.findById(request.departmentId())
-                .orElseThrow(() -> new ResourceNotFoundException("departmentId not found"));
 
         Team team = new Team();
         team.setName(request.name());
@@ -151,7 +148,10 @@ public class TeamServiceImpl implements TeamService {
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
         Person changedBy = personRepository.findById(request.changedById())
                 .orElseThrow(() -> new ResourceNotFoundException("changedById not found"));
-        requireDirector(changedBy, "Only a Director can reassign a team's leader.");
+        if (!isHeadOfTeamsDepartment(changedBy, team)) {
+            throw new ForbiddenActionException(
+                    "Only a Director who heads this team's department (or an Executive/Super Admin) can reassign its leader.");
+        }
 
         TeamMember target = teamMemberRepository.findByTeamIdAndPersonId(teamId, personId)
                 .orElseThrow(() -> new InvalidAssignmentException("Leader must already be a member of the team."));
@@ -204,7 +204,7 @@ public class TeamServiceImpl implements TeamService {
         Person changedBy = personRepository.findById(request.changedById())
                 .orElseThrow(() -> new ResourceNotFoundException("changedById not found"));
 
-        requireDirectorOrTeamLeader(teamId, changedBy);
+        requireDirectorOfTeamsDepartmentOrTeamLeader(team, changedBy);
 
         if (teamMemberRepository.existsByTeamIdAndPersonId(teamId, request.personId())) {
             throw new DuplicateResourceException("This person is already a member of this team.");
@@ -231,7 +231,7 @@ public class TeamServiceImpl implements TeamService {
         Person changedBy = personRepository.findById(request.changedById())
                 .orElseThrow(() -> new ResourceNotFoundException("changedById not found"));
 
-        requireDirectorOrTeamLeader(teamId, changedBy);
+        requireDirectorOfTeamsDepartmentOrTeamLeader(team, changedBy);
 
         // TODO: block this removal if the member has unfinished subtasks assigned to them
         // within this team, per the "block removal" decision from Phase 2. This is now
@@ -329,14 +329,36 @@ public class TeamServiceImpl implements TeamService {
         }
     }
 
-    private void requireDirectorOrTeamLeader(Long teamId, Person changedBy) {
-        boolean isDirector = Role.isAtLeastDirector(changedBy.getRole());
-        boolean isThisTeamsLeader = teamMemberRepository.findByTeamIdAndPersonId(teamId, changedBy.getId())
+    /** Executive/Super Admin always qualifies. A plain DIRECTOR only qualifies when they
+     *  are the actual head of this department (Department.headDirector) — not merely a
+     *  member of it. A Director who belongs to a department without heading it has no more
+     *  standing over it than a Director from an unrelated department entirely; "the one
+     *  they head" is the whole boundary, per explicit product decision. Mirrors
+     *  TaskServiceImpl.createImplementationTask's identical restriction one level up. */
+    private boolean isHeadOfDepartment(Person person, Department department) {
+        if (Role.isAtLeastExecutive(person.getRole())) {
+            return true;
+        }
+        if (person.getRole() != Role.DIRECTOR) {
+            return false;
+        }
+        return department != null && department.getHeadDirector() != null
+                && department.getHeadDirector().getId().equals(person.getId());
+    }
+
+    private boolean isHeadOfTeamsDepartment(Person person, Team team) {
+        return isHeadOfDepartment(person, team.getDepartment());
+    }
+
+    private void requireDirectorOfTeamsDepartmentOrTeamLeader(Team team, Person changedBy) {
+        boolean isAuthorizedDirector = isHeadOfTeamsDepartment(changedBy, team);
+        boolean isThisTeamsLeader = teamMemberRepository.findByTeamIdAndPersonId(team.getId(), changedBy.getId())
                 .map(TeamMember::isLeader)
                 .orElse(false);
 
-        if (!isDirector && !isThisTeamsLeader) {
-            throw new ForbiddenActionException("Only this team's leader or a Director can change its membership.");
+        if (!isAuthorizedDirector && !isThisTeamsLeader) {
+            throw new ForbiddenActionException(
+                    "Only this team's leader, or a Director from its own department (or an Executive/Super Admin), can change its membership.");
         }
     }
 

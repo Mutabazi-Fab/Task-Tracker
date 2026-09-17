@@ -19,6 +19,14 @@ public record TaskDetailResponse(
     String assigneeName,
     Long assigneeId,
     AssigneeType assigneeType,
+    // The department this task actually lives in right now, regardless of assigneeType —
+    // its own assignedDepartment for a DEPARTMENT task, its team's department for a TEAM
+    // task, its assignee's own department for an INDIVIDUAL one (see TaskServiceImpl.
+    // resolveTaskDepartment, mirrored here). Lets the frontend gate pin/reassign/delete UI
+    // against "does the viewer head this department" (or, for a plain Director, just
+    // compare against their own departmentId — every current Director's own department
+    // membership already matches their headship) without a second fetch.
+    Long taskDepartmentId,
     // The team actually responsible for this task, regardless of assigneeType: for a
     // top-level (TEAM-assigned) task, same as assigneeId; for a subtask (always
     // INDIVIDUAL-assigned), its parent task's team. Lets the frontend decide "is the

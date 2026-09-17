@@ -44,10 +44,18 @@ export function SubtasksPanel({ task }: { task: TaskDetail }) {
   const isThisTeamsLeader = currentUser?.teams.some((t) => t.teamId === task.assigneeId && t.isLeader)
   const isThisDepartmentsHead =
     isDepartmentTask && departmentQuery.data?.headDirectorId === currentUser?.id
+  // Mirrors TaskServiceImpl.createLeafSubtask: a plain Director (not Executive/Super
+  // Admin, who bypass this entirely below) must head THIS task's own department — not
+  // merely outrank a plain Member. Compared via taskDepartmentId against the viewer's own
+  // departmentId, same simplifying assumption used across this app (every current
+  // Director's own department membership already matches their headship).
+  const isPlainDirector = isDirector && !isExecutive
+  const headsThisTasksDepartment =
+    isPlainDirector && task.taskDepartmentId !== null && task.taskDepartmentId === currentUser?.departmentId
 
   const canCreate = isDepartmentTask
     ? (isExecutive && !isCeo) || isThisDepartmentsHead
-    : (isDirector && !isCeo) || isThisTeamsLeader
+    : (isExecutive && !isCeo) || headsThisTasksDepartment || isThisTeamsLeader
 
   return (
     <>

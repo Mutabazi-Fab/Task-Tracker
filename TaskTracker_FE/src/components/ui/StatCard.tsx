@@ -14,10 +14,10 @@ interface StatCardProps {
 /** label + big number + note. The building block of every KPI row. */
 export function StatCard({ label, value, note, compact }: StatCardProps) {
   return (
-    <Card padding={compact ? 'sm' : 'md'}>
+    <Card padding={compact ? 'xs' : 'md'}>
       <div className={styles.label}>{label}</div>
       <div className={[styles.value, compact && styles.valueCompact].filter(Boolean).join(' ')}>{value}</div>
-      {note && <div className={styles.note}>{note}</div>}
+      {note && <div className={[styles.note, compact && styles.noteCompact].filter(Boolean).join(' ')}>{note}</div>}
     </Card>
   )
 }

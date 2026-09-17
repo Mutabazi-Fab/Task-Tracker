@@ -6,6 +6,7 @@ import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.enums.TaskStatus;
 import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.mapper.TaskMapper;
+import com.throughline.taskmanagement.model.Department;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.Team;
@@ -37,12 +38,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Covers the two authorization rules on TaskServiceImpl that used to have NO server-side
- * check at all (reassignTask) or were only gated by the frontend hiding a button
- * (deleteTask) — see the security-hardening pass this project went through. Both are
- * private checks (requireCanReassign, the role check inside deleteTask), so they're
- * exercised here through the public methods that call them, exactly as a real request
- * would.
+ * Covers the authorization rules on TaskServiceImpl that used to have NO server-side check
+ * at all (reassignTask) or were only gated by the frontend hiding a button (deleteTask) —
+ * see the security-hardening pass this project went through — plus the later department-
+ * headship restriction added on top of both: a plain Director only has authority within the
+ * department they actually head (Department.headDirector), never merely one they belong to,
+ * and never an unrelated one just by outranking a plain Member. Private checks
+ * (requireCanReassign, requireCanDelete), so they're exercised here through the public
+ * methods that call them, exactly as a real request would.
  */
 @ExtendWith(MockitoExtension.class)
 class TaskServiceImplAuthorizationTest {
@@ -61,6 +64,8 @@ class TaskServiceImplAuthorizationTest {
 
     private TaskServiceImpl taskService;
 
+    private Department ownDepartment;
+    private Department otherDepartment;
     private Team owningTeam;
     private Team otherTeam;
     private Task topLevelTask;
@@ -71,9 +76,18 @@ class TaskServiceImplAuthorizationTest {
                 teamMemberRepository, departmentRepository, taskCommentRepository, taskReassignmentRepository,
                 taskDeadlineExtensionRequestRepository, taskMapper, notificationService, taskActivityRepository);
 
+        ownDepartment = new Department();
+        ownDepartment.setId(100L);
+        ownDepartment.setName("Digital Banking Dept");
+
+        otherDepartment = new Department();
+        otherDepartment.setId(200L);
+        otherDepartment.setName("Some Other Dept");
+
         owningTeam = new Team();
         owningTeam.setId(5L);
         owningTeam.setName("Digital Banking");
+        owningTeam.setDepartment(ownDepartment);
 
         otherTeam = new Team();
         otherTeam.setId(6L);
@@ -97,8 +111,9 @@ class TaskServiceImplAuthorizationTest {
     // ---- reassignTask ----
 
     @Test
-    void reassignTask_directorMayReassignAnyTeamsTask() {
+    void reassignTask_directorWhoHeadsThisTeamsDepartmentMayReassignIt() {
         Person director = personWithRole(1L, Role.DIRECTOR);
+        ownDepartment.setHeadDirector(director);
         when(taskRepository.findWithDetailsById(13L)).thenReturn(Optional.of(topLevelTask));
         when(personRepository.findById(1L)).thenReturn(Optional.of(director));
         when(teamRepository.findById(6L)).thenReturn(Optional.of(otherTeam));
@@ -106,6 +121,23 @@ class TaskServiceImplAuthorizationTest {
         ReassignTaskRequest request = new ReassignTaskRequest(6L, null, null, 1L, "handing off to Mobile Banking");
 
         assertDoesNotThrow(() -> taskService.reassignTask(13L, request));
+    }
+
+    @Test
+    void reassignTask_directorWhoDoesNotHeadThisTeamsDepartmentIsForbiddenUnlessTeamLeader() {
+        // Some other Director exists and is DIGITAL_BANKING_DEPT's actual head — this actor
+        // outranks a plain Member but has no standing over a department they don't head.
+        Person unrelatedDirector = personWithRole(2L, Role.DIRECTOR);
+        ownDepartment.setHeadDirector(personWithRole(1L, Role.DIRECTOR));
+        when(taskRepository.findWithDetailsById(13L)).thenReturn(Optional.of(topLevelTask));
+        when(personRepository.findById(2L)).thenReturn(Optional.of(unrelatedDirector));
+        when(teamMemberRepository.findByTeamIdAndIsLeaderTrue(5L)).thenReturn(Optional.empty());
+
+        ReassignTaskRequest request = new ReassignTaskRequest(6L, null, null, 2L, "trying to hand this off");
+
+        assertThrows(ForbiddenActionException.class, () -> taskService.reassignTask(13L, request));
+        // Never even got to looking up the destination team — rejected purely on authority.
+        verify(teamRepository, never()).findById(anyLong());
     }
 
     @Test
@@ -164,6 +196,7 @@ class TaskServiceImplAuthorizationTest {
     @Test
     void deleteTask_directorMayDeleteATaskTheyCreatedThemselves() {
         Person director = personWithRole(1L, Role.DIRECTOR);
+        ownDepartment.setHeadDirector(director);
         topLevelTask.setAssignedBy(director);
         when(personRepository.findById(1L)).thenReturn(Optional.of(director));
         when(taskRepository.findWithDetailsById(13L)).thenReturn(Optional.of(topLevelTask));
@@ -171,6 +204,22 @@ class TaskServiceImplAuthorizationTest {
         assertDoesNotThrow(() -> taskService.deleteTask(13L, 1L));
 
         verify(taskRepository).delete(topLevelTask);
+    }
+
+    @Test
+    void deleteTask_directorNoLongerHeadingTheDepartmentIsForbiddenEvenIfTheyCreatedIt() {
+        // They created it back when they headed Digital Banking Dept, but headship has
+        // since moved to someone else — the department, not creation alone, is what
+        // requireCanDelete's second check is actually about.
+        Person director = personWithRole(1L, Role.DIRECTOR);
+        ownDepartment.setHeadDirector(personWithRole(2L, Role.DIRECTOR));
+        topLevelTask.setAssignedBy(director);
+        when(personRepository.findById(1L)).thenReturn(Optional.of(director));
+        when(taskRepository.findWithDetailsById(13L)).thenReturn(Optional.of(topLevelTask));
+
+        assertThrows(ForbiddenActionException.class, () -> taskService.deleteTask(13L, 1L));
+
+        verify(taskRepository, never()).delete(any());
     }
 
     @Test

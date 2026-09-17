@@ -103,6 +103,13 @@ export interface TaskDetail {
   assigneeName: string
   assigneeId: number | null
   assigneeType: AssigneeType
+  // The department this task actually lives in right now, regardless of assigneeType — see
+  // TaskDetailResponse's own doc comment on the backend for the derivation. Used to gate
+  // pin/reassign UI: a plain Director may only act on a task within their own department —
+  // compared against currentUser.departmentId directly (every current Director's own
+  // department membership already matches their headship, same simplifying assumption
+  // CreateTeamForm relies on) rather than a second department/headDirector fetch.
+  taskDepartmentId: number | null
   // The team actually responsible for this task regardless of assigneeType: for a
   // top-level task, same as assigneeId; for a subtask, its parent task's team. Used to
   // decide whether the current viewer is this task's Team Leader (who, along with a

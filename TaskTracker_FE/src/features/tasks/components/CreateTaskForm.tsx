@@ -77,6 +77,17 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
       ? [...ASSIGNEE_KIND_OPTIONS, DEPARTMENT_OPTION]
       : ASSIGNEE_KIND_OPTIONS
 
+  // A plain Director may only assign a new task to a team/person within the department
+  // they head (enforced server-side in TaskServiceImpl.createTask/
+  // requireCanAssignWithinDepartment) — scoped here too so they never see a choice that'd
+  // just be rejected. Executive/Super Admin keep the full org-wide list.
+  const assignableTeams = isExecutive
+    ? (teamsQuery.data ?? [])
+    : (teamsQuery.data ?? []).filter((team) => team.departmentId === currentUser?.departmentId)
+  const assignablePeople = isExecutive
+    ? (peopleQuery.data ?? [])
+    : (peopleQuery.data ?? []).filter((person) => person.departmentId === currentUser?.departmentId)
+
   const [assigneeKind, setAssigneeKind] = useState<AssigneeKind>(() => (isCeo ? 'DEPARTMENT' : 'TEAM'))
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -165,7 +176,7 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
             value={assignedTeamId}
             onChange={handleTeamChange}
             placeholder={teamsQuery.isLoading ? 'Loading…' : 'Select a team'}
-            options={(teamsQuery.data ?? []).map((team) => ({ label: team.name, value: String(team.id) }))}
+            options={assignableTeams.map((team) => ({ label: team.name, value: String(team.id) }))}
           />
           {assignedTeamId !== '' && (
             <InlineSubtasksField teamId={Number(assignedTeamId)} rows={subtaskRows} onChange={setSubtaskRows} />
@@ -178,7 +189,7 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
           value={assignedPersonId}
           onChange={setAssignedPersonId}
           placeholder={peopleQuery.isLoading ? 'Loading…' : 'Select a person'}
-          options={(peopleQuery.data ?? []).map((person) => ({ label: person.fullName, value: String(person.id) }))}
+          options={assignablePeople.map((person) => ({ label: person.fullName, value: String(person.id) }))}
         />
       )}
       {assigneeKind === 'DEPARTMENT' && (

@@ -4,6 +4,16 @@
   gap: var(--space-4);
 }
 
+/* Groups KpiRow + ExecutiveKpiRow into one .main child (see AppShell.module.css) so the
+   space between the two stat-tile rows is this smaller gap, not .main's own space-6 —
+   which stays untouched for spacing against every other section, on this page and every
+   other one. */
+.kpiStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 /* Every section heading on the dashboard (also used by DirectorInitiativesSection.module.css
    for My Initiatives, to match). */
 .sectionHeadingLg {

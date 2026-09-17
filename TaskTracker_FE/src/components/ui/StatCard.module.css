@@ -17,12 +17,17 @@
 }
 
 .valueCompact {
-  margin-top: var(--space-1);
-  font-size: 20px;
+  margin-top: 2px;
+  font-size: 17px;
 }
 
 .note {
   margin-top: var(--space-1);
   font-size: 13px;
   color: var(--muted);
+}
+
+.noteCompact {
+  margin-top: 2px;
+  font-size: 11px;
 }
