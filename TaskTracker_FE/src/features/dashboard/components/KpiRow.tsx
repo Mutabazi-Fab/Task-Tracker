@@ -18,21 +18,24 @@ export function KpiRow() {
       {(overview) => (
         <div className={styles.row}>
           <StatCard
+            compact
             label="Org average progress"
             value={formatPercentage(overview.orgAverageProgress)}
             note={`${overview.totalTasks} tasks`}
           />
           <StatCard
+            compact
             label="Completed"
             value={String(overview.completedCount)}
             note={shareOfTotal(overview.completedCount, overview.totalTasks)}
           />
           <StatCard
+            compact
             label="Ongoing"
             value={String(overview.ongoingCount)}
             note={shareOfTotal(overview.ongoingCount, overview.totalTasks)}
           />
-          <StatCard label="Pending" value={String(overview.pendingCount)} note="stalled at 0%" />
+          <StatCard compact label="Pending" value={String(overview.pendingCount)} note="stalled at 0%" />
         </div>
       )}
     </QueryBoundary>

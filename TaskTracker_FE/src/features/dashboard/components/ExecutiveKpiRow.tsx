@@ -15,10 +15,10 @@ export function ExecutiveKpiRow() {
     <QueryBoundary query={query}>
       {(kpis) => (
         <div className={styles.row}>
-          <StatCard label="Departments on track" value={formatPercentage(kpis.orgOnTrackPercentage)} />
-          <StatCard label="Overdue" value={String(kpis.overdueCount)} note="top-level initiatives" />
-          <StatCard label="Critical, not complete" value={String(kpis.criticalPendingCount)} />
-          <StatCard label="Awaiting your decision" value={String(kpis.pendingDecisionsCount)} note="deadline extensions" />
+          <StatCard compact label="Departments on track" value={formatPercentage(kpis.orgOnTrackPercentage)} />
+          <StatCard compact label="Overdue" value={String(kpis.overdueCount)} note="top-level initiatives" />
+          <StatCard compact label="Critical, not complete" value={String(kpis.criticalPendingCount)} />
+          <StatCard compact label="Awaiting your decision" value={String(kpis.pendingDecisionsCount)} note="deadline extensions" />
         </div>
       )}
     </QueryBoundary>

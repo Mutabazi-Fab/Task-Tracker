@@ -16,6 +16,11 @@
   color: var(--ink);
 }
 
+.valueCompact {
+  margin-top: var(--space-1);
+  font-size: 20px;
+}
+
 .note {
   margin-top: var(--space-1);
   font-size: 13px;
