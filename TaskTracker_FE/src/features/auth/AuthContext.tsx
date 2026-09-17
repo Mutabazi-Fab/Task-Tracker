@@ -6,7 +6,6 @@ import type {
   LoginRequest,
   ResendOtpRequest,
   ResetPasswordRequest,
-  SignupRequest,
   VerifyEmailRequest,
 } from '../../types/auth.types'
 import type { Person } from '../../types/person.types'
@@ -17,7 +16,6 @@ import {
   logout as logoutRequest,
   resendOtp as resendOtpRequest,
   resetPassword as resetPasswordRequest,
-  signup as signupRequest,
   verifyEmail as verifyEmailRequest,
 } from './api/auth.api'
 
@@ -41,16 +39,10 @@ export interface AuthContextValue {
    *  false keeps it in sessionStorage only (gone once the tab closes) — the "Remember me"
    *  checkbox on LoginPage. */
   login: (request: LoginRequest, remember: boolean) => Promise<void>
-  /**
-   * Returns the raw AuthResponse rather than resolving to void — a brand-new signup comes
-   * back with emailVerified=false and no token (still needs OTP verification), and the
-   * caller (SignupPage) needs to see that to route to the verify-email screen instead of
-   * the dashboard. Only stores a token and hydrates when one actually comes back. Always
-   * remembered (no checkbox on signup) once it does.
-   */
-  signup: (request: SignupRequest) => Promise<AuthResponse>
-  /** Same "may still need verification" shape as signup — checking a code doesn't always
-   *  succeed. On success this also logs the person in. */
+  /** Returns the raw AuthResponse rather than resolving to void — checking a code doesn't
+   *  always succeed (may come back needing another attempt). On success this also logs the
+   *  person in. Used by the rare legacy account still unverified (see VerifyEmailPage) —
+   *  every Super-Admin-created account starts verified already. */
   verifyEmail: (request: VerifyEmailRequest) => Promise<AuthResponse>
   resendOtp: (request: ResendOtpRequest) => Promise<void>
   /** Always resolves — see ForgotPasswordRequest. The caller always shows the same generic
@@ -100,7 +92,7 @@ function clearStoredToken() {
  * backend still takes explicitly (assignedById, changedById, authorId, ...) is filled in
  * from currentUser here rather than a picker, now that we actually know who's logged in.
  *
- * AuthResponse (from login/signup/verify-email) only carries {token, personId, fullName,
+ * AuthResponse (from login/verify-email/reset-password) only carries {token, personId, fullName,
  * email, role, emailVerified} — not jobTitle/rank/teams — so right after any of them
  * yields a real token, this fetches the full profile from GET /auth/me before considering
  * the user "authenticated".
@@ -147,15 +139,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       storeToken(auth.token, remember)
       await hydrate()
     }
-  }, [hydrate])
-
-  const signup = useCallback(async (request: SignupRequest): Promise<AuthResponse> => {
-    const auth = await signupRequest(request)
-    if (auth.token) {
-      storeToken(auth.token, true)
-      await hydrate()
-    }
-    return auth
   }, [hydrate])
 
   const verifyEmail = useCallback(async (request: VerifyEmailRequest): Promise<AuthResponse> => {
@@ -205,14 +188,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isExecutive: currentUser?.role === 'EXECUTIVE' || currentUser?.role === 'SUPER_ADMIN',
       isSuperAdmin: currentUser?.role === 'SUPER_ADMIN',
       login,
-      signup,
       verifyEmail,
       resendOtp,
       forgotPassword,
       resetPassword,
       logout,
     }),
-    [status, currentUser, login, signup, verifyEmail, resendOtp, forgotPassword, resetPassword, logout],
+    [status, currentUser, login, verifyEmail, resendOtp, forgotPassword, resetPassword, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

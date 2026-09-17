@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
@@ -153,6 +153,19 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
           </div>
         }
       />
+
+      {/* Task-detail viewing has no permission check beyond being logged in — anyone who
+          can see this subtask/implementation task can already open its parent the same way,
+          they just have no way to discover it without this link (parentTaskId isn't
+          otherwise surfaced anywhere on this page). Lets a team member assigned to, say, a
+          CEO-assigned Department task's implementation task climb back up to see the whole
+          chain — the parent task itself, and (via that page's own Subtasks panel) any
+          sibling subtasks and documents attached up there. */}
+      {task.parentTaskId !== null && (
+        <Link to={ROUTES.taskDetail(task.parentTaskId)} className={styles.parentLink}>
+          ← Part of {task.parentTaskTitle ?? task.parentTaskCode}
+        </Link>
+      )}
 
       <TaskDetailHeader task={task} />
 

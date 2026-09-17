@@ -77,7 +77,7 @@ class PersonControllerActorSubstitutionTest {
     @Test
     void createPerson_ignoresASpoofedCreatedById() {
         CreatePersonRequest spoofed = new CreatePersonRequest(
-                "New Person", "new@example.com", "Engineer", null, SPOOFED_ACTOR_ID, Role.SUPER_ADMIN, 1L);
+                "New Person", "new@example.com", "Engineer", null, SPOOFED_ACTOR_ID, Role.SUPER_ADMIN, 1L, "password123");
 
         controller.createPerson(spoofed, authentication);
 

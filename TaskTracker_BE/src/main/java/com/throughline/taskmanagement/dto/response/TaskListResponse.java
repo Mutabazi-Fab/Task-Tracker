@@ -33,6 +33,9 @@ public record TaskListResponse(
     // "a subtask of some team's top-level task", which otherwise both show the identical
     // assigneeType INDIVIDUAL with nothing else distinguishing them.
     String parentTaskCode,
+    // The parent task's actual title — for UI copy like "under {parentTaskTitle}" instead
+    // of the less legible task code. Null wherever parentTaskCode is.
+    String parentTaskTitle,
     CreatedByRole createdByRole,
     // Empty for a leaf subtask (can't nest further). For a top-level task, or a depth-1
     // TEAM-assigned implementation task, lets a list view (e.g. the Director's Dashboard)

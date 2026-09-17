@@ -3,6 +3,22 @@
   gap: var(--space-2);
 }
 
+.parentLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: var(--space-2);
+}
+
+.parentLink:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
 .progressRow {
   display: grid;
   grid-template-columns: 1fr 1fr;

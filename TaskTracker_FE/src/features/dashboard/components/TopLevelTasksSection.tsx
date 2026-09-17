@@ -21,8 +21,10 @@ interface TopLevelTasksSectionProps {
    *  CRITICAL-severity task org-wide, at any depth, plus every task an Executive/Super
    *  Admin personally assigned — see useExecutiveTasks/the backend's
    *  findBySeverityOrAssignedByRoleIn. Executive/Super Admin only, the literal same view
-   *  for both (see DashboardPage). Same card/pagination/sort composition either way — only
-   *  the data source and heading/empty-state copy differ. */
+   *  for both (see DashboardPage). A plain Director's equivalent combined view lives in
+   *  DirectorTasksPanel instead (a single toggling panel, not a second instance of this
+   *  component) — see that component for why. Same card/pagination/sort composition either
+   *  way — only the data source and heading/empty-state copy differ. */
   scope: 'mine' | 'org-wide'
 }
 
@@ -38,7 +40,7 @@ export function TopLevelTasksSection({ scope }: TopLevelTasksSectionProps) {
   const [sort, setSort] = useState<TaskSortValue>('updatedAt,desc')
 
   const mineQuery = useDirectorTasks(scope === 'mine' ? (currentUser?.id ?? NaN) : NaN, page, PAGE_SIZE, sort)
-  const orgWideQuery = useExecutiveTasks(page, PAGE_SIZE, sort)
+  const orgWideQuery = useExecutiveTasks(page, PAGE_SIZE, sort, scope === 'org-wide')
   const query = scope === 'mine' ? mineQuery : orgWideQuery
 
   // Org-wide is no longer depth-based at all — it's "what actually needs an Executive's

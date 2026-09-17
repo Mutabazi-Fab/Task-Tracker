@@ -18,6 +18,26 @@ import java.util.Optional;
 
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
+    /**
+     * A Member's visible task set: assigned to them directly, or to a team they belong to —
+     * PLUS the ancestor chain of any such task (its parent, and its parent's parent), so a
+     * team member working on a Director's implementation task can also see the CEO's
+     * original Department task it was carved out of, not just the slice handed to their own
+     * team. Task depth never exceeds 2 (see AssigneeType's own doc comment: 0 = top-level, 1
+     * = implementation task, 2 = leaf subtask), so two ancestor hops (parent, grandparent)
+     * always covers it — no recursive query needed. Deliberately does NOT expand to siblings
+     * or the parent's other children — reachable by navigating INTO the now-visible parent
+     * (see SubtasksPanel/the frontend's parent-task breadcrumb link), not surfaced again
+     * here as a flat list.
+     */
+    String VISIBLE_TO_PERSON_OR_ANCESTOR =
+            "(t.assignedPerson.id = :personId "
+            + "OR t.assignedTeam.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.person.id = :personId) "
+            + "OR t.id IN (SELECT s.parentTask.id FROM Task s WHERE s.parentTask IS NOT NULL AND "
+            + "(s.assignedPerson.id = :personId OR s.assignedTeam.id IN (SELECT tm2.team.id FROM TeamMember tm2 WHERE tm2.person.id = :personId))) "
+            + "OR t.id IN (SELECT s.parentTask.parentTask.id FROM Task s WHERE s.parentTask IS NOT NULL AND s.parentTask.parentTask IS NOT NULL AND "
+            + "(s.assignedPerson.id = :personId OR s.assignedTeam.id IN (SELECT tm3.team.id FROM TeamMember tm3 WHERE tm3.person.id = :personId))))";
+
     Optional<Task> findByTaskCode(String taskCode);
     
     Page<Task> findByStatus(TaskStatus status, Pageable pageable);
@@ -31,15 +51,13 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     // Backs "my tasks" — a Member's scoped view of GET /tasks: everything they're currently
     // responsible for, either assigned to them directly (individual tasks/subtasks) or as a
-    // top-level task assigned to a team they belong to (not the org's whole task list, and
-    // not just their individual work in isolation from their team's).
-    @Query("SELECT t FROM Task t WHERE t.assignedPerson.id = :personId "
-            + "OR t.assignedTeam.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.person.id = :personId)")
+    // top-level task assigned to a team they belong to, PLUS the ancestor chain of any of
+    // that (see VISIBLE_TO_PERSON_OR_ANCESTOR) — not the org's whole task list, and not just
+    // their individual work in isolation from their team's or from the initiative it's part of.
+    @Query("SELECT t FROM Task t WHERE " + VISIBLE_TO_PERSON_OR_ANCESTOR)
     Page<Task> findVisibleToPerson(@Param("personId") Long personId, Pageable pageable);
 
-    @Query("SELECT t FROM Task t WHERE (t.assignedPerson.id = :personId "
-            + "OR t.assignedTeam.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.person.id = :personId)) "
-            + "AND t.status = :status")
+    @Query("SELECT t FROM Task t WHERE " + VISIBLE_TO_PERSON_OR_ANCESTOR + " AND t.status = :status")
     Page<Task> findVisibleToPersonAndStatus(@Param("personId") Long personId, @Param("status") TaskStatus status, Pageable pageable);
 
     List<Task> findByAssignedTeamId(Long teamId);
@@ -139,6 +157,28 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             @Param("executiveRoles") List<Role> executiveRoles,
             Pageable pageable);
 
+    // Backs the Director Dashboard's "Critical & CEO-assigned" panel — the department-scoped
+    // equivalent of findBySeverityOrAssignedByRoleIn above, one combined query rather than
+    // two separate panels: this Director's own department (membership, same read-visibility
+    // boundary as findByDepartmentId — not the stricter headship check writes use), anything
+    // whose severity is in :severities OR whose assignedBy holds one of :executiveRoles, any
+    // depth. Not depth-scoped, same reasoning as findBySeverityOrAssignedByRoleIn — a
+    // HIGH/CRITICAL subtask, or one an Executive personally assigned, deserves a Director's
+    // attention just as much as a top-level task does. Same explicit-LEFT-JOIN department
+    // derivation as findByDepartmentId — see that method's comment for why bare path
+    // navigation would silently drop every row here too.
+    @Query("SELECT t FROM Task t "
+            + "LEFT JOIN t.assignedDepartment dept "
+            + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
+            + "LEFT JOIN t.assignedPerson person LEFT JOIN person.department personDept "
+            + "WHERE (dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId) "
+            + "AND (t.severity IN :severities OR t.assignedBy.role IN :executiveRoles)")
+    Page<Task> findByDepartmentIdAndSeverityInOrAssignedByRoleIn(
+            @Param("departmentId") Long departmentId,
+            @Param("severities") List<TaskSeverity> severities,
+            @Param("executiveRoles") List<Role> executiveRoles,
+            Pageable pageable);
+
     long countByStatus(TaskStatus status);
 
     // Backs the Executive Dashboard's org-health KPI tile and (implicitly) the
@@ -163,14 +203,13 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
            countQuery = "SELECT COUNT(t) FROM Task t WHERE LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%'))")
     Page<Task> search(@Param("q") String q, Pageable pageable);
 
-    // Same search, scoped to what's visible to this person (see findVisibleToPerson) — a
-    // Member's search shouldn't surface tasks that aren't theirs or their team's any more
-    // than the plain list should.
-    @Query(value = "SELECT t FROM Task t WHERE (t.assignedPerson.id = :personId "
-                  + "OR t.assignedTeam.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.person.id = :personId)) AND "
+    // Same search, scoped to what's visible to this person (see findVisibleToPerson,
+    // including the same ancestor-chain expansion) — a Member's search shouldn't surface
+    // tasks that aren't theirs, their team's, or an ancestor of either, any more than the
+    // plain list should.
+    @Query(value = "SELECT t FROM Task t WHERE " + VISIBLE_TO_PERSON_OR_ANCESTOR + " AND "
                   + "(LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%')))",
-           countQuery = "SELECT COUNT(t) FROM Task t WHERE (t.assignedPerson.id = :personId "
-                  + "OR t.assignedTeam.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.person.id = :personId)) AND "
+           countQuery = "SELECT COUNT(t) FROM Task t WHERE " + VISIBLE_TO_PERSON_OR_ANCESTOR + " AND "
                   + "(LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%')))")
     Page<Task> searchVisibleToPerson(@Param("q") String q, @Param("personId") Long personId, Pageable pageable);
 

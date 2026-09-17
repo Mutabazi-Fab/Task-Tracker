@@ -2,6 +2,7 @@ import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { useAuth } from '../auth/useAuth'
 import { TopLevelTasksSection } from './components/TopLevelTasksSection'
+import { DirectorTasksPanel } from './components/DirectorTasksPanel'
 import { MyDashboardSummary } from './components/MyDashboardSummary'
 import { KpiRow } from './components/KpiRow'
 import { ExecutiveKpiRow } from './components/ExecutiveKpiRow'
@@ -18,9 +19,10 @@ import styles from './DashboardPage.module.css'
  * MyDashboardSummary (their own assigned tasks and progress) — not the org-wide
  * KPIs/charts/leaderboard/people-summary a Director sees; those show what isn't theirs to
  * see. Executive and Super Admin share the exact same view as each other and as a Director
- * (per explicit request, reverting an earlier CEO-specific redesign) — the only difference
- * for that tier is the extra ExecutiveKpiRow up top and TopLevelTasksSection's org-wide
- * scope, both gated on isExecutive (true for Executive AND Super Admin).
+ * (per explicit request, reverting an earlier CEO-specific redesign) — the differences for
+ * that tier are the extra ExecutiveKpiRow up top and the org-wide "Critical & CEO-assigned"
+ * panel (TopLevelTasksSection) in place of a plain Director's department-scoped
+ * DirectorTasksPanel, both gated on isExecutive (true for Executive AND Super Admin).
  */
 export function DashboardPage() {
   const { isDirector, isExecutive } = useAuth()
@@ -59,10 +61,12 @@ export function DashboardPage() {
       </div>
 
       {/* An Executive/Super Admin sees every CRITICAL task org-wide plus everything they
-          personally assigned — the literal same view for both, not a separate lookalike. A
-          plain Director gets the classic "my initiatives" scoping: only the top-level tasks
-          they created themselves. */}
-      <TopLevelTasksSection scope={isExecutive ? 'org-wide' : 'mine'} />
+          personally assigned, in one panel — the literal same view for both, not a separate
+          lookalike. A plain Director gets the department-scoped equivalent: one panel
+          toggling between that same "critical & CEO-assigned" view and their own "my
+          initiatives" (see DirectorTasksPanel), rather than stacking separate panels for
+          each. */}
+      {isExecutive ? <TopLevelTasksSection scope="org-wide" /> : <DirectorTasksPanel />}
 
       <Card>
         <div className={styles.sectionHeadingLg}>Team leaderboard</div>

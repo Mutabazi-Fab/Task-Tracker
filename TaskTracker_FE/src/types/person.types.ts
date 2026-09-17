@@ -32,9 +32,10 @@ export interface Person {
 
 /**
  * Body for POST /people (and reused for PUT /people/{id}, which ignores createdById/role/
- * departmentId). createdById must be a Director or Super Admin; only a Super Admin may set
- * role to anything other than Member (omitted/undefined defaults to Member); departmentId
- * is required at creation — every person belongs to exactly one department.
+ * departmentId/password). There is no public self-registration — createdById must resolve
+ * to a Super Admin, enforced server-side; departmentId and password (at least 8 characters)
+ * are both required at creation. The password set here is what the new person logs in with
+ * — the Super Admin is expected to hand it to them directly.
  */
 export interface CreatePersonRequest {
   fullName: string
@@ -44,6 +45,7 @@ export interface CreatePersonRequest {
   createdById?: number
   role?: Role
   departmentId?: number
+  password?: string
 }
 
 /** Body for PUT /people/{id}/role. Super-Admin-only; reason is mandatory (both here and

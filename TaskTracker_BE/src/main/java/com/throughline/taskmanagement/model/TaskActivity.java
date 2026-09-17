@@ -47,6 +47,10 @@ public class TaskActivity {
      *  even after TSK-0013 itself might later be gone too. */
     private String parentTaskCode;
 
+    /** The parent task's title at the time of this event, same snapshot reasoning as
+     *  parentTaskCode — lets the log show "under {title}" instead of a bare code. */
+    private String parentTaskTitle;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AssigneeType assigneeType;

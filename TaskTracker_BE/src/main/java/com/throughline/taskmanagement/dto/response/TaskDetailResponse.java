@@ -65,6 +65,10 @@ public record TaskDetailResponse(
     Long deadlineDeciderId,
     Long parentTaskId,
     String parentTaskCode,
+    // The parent task's actual title — lets the frontend show a real "back to {title}"
+    // breadcrumb link (via parentTaskId) instead of a bare code. Null wherever
+    // parentTaskId/parentTaskCode are.
+    String parentTaskTitle,
     CreatedByRole createdByRole,
     // 0 for a real top-level task (plain or Department-assigned), 1 for a direct child, 2
     // for a grandchild (only possible under a Department-rooted hierarchy). Lets the

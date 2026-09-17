@@ -209,6 +209,30 @@ public class DashboardServiceImpl implements DashboardService {
                 });
     }
 
+    @Override
+    public Page<TaskListResponse> getDirectorCriticalAndCeoAssignedTasks(Long directorId, Pageable pageable) {
+        Person director = personRepository.findById(directorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+        if (!Role.isAtLeastDirector(director.getRole())) {
+            throw new ForbiddenActionException("Only a Director has the Critical & CEO-assigned panel.");
+        }
+
+        // A legacy Director account that predates the department field has nothing to scope
+        // to — an empty panel is the right degraded behavior here, not a 404/500.
+        Department department = director.getDepartment();
+        if (department == null) {
+            return Page.empty(pageable);
+        }
+
+        return taskRepository.findByDepartmentIdAndSeverityInOrAssignedByRoleIn(
+                        department.getId(), List.of(TaskSeverity.HIGH, TaskSeverity.CRITICAL),
+                        List.of(Role.EXECUTIVE, Role.SUPER_ADMIN), pageable)
+                .map(t -> {
+                    TaskComment lastComment = taskCommentRepository.findFirstByTaskIdOrderByCreatedAtDesc(t.getId()).orElse(null);
+                    return taskMapper.toListResponse(t, lastComment);
+                });
+    }
+
     // Shared by getExecutiveDepartmentHealth and getExecutiveKpis so the KPI tile's
     // on-track percentage and the roll-up table it summarizes can never disagree — both
     // read off this exact same list. Same N+1-per-entity, in-Java-aggregation style as

@@ -36,7 +36,7 @@ const PAGE_SIZE = 15
 const FETCH_SIZE = 100
 
 type Row =
-  | { id: string; kind: 'TASK'; timestamp: string; taskCode: string; title: string; parentTaskCode: string | null; action: 'CREATED' | 'DELETED'; assigneeSummary: string; actorName: string }
+  | { id: string; kind: 'TASK'; timestamp: string; taskCode: string; title: string; parentTaskCode: string | null; parentTaskTitle: string | null; action: 'CREATED' | 'DELETED'; assigneeSummary: string; actorName: string }
   | { id: string; kind: 'ROLE'; timestamp: string; personName: string; changeLabel: string; reason: string | null; actorName: string }
   | { id: string; kind: 'STATUS'; timestamp: string; personName: string; changeLabel: string; reason: string | null; actorName: string }
   | { id: string; kind: 'DEPARTMENT'; timestamp: string; departmentName: string; actorName: string }
@@ -78,6 +78,7 @@ export function ActivityPage() {
       taskCode: entry.taskCode,
       title: entry.title,
       parentTaskCode: entry.parentTaskCode,
+      parentTaskTitle: entry.parentTaskTitle,
       action: entry.action,
       assigneeSummary: entry.assigneeSummary,
       actorName: entry.performedByName,
@@ -158,7 +159,9 @@ export function ActivityPage() {
                   <div className={styles.titleCol}>
                     <span className={styles.taskCode}>{row.taskCode}</span>
                     <span className={styles.title}>{row.title}</span>
-                    {row.parentTaskCode && <span className={styles.subtext}>under {row.parentTaskCode}</span>}
+                    {row.parentTaskCode && (
+                      <span className={styles.subtext}>under {row.parentTaskTitle ?? row.parentTaskCode}</span>
+                    )}
                   </div>
                   <span className={row.action === 'CREATED' ? styles.created : styles.deleted}>{row.action}</span>
                   <span className={styles.assignee}>{row.assigneeSummary}</span>

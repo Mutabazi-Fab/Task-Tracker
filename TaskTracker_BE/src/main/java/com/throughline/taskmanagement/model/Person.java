@@ -61,23 +61,23 @@ public class Person {
 
     /**
      * Stored in plaintext (see SecurityConfig's NoOpPasswordEncoder — a deliberate,
-     * explicit choice for this project). A null password means this account has never
-     * been provisioned to log in (e.g. seeded before auth existed) — such
-     * accounts exist in the system but simply can't authenticate until they
-     * sign up with this same email, which claims the record instead of
-     * creating a duplicate.
+     * explicit choice for this project). Set directly by the Super Admin who creates this
+     * account (see PersonServiceImpl.createPerson) — there is no public self-registration,
+     * so a null password only ever means a legacy row that predates that requirement (e.g.
+     * seeded before auth existed), which simply can't authenticate until a Super Admin
+     * gives it a password via createPerson or sendPasswordReset.
      */
     private String password;
 
     /**
-     * Whether this person has proven control of their email via the OTP sent at signup.
-     * @ColumnDefault backfills every EXISTING row to true when this column is first added
-     * (they predate this feature, exempted per the "leave old accounts alone" decision) —
-     * but that's purely a migration default; Hibernate still writes the Java field's
-     * actual value (false) for every brand-new signup going forward, so new accounts do
-     * require verification. Only self-signup ever sets this false — a Director/Super Admin
-     * creating a person here starts them at false too, since they haven't proven anything
-     * about the email yet either.
+     * Whether this account's email address is considered proven. There is no public
+     * self-registration OTP step anymore — a Super Admin creating a person here vouches for
+     * the address directly, so createPerson sets this true immediately. @ColumnDefault
+     * backfills every EXISTING row to true when this column is first added (they predate
+     * this feature, exempted per the "leave old accounts alone" decision). The OTP
+     * verification machinery (otpCode/otpExpiresAt, VerifyEmailPage) stays in place for
+     * whatever legacy/unverified rows still exist, but nothing sets this false going
+     * forward.
      */
     @ColumnDefault("true")
     @Column(nullable = false)

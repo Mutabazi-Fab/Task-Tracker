@@ -57,9 +57,6 @@ export function LoginPage() {
     <AuthLayout
       title="Welcome Back"
       subtitle="Sign in to keep tracking your team's progress"
-      footerText="Don't have an account?"
-      footerLinkTo={ROUTES.signup}
-      footerLinkLabel="Create one"
     >
       <form className={styles.form} onSubmit={handleSubmit}>
         <AuthField

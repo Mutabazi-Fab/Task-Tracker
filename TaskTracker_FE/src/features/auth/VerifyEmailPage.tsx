@@ -11,10 +11,10 @@ import styles from './components/AuthLayout.module.css'
 import verifyStyles from './VerifyEmailPage.module.css'
 
 /**
- * Reached either from signup (a brand-new account, emailVerified=false) or from login
- * (an account that signed up but never verified) — both send the email along via router
- * state. Falls back to asking for it if someone lands here directly (a refresh, a bad
- * link) rather than being stuck with nothing to submit.
+ * Reached from login, when a legacy account that predates Super-Admin-created accounts
+ * starting emailVerified=true still has emailVerified=false — the email is sent along via
+ * router state. Falls back to asking for it if someone lands here directly (a refresh, a
+ * bad link) rather than being stuck with nothing to submit.
  */
 export function VerifyEmailPage() {
   const { verifyEmail, resendOtp } = useAuth()

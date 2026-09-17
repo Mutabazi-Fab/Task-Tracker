@@ -4,8 +4,8 @@ import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 import { ROUTES } from '../../app/routes'
 import { useAuth } from './useAuth'
 
-/** Wraps /login and /signup — an already-logged-in person is sent straight to the
- *  dashboard instead of seeing the login form again. */
+/** Wraps /login and the account-recovery pages — an already-logged-in person is sent
+ *  straight to the dashboard instead of seeing the login form again. */
 export function PublicOnlyRoute({ children }: { children: ReactNode }) {
   const { status } = useAuth()
 

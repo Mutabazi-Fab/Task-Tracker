@@ -38,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,6 +60,7 @@ public class PersonServiceImpl implements PersonService {
     private final NotificationService notificationService;
     private final MailService mailService;
     private final AuthService authService;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -74,18 +76,24 @@ public class PersonServiceImpl implements PersonService {
 
         Person createdBy = personRepository.findById(request.createdById())
                 .orElseThrow(() -> new ResourceNotFoundException("createdById not found"));
-        requireDirector(createdBy, "Only a Director or Super Admin can add a new person.");
+        // There is no public self-registration — a Super Admin is the only one who can
+        // create a login-enabled account, full stop, not just for a non-Member role.
+        requireSuperAdmin(createdBy, "Only a Super Admin can create a new account.");
 
         Role targetRole = request.role() != null ? request.role() : Role.MEMBER;
-        if (targetRole != Role.MEMBER) {
-            requireSuperAdmin(createdBy, "Only a Super Admin can set a new person's role to Director or Super Admin.");
-        }
 
         if (request.departmentId() == null) {
             throw new InvalidAssignmentException("departmentId is required.");
         }
         Department department = departmentRepository.findById(request.departmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("departmentId not found"));
+
+        if (request.password() == null || request.password().isBlank()) {
+            throw new InvalidAssignmentException("password is required.");
+        }
+        if (request.password().length() < 8) {
+            throw new InvalidAssignmentException("Password must be at least 8 characters.");
+        }
 
         Person person = new Person();
         person.setFullName(request.fullName());
@@ -94,21 +102,26 @@ public class PersonServiceImpl implements PersonService {
         person.setRank(request.rank());
         person.setRole(targetRole);
         person.setDepartment(department);
-        // emailVerified defaults false (see Person.emailVerified) — new to the system,
-        // still has to prove they control this inbox once they sign up to activate login.
+        person.setPassword(passwordEncoder.encode(request.password()));
+        // The Super Admin who set this password is already vouching for this person and
+        // this email address — unlike the old self-service signup flow, there's no OTP
+        // step proving inbox control, so this starts verified rather than stuck unable to
+        // log in until a verification step that no longer exists.
+        person.setEmailVerified(true);
 
         Person saved = personRepository.save(person);
 
         // Best-effort — the person record is created either way; a flaky mail send
         // shouldn't block whoever's onboarding them from doing so, they can always be
-        // told directly instead.
+        // told the credentials directly instead.
         try {
             String roleWord = targetRole == Role.MEMBER ? "a team member" : "a " + targetRole.name().toLowerCase();
             mailService.send(
                     saved.getEmail(),
                     "You've been added to Throughline",
                     String.format(
-                            "%s added you to Throughline as %s. Sign up at %s/signup using this email address (%s) to activate your account.",
+                            "%s added you to Throughline as %s. Log in at %s using this email address (%s) and "
+                                    + "the password provided to you.",
                             createdBy.getFullName(), roleWord, frontendUrl, saved.getEmail()));
         } catch (Exception e) {
             // Ignored on purpose — see comment above.
@@ -249,12 +262,6 @@ public class PersonServiceImpl implements PersonService {
                 c.getReason(),
                 c.getTimestamp()
         );
-    }
-
-    private void requireDirector(Person person, String message) {
-        if (!Role.isAtLeastDirector(person.getRole())) {
-            throw new ForbiddenActionException(message);
-        }
     }
 
     private void requireSuperAdmin(Person person, String message) {

@@ -8,6 +8,7 @@ import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.TaskActivityRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
 import com.throughline.taskmanagement.repository.TaskDeadlineExtensionRequestRepository;
+import com.throughline.taskmanagement.repository.TaskDocumentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
 import com.throughline.taskmanagement.service.TaskService;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -60,6 +62,9 @@ class TaskServiceImplDeleteCascadeTest {
     @Autowired
     private TaskActivityRepository taskActivityRepository;
 
+    @Autowired
+    private TaskDocumentRepository taskDocumentRepository;
+
     private Long idOf(String email) {
         return personRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalStateException("Seed data missing: " + email))
@@ -83,6 +88,8 @@ class TaskServiceImplDeleteCascadeTest {
         // valid way to get a real pending extension request row onto this task.
         taskService.requestDeadlineExtension(taskId, new RequestDeadlineExtensionRequest(
                 LocalDate.now().plusDays(20), "Testing cascade delete.", jeanPaulId));
+        taskService.addDocument(taskId, "notes.txt", "text/plain",
+                "cascade delete test file".getBytes(StandardCharsets.UTF_8), jeanPaulId);
 
         assertFalse(taskCommentRepository.findByTaskIdOrderByCreatedAtAsc(taskId).isEmpty(),
                 "Sanity check: the opening comment should exist before deletion.");
@@ -90,6 +97,8 @@ class TaskServiceImplDeleteCascadeTest {
                 taskDeadlineExtensionRequestRepository.findByTaskIdOrderByRequestedAtDesc(taskId, Pageable.unpaged())
                         .hasContent(),
                 "Sanity check: the extension request should exist before deletion.");
+        assertFalse(taskDocumentRepository.findByTaskIdOrderByUploadedAtAsc(taskId).isEmpty(),
+                "Sanity check: the document should exist before deletion.");
 
         taskService.deleteTask(taskId, jeanPaulId);
 
@@ -100,6 +109,8 @@ class TaskServiceImplDeleteCascadeTest {
                 taskDeadlineExtensionRequestRepository.findByTaskIdOrderByRequestedAtDesc(taskId, Pageable.unpaged())
                         .hasContent(),
                 "Its extension requests should have been cascade-deleted, not left orphaned.");
+        assertTrue(taskDocumentRepository.findByTaskIdOrderByUploadedAtAsc(taskId).isEmpty(),
+                "Its documents should have been cascade-deleted from the database, not left orphaned.");
 
         boolean hasDeletedActivityEntry = taskActivityRepository.findAll().stream()
                 .anyMatch(activity -> activity.getTaskCode().equals(taskCode)

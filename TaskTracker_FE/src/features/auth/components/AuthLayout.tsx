@@ -7,9 +7,11 @@ interface AuthLayoutProps {
   title: string
   subtitle: string
   children: ReactNode
-  footerText: string
-  footerLinkTo: string
-  footerLinkLabel: string
+  // Optional — LoginPage has nowhere to send a footer link to (there's no public sign-up
+  // page), so it omits these entirely and no footer renders at all.
+  footerText?: string
+  footerLinkTo?: string
+  footerLinkLabel?: string
 }
 
 /** What Throughline actually does, cycled on the branding side — not stock copy borrowed
@@ -30,10 +32,11 @@ const SLIDES = [
 ]
 
 /**
- * Split-screen chrome for LoginPage/SignupPage — branding + rotating description on the
- * left, the form itself on the right. Rendered outside AppShell (no sidebar, no global
- * search bar) since there's no logged-in identity yet to build those around. The
- * branding side collapses away below ~900px so this doesn't break on a phone.
+ * Split-screen chrome for LoginPage and the account-recovery pages (forgot/reset password,
+ * verify email) — branding + rotating description on the left, the form itself on the
+ * right. Rendered outside AppShell (no sidebar, no global search bar) since there's no
+ * logged-in identity yet to build those around. The branding side collapses away below
+ * ~900px so this doesn't break on a phone.
  */
 export function AuthLayout({ title, subtitle, children, footerText, footerLinkTo, footerLinkLabel }: AuthLayoutProps) {
   const [slideIndex, setSlideIndex] = useState(0)
@@ -71,9 +74,11 @@ export function AuthLayout({ title, subtitle, children, footerText, footerLinkTo
 
           {children}
 
-          <div className={styles.footer}>
-            {footerText} <Link to={footerLinkTo} className={styles.footerLink}>{footerLinkLabel}</Link>
-          </div>
+          {footerText && footerLinkTo && footerLinkLabel && (
+            <div className={styles.footer}>
+              {footerText} <Link to={footerLinkTo} className={styles.footerLink}>{footerLinkLabel}</Link>
+            </div>
+          )}
         </div>
       </div>
     </div>

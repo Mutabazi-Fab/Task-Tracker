@@ -37,7 +37,7 @@ const ROLE_LABEL: Record<string, string> = {
  * (see usePeople's enabled flag), not just hide it in the UI.
  */
 export function PeopleListPage() {
-  const { isDirector } = useAuth()
+  const { isDirector, isSuperAdmin } = useAuth()
   const query = usePeople(isDirector)
   const [createOpen, setCreateOpen] = useState(false)
   const [page, setPage] = useState(0)
@@ -56,7 +56,9 @@ export function PeopleListPage() {
       <PageHeader
         breadcrumb="Throughline"
         title="People"
-        right={<Button onClick={() => setCreateOpen(true)}>New person</Button>}
+        // Only a Super Admin can create an account — there's no public self-registration,
+        // so this is the only path to a new login-enabled person in the system.
+        right={isSuperAdmin ? <Button onClick={() => setCreateOpen(true)}>New person</Button> : undefined}
       />
       <QueryBoundary query={query}>
         {(people) => {
@@ -106,7 +108,7 @@ export function PeopleListPage() {
         }}
       </QueryBoundary>
 
-      <CreatePersonModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      {isSuperAdmin && <CreatePersonModal open={createOpen} onClose={() => setCreateOpen(false)} />}
     </>
   )
 }

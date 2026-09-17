@@ -4,14 +4,12 @@ import com.throughline.taskmanagement.dto.request.ForgotPasswordRequest;
 import com.throughline.taskmanagement.dto.request.LoginRequest;
 import com.throughline.taskmanagement.dto.request.ResendOtpRequest;
 import com.throughline.taskmanagement.dto.request.ResetPasswordRequest;
-import com.throughline.taskmanagement.dto.request.SignupRequest;
 import com.throughline.taskmanagement.dto.request.VerifyEmailRequest;
 import com.throughline.taskmanagement.dto.response.AuthResponse;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,14 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
-
-    /** May return a null token if this email still needs OTP verification (see
-     *  AuthResponse.emailVerified) — the frontend routes to "verify your email" in that
-     *  case rather than treating it as a failure. */
-    @PostMapping("/signup")
-    public ResponseEntity<AuthResponse> signup(@Valid @RequestBody SignupRequest request) {
-        return new ResponseEntity<>(authService.signup(request), HttpStatus.CREATED);
-    }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {

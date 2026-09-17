@@ -22,10 +22,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 /**
- * JWT, stateless. Every route requires a valid Bearer token except signup/login/logout
- * (you need to be able to log in before you have one). Now that the frontend (Phase 7)
- * attaches a token to every request, this is authenticated() everywhere else — it used to
- * be permitAll() while the frontend still couldn't send one.
+ * JWT, stateless. Every route requires a valid Bearer token except login/logout and the
+ * account-recovery flows (you need to be able to log in before you have one). There is no
+ * public self-registration endpoint — only a Super Admin can create a login-enabled account
+ * (see PersonServiceImpl.createPerson), so nothing under /auth is permitAll for account
+ * creation. Now that the frontend (Phase 7) attaches a token to every request, this is
+ * authenticated() everywhere else — it used to be permitAll() while the frontend still
+ * couldn't send one.
  *
  * No DaoAuthenticationProvider bean here on purpose: Spring Boot's security
  * auto-configuration builds one automatically from the CustomUserDetailsService
@@ -84,7 +87,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(restAccessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/logout",
+                                "/api/v1/auth/login", "/api/v1/auth/logout",
                                 "/api/v1/auth/verify-email", "/api/v1/auth/resend-otp",
                                 "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password"
                         ).permitAll()

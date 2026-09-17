@@ -38,7 +38,8 @@ public class PersonController {
     public ResponseEntity<PersonResponse> createPerson(@Valid @RequestBody CreatePersonRequest request, Authentication authentication) {
         Long actorId = currentPersonResolver.resolveId(authentication);
         CreatePersonRequest verified = new CreatePersonRequest(
-                request.fullName(), request.email(), request.jobTitle(), request.rank(), actorId, request.role(), request.departmentId());
+                request.fullName(), request.email(), request.jobTitle(), request.rank(), actorId, request.role(),
+                request.departmentId(), request.password());
         return new ResponseEntity<>(personService.createPerson(verified), HttpStatus.CREATED);
     }
 

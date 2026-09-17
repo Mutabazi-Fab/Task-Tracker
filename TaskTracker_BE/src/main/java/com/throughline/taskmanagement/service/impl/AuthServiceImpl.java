@@ -4,12 +4,9 @@ import com.throughline.taskmanagement.dto.request.LoginRequest;
 import com.throughline.taskmanagement.dto.request.ForgotPasswordRequest;
 import com.throughline.taskmanagement.dto.request.ResendOtpRequest;
 import com.throughline.taskmanagement.dto.request.ResetPasswordRequest;
-import com.throughline.taskmanagement.dto.request.SignupRequest;
 import com.throughline.taskmanagement.dto.request.VerifyEmailRequest;
 import com.throughline.taskmanagement.dto.response.AuthResponse;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
-import com.throughline.taskmanagement.enums.Role;
-import com.throughline.taskmanagement.exception.DuplicateResourceException;
 import com.throughline.taskmanagement.exception.EmailDeliveryException;
 import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.InvalidAssignmentException;
@@ -49,46 +46,6 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final MailService mailService;
     private final LoginRateLimiter rateLimiter;
-
-    @Override
-    public AuthResponse signup(SignupRequest request) {
-        Person person = personRepository.findByEmailIgnoreCase(request.email()).orElse(null);
-
-        if (person != null && person.getPassword() != null) {
-            throw new DuplicateResourceException("An account with this email already exists.");
-        }
-
-        if (person == null) {
-            person = new Person();
-            person.setEmail(request.email());
-            // Brand new to the system — must prove they control this inbox before they
-            // can log in. A pre-existing (seeded) record being claimed instead keeps
-            // whatever emailVerified value it already had (true, for anything that
-            // predates this feature — see the @ColumnDefault on Person.emailVerified).
-            person.setEmailVerified(false);
-        }
-        // else: this claims a pre-existing record (e.g. seeded before auth existed, or added
-        // to a team by a Director before ever signing up) instead of creating a duplicate
-        // person with the same email.
-
-        person.setFullName(request.fullName());
-        person.setJobTitle(request.jobTitle());
-        person.setRank(request.rank());
-        person.setPassword(passwordEncoder.encode(request.password()));
-        if (person.getRole() == null) {
-            person.setRole(Role.MEMBER);
-        }
-
-        Person saved = personRepository.save(person);
-
-        if (!saved.isEmailVerified()) {
-            sendOtp(saved);
-            return new AuthResponse(null, saved.getId(), saved.getFullName(), saved.getEmail(), saved.getRole(), false);
-        }
-
-        String token = jwtService.generateToken(saved.getEmail());
-        return new AuthResponse(token, saved.getId(), saved.getFullName(), saved.getEmail(), saved.getRole(), true);
-    }
 
     @Override
     public AuthResponse login(LoginRequest request) {

@@ -4,17 +4,12 @@ import com.throughline.taskmanagement.dto.request.ForgotPasswordRequest;
 import com.throughline.taskmanagement.dto.request.LoginRequest;
 import com.throughline.taskmanagement.dto.request.ResendOtpRequest;
 import com.throughline.taskmanagement.dto.request.ResetPasswordRequest;
-import com.throughline.taskmanagement.dto.request.SignupRequest;
 import com.throughline.taskmanagement.dto.request.VerifyEmailRequest;
 import com.throughline.taskmanagement.dto.response.AuthResponse;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.model.Person;
 
 public interface AuthService {
-    /** Returns a null token (emailVerified=false) if this email still needs OTP
-     *  verification — a brand-new signup always does; a pre-existing/seeded record being
-     *  claimed here may already be exempted, in which case this logs them straight in. */
-    AuthResponse signup(SignupRequest request);
 
     AuthResponse login(LoginRequest request);
 

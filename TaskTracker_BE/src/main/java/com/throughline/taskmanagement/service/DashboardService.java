@@ -26,6 +26,16 @@ public interface DashboardService {
      *  literal same view, not a separate lookalike). */
     Page<TaskListResponse> getExecutiveTasks(Long viewerId, Pageable pageable);
 
+    /** The Director Dashboard's "Critical & CEO-assigned" panel — the department-scoped
+     *  equivalent of getExecutiveTasks, alongside their existing "My initiatives" view (see
+     *  DashboardPage/DirectorTasksPanel on the frontend, which toggles between the two rather
+     *  than stacking separate panels), not replacing it: every HIGH/CRITICAL-severity task
+     *  within this Director's own department, plus every task in that department an
+     *  Executive/Super Admin personally assigned, any depth (see TaskRepository.
+     *  findByDepartmentIdAndSeverityInOrAssignedByRoleIn). Director-or-above only; empty if
+     *  the Director belongs to no department. */
+    Page<TaskListResponse> getDirectorCriticalAndCeoAssignedTasks(Long directorId, Pageable pageable);
+
     /** The Executive Dashboard's department traffic-light roll-up — one row per department,
      *  replacing the task-card list an Executive used to see. Same viewer-gating pattern as
      *  getExecutiveTasks (Executive-or-above only). */

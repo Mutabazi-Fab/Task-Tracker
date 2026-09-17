@@ -893,6 +893,7 @@ public class TaskServiceImpl implements TaskService {
         activity.setTaskCode(task.getTaskCode());
         activity.setTitle(task.getTitle());
         activity.setParentTaskCode(task.getParentTask() != null ? task.getParentTask().getTaskCode() : null);
+        activity.setParentTaskTitle(task.getParentTask() != null ? task.getParentTask().getTitle() : null);
         activity.setAssigneeType(task.getAssigneeType());
         activity.setAssigneeSummary(switch (task.getAssigneeType()) {
             case TEAM -> task.getAssignedTeam().getName();
@@ -917,6 +918,7 @@ public class TaskServiceImpl implements TaskService {
                 a.getTaskCode(),
                 a.getTitle(),
                 a.getParentTaskCode(),
+                a.getParentTaskTitle(),
                 a.getAssigneeType(),
                 a.getAssigneeSummary(),
                 a.getPerformedBy().getFullName(),

@@ -31,7 +31,7 @@ export function TaskTableRow({ task }: { task: TaskListItem }) {
             INDIVIDUAL — parentTaskCode is the only thing that actually tells them
             apart, so it takes over this line instead of just repeating "INDIVIDUAL". */}
         <span className={styles.assigneeType}>
-          {task.parentTaskCode ? `SUBTASK · under ${task.parentTaskCode}` : task.assigneeType}
+          {task.parentTaskCode ? `SUBTASK · under ${task.parentTaskTitle ?? task.parentTaskCode}` : task.assigneeType}
         </span>
       </div>
       <div className={styles.progress}>

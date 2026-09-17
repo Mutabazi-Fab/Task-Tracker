@@ -11,6 +11,7 @@ public record TaskActivityResponse(
     String taskCode,
     String title,
     String parentTaskCode,
+    String parentTaskTitle,
     AssigneeType assigneeType,
     String assigneeSummary,
     String performedByName,

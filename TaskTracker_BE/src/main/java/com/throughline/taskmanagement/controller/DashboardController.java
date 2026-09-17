@@ -75,6 +75,19 @@ public class DashboardController {
         return ResponseEntity.ok(dashboardService.getExecutiveTasks(viewerId, pageable));
     }
 
+    /** The Director Dashboard's "Critical & CEO-assigned" panel — the department-scoped
+     *  equivalent of getExecutiveTasks: every HIGH/CRITICAL task in this Director's own
+     *  department, plus every task in it an Executive/Super Admin personally assigned. The
+     *  frontend toggles between this and getDirectorTasks' "my initiatives" in one panel
+     *  rather than stacking both. directorId is always the caller's own real identity, same
+     *  as every other endpoint here. */
+    @GetMapping("/director/critical-and-ceo-assigned")
+    public ResponseEntity<Page<TaskListResponse>> getDirectorCriticalAndCeoAssignedTasks(
+            Pageable pageable, Authentication authentication) {
+        Long directorId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(dashboardService.getDirectorCriticalAndCeoAssignedTasks(directorId, pageable));
+    }
+
     /** The Executive Dashboard's department traffic-light roll-up — Executive-or-above only,
      *  same viewerId-from-JWT pattern as every other endpoint here. */
     @GetMapping("/executive/department-health")

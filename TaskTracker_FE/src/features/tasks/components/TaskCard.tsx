@@ -32,7 +32,9 @@ export function TaskCard({ task }: { task: TaskListItem }) {
           {task.assigneeName}
           {/* Same distinction as the Table view — without this, a subtask and a
               standalone individual task are visually identical here. */}
-          {task.parentTaskCode && <span className={styles.subtaskTag}> · under {task.parentTaskCode}</span>}
+          {task.parentTaskCode && (
+            <span className={styles.subtaskTag}> · under {task.parentTaskTitle ?? task.parentTaskCode}</span>
+          )}
         </p>
         <ProgressBar percentage={task.progressPercentage} status={task.status} />
         <div className={styles.comment}>

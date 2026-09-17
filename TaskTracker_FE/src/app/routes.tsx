@@ -12,7 +12,6 @@ import { DepartmentsListPage } from '../features/departments/DepartmentsListPage
 import { DepartmentPage } from '../features/departments/DepartmentPage'
 import { SearchResultsPage } from '../features/search/SearchResultsPage'
 import { LoginPage } from '../features/auth/LoginPage'
-import { SignupPage } from '../features/auth/SignupPage'
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
@@ -43,10 +42,11 @@ function protectedPage(page: React.ReactNode) {
  * NotFoundPage rather than a fake stub — Tasks/People/Teams/Search land
  * here as their features are built.
  *
- * /login and /signup render outside AppShell (no sidebar, no search bar —
- * there's no logged-in identity yet to build those around) and are wrapped
- * in PublicOnlyRoute instead, so an already-logged-in person skips straight
- * past them.
+ * /login renders outside AppShell (no sidebar, no search bar — there's no logged-in
+ * identity yet to build those around) and is wrapped in PublicOnlyRoute instead, so an
+ * already-logged-in person skips straight past it. There is no public /signup route — the
+ * only way to get a new account is a Super Admin creating one (People → New person); this
+ * app deliberately has no self-service registration.
  */
 export function AppRoutes() {
   return (
@@ -56,14 +56,6 @@ export function AppRoutes() {
         element={
           <PublicOnlyRoute>
             <LoginPage />
-          </PublicOnlyRoute>
-        }
-      />
-      <Route
-        path={ROUTES.signup}
-        element={
-          <PublicOnlyRoute>
-            <SignupPage />
           </PublicOnlyRoute>
         }
       />

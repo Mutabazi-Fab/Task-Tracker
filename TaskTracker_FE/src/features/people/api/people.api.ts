@@ -44,7 +44,9 @@ export async function fetchPersonTaskHistory(id: number): Promise<PersonTaskHist
   return data.content
 }
 
-/** Director/Super-Admin-only, enforced server-side. Sends a best-effort invite email. */
+/** Super-Admin-only, enforced server-side — there is no public self-registration. Creates
+ *  the account fully login-ready (password hashed, emailVerified=true) and sends a
+ *  best-effort notification email. */
 export async function createPerson(payload: CreatePersonRequest): Promise<Person> {
   const { data } = await axiosClient.post<Person>(endpoints.people.create(), payload)
   return data

@@ -6,19 +6,6 @@ export interface LoginRequest {
   password: string
 }
 
-/**
- * Body for POST /auth/signup. No role field — self-service signup always
- * creates a MEMBER; Director/Super Admin accounts are provisioned by someone
- * who already holds the right role.
- */
-export interface SignupRequest {
-  fullName: string
-  email: string
-  password: string
-  jobTitle: string
-  rank?: string
-}
-
 /** Body for POST /auth/verify-email. */
 export interface VerifyEmailRequest {
   email: string
@@ -46,9 +33,11 @@ export interface ResetPasswordRequest {
 }
 
 /**
- * What POST /auth/login, /auth/signup, and /auth/verify-email all return. token is null
- * when signup succeeds but the email still needs OTP verification — emailVerified tells
- * the caller which case this is, rather than treating a null token as an error.
+ * What POST /auth/login, /auth/verify-email, and /auth/reset-password all return. token is
+ * null when a still-unverified legacy account needs OTP verification before it can log in
+ * — emailVerified tells the caller which case this is, rather than treating a null token as
+ * an error. Every account a Super Admin creates now starts emailVerified=true, so this only
+ * matters for accounts that predate that.
  */
 export interface AuthResponse {
   token: string | null

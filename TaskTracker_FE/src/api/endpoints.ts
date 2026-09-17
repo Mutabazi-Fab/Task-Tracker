@@ -8,7 +8,6 @@ const BASE = '/api/v1'
 
 export const endpoints = {
   auth: {
-    signup: () => `${BASE}/auth/signup`,
     login: () => `${BASE}/auth/login`,
     logout: () => `${BASE}/auth/logout`,
     me: () => `${BASE}/auth/me`,
@@ -104,6 +103,7 @@ export const endpoints = {
     peopleSummary: () => `${BASE}/dashboard/people-summary`,
     search: () => `${BASE}/dashboard/search`,
     directorTasks: () => `${BASE}/dashboard/director/tasks`,
+    directorCriticalAndCeoAssigned: () => `${BASE}/dashboard/director/critical-and-ceo-assigned`,
     executiveTasks: () => `${BASE}/dashboard/executive/tasks`,
     executiveDepartmentHealth: () => `${BASE}/dashboard/executive/department-health`,
     executiveKpis: () => `${BASE}/dashboard/executive/kpis`,

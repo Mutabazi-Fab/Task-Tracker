@@ -87,6 +87,9 @@ export interface TaskListItem {
   // 'INDIVIDUAL' with nothing else to tell them apart, so this is what actually
   // distinguishes "assigned to one person directly" from "a subtask of something".
   parentTaskCode: string | null
+  // The parent task's actual title — use this for "under {title}" UI copy instead of the
+  // less legible parentTaskCode. Null wherever parentTaskCode is.
+  parentTaskTitle: string | null
   // 0 for a real top-level task (plain or Department-assigned), 1 for a direct child, 2
   // for a grandchild (only possible under a Department-rooted hierarchy).
   depth: number
@@ -148,6 +151,9 @@ export interface TaskDetail {
   // which uses this to decide "reassign to a team" vs "reassign to a person".
   parentTaskId: number | null
   parentTaskCode: string | null
+  // The parent task's actual title — used for a real "back to {title}" breadcrumb link
+  // (via parentTaskId) instead of a bare code. Null wherever parentTaskId/parentTaskCode are.
+  parentTaskTitle: string | null
   createdByRole: CreatedByRole | null
   // 0 for a real top-level task (plain or Department-assigned), 1 for a direct child, 2
   // for a grandchild (only possible under a Department-rooted hierarchy). Decides whether
@@ -249,6 +255,9 @@ export interface TaskActivity {
   title: string
   /** Set only when the task was a subtask. */
   parentTaskCode: string | null
+  /** The parent task's title at the time of this event — same snapshot reasoning as
+   *  parentTaskCode above. */
+  parentTaskTitle: string | null
   assigneeType: AssigneeType
   assigneeSummary: string
   performedByName: string
