@@ -9,12 +9,20 @@
   gap: var(--space-4);
 }
 
+/* Discussion stays the main, wide column; Documents rides as a narrow sidebar next to it —
+   same "main + sidebar" idea as DashboardPage's own .charts row (65fr 35fr). */
+.discussionRow {
+  display: grid;
+  grid-template-columns: 65fr 35fr;
+  gap: var(--space-4);
+}
+
 .sparklineLabel,
 .sectionHeading {
   display: block;
   font-family: var(--font-mono);
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
@@ -22,7 +30,8 @@
 }
 
 @media (max-width: 768px) {
-  .progressRow {
+  .progressRow,
+  .discussionRow {
     grid-template-columns: 1fr;
   }
 }

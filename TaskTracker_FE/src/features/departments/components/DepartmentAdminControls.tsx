@@ -11,8 +11,11 @@ import { useRenameDepartment } from '../hooks/useRenameDepartment'
 import type { Department } from '../../../types/department.types'
 import styles from './DepartmentAdminControls.module.css'
 
-/** Super-Admin-only (see DepartmentPage). Rename and head-reassignment each go through
- *  their own endpoint, same split as TeamServiceImpl's rename vs. setTeamLeader. */
+/** Super-Admin-only (see DepartmentPage) — rename and head-reassignment each go through
+ *  their own endpoint, same split as TeamServiceImpl's rename vs. setTeamLeader. Deleting
+ *  the department lives in the page header instead (see DepartmentPage/
+ *  DeleteDepartmentModal), not here — that action is a wider Executive-or-above tier,
+ *  broader than the Super-Admin-only controls this component owns. */
 export function DepartmentAdminControls({ department }: { department: Department }) {
   const { currentUser } = useAuth()
   const peopleQuery = usePeople()

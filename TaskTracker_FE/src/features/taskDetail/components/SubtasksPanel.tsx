@@ -60,7 +60,7 @@ export function SubtasksPanel({ task }: { task: TaskDetail }) {
   return (
     <>
       <div className={styles.header}>
-        <span>{isDepartmentTask ? 'Implementation task' : 'Subtasks'}</span>
+        <span className={styles.title}>{isDepartmentTask ? 'Implementation task' : 'Subtasks'}</span>
         {canCreate && (
           <Button variant="primary" onClick={() => setCreateOpen(true)}>
             {isDepartmentTask ? 'Add implementation task' : 'Add subtask'}

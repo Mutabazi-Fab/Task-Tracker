@@ -1,6 +1,7 @@
 import type { TaskComment } from './comment.types'
 import type { TaskReassignment } from './reassignment.types'
 import type { DeadlineExtension } from './deadlineExtension.types'
+import type { TaskDocument } from './document.types'
 import type { Role } from './person.types'
 
 /** DEPARTMENT is Executive-only, and only ever at depth 0 — a whole Department's head
@@ -156,6 +157,7 @@ export interface TaskDetail {
   comments: TaskComment[]
   reassignments: TaskReassignment[]
   deadlineExtensions: DeadlineExtension[]
+  documents: TaskDocument[]
   progressTimeline: TaskTimelinePoint[]
   createdAt: string
   updatedAt: string

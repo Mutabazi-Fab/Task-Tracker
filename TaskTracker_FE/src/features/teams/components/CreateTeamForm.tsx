@@ -12,6 +12,12 @@ interface CreateTeamFormProps {
   onSubmit: (payload: CreateTeamRequest) => void
   onCancel: () => void
   submitting: boolean
+  /** Set when this form is opened from a specific Department's own page (see
+   *  DepartmentPage) — locks the department to that one instead of offering the full
+   *  org-wide picker (Executive/Super Admin) or falling back to the caller's own department
+   *  (a plain Director), since it's already obvious from context which department this is. */
+  fixedDepartmentId?: number
+  fixedDepartmentName?: string
 }
 
 /** Director creates the team, picks its roster, and names one member as Team Leader —
@@ -21,8 +27,16 @@ interface CreateTeamFormProps {
  *  at all — it's silently their own, same as GET /tasks' department scoping. Only
  *  Executive/Super Admin (who aren't tied to a single department) get to choose, since
  *  they're the only ones actually able to stand up a team for someone else's department —
- *  enforced server-side in TeamServiceImpl.createTeam, not just hidden here. */
-export function CreateTeamForm({ onSubmit, onCancel, submitting }: CreateTeamFormProps) {
+ *  enforced server-side in TeamServiceImpl.createTeam, not just hidden here. When opened
+ *  from a Department's own page (fixedDepartmentId set), nobody gets a picker — it's locked
+ *  to that department for every role, Executive/Super Admin included. */
+export function CreateTeamForm({
+  onSubmit,
+  onCancel,
+  submitting,
+  fixedDepartmentId,
+  fixedDepartmentName,
+}: CreateTeamFormProps) {
   const { currentUser, isExecutive } = useAuth()
   const peopleQuery = usePeople()
   const departmentsQuery = useDepartments()
@@ -31,7 +45,11 @@ export function CreateTeamForm({ onSubmit, onCancel, submitting }: CreateTeamFor
   const [memberIds, setMemberIds] = useState<number[]>([])
   const [leaderId, setLeaderId] = useState('')
   const [departmentId, setDepartmentId] = useState(() =>
-    !isExecutive && currentUser?.departmentId ? String(currentUser.departmentId) : '',
+    fixedDepartmentId != null
+      ? String(fixedDepartmentId)
+      : !isExecutive && currentUser?.departmentId
+        ? String(currentUser.departmentId)
+        : '',
   )
 
   function toggleMember(id: number) {
@@ -64,7 +82,12 @@ export function CreateTeamForm({ onSubmit, onCancel, submitting }: CreateTeamFor
     <form className={styles.form} onSubmit={handleSubmit}>
       <TextField label="Team name" value={name} onChange={setName} placeholder="e.g. Auditing App" required />
 
-      {isExecutive ? (
+      {fixedDepartmentId != null ? (
+        <div className={styles.field}>
+          <span className={styles.label}>Department</span>
+          <span className={styles.readOnlyValue}>{fixedDepartmentName ?? 'This department'}</span>
+        </div>
+      ) : isExecutive ? (
         <SelectField
           label="Department"
           value={departmentId}

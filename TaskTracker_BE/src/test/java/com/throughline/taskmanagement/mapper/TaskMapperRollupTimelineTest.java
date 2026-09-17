@@ -57,4 +57,31 @@ class TaskMapperRollupTimelineTest {
         assertEquals(detail.progressPercentage(), last.percentage(),
                 "The reconstructed timeline's final point should match the task's live rollup percentage.");
     }
+
+    /** TSK-0001 (above) happens to have its own opening-note comment seeded directly via SQL
+     *  with an explicit DISCUSSION type, so it never actually exercised the real bug: any
+     *  task created through the running app — TaskServiceImpl.addOpeningComment never sets
+     *  a type, and TaskComment.type defaults to PROGRESS — gets a spurious PROGRESS comment
+     *  of its own even when it's a rollup (TEAM/DEPARTMENT) task. The old code treated "has
+     *  its own PROGRESS comment" as "is individually tracked", so that one spurious
+     *  0%-at-creation comment short-circuited straight past the real reconstruction, leaving
+     *  the Trend chart stuck showing a single 0% point forever. TSK-0034 (a DEPARTMENT task,
+     *  → TSK-0035 TEAM implementation task → TSK-0036 INDIVIDUAL leaf, all created live
+     *  through the app during this session, not seeded) reproduces this exactly. */
+    @Test
+    void rollupTaskWithItsOwnSpuriousOpeningProgressCommentStillReconstructsFromChildren() {
+        Long taskId = taskRepository.findByTaskCode("TSK-0034")
+                .orElseThrow(() -> new IllegalStateException("Seed data missing: TSK-0034"))
+                .getId();
+
+        TaskDetailResponse detail = taskService.getTaskById(taskId);
+        List<TaskTimelineResponse> timeline = detail.progressTimeline();
+
+        assertTrue(timeline.size() >= 2, "Expected a reconstructed multi-point timeline even though this "
+                + "DEPARTMENT task carries its own (spurious) PROGRESS-type opening comment, got: " + timeline);
+
+        TaskTimelineResponse last = timeline.get(timeline.size() - 1);
+        assertEquals(detail.progressPercentage(), last.percentage(),
+                "The reconstructed timeline's final point should match the task's live rollup percentage.");
+    }
 }

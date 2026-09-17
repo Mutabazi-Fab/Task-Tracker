@@ -12,6 +12,7 @@ import com.throughline.taskmanagement.dto.request.SetPinnedRequest;
 import com.throughline.taskmanagement.dto.request.UpdateTaskRequest;
 import com.throughline.taskmanagement.dto.response.CommentResponse;
 import com.throughline.taskmanagement.dto.response.DeadlineExtensionResponse;
+import com.throughline.taskmanagement.dto.response.DocumentDownload;
 import com.throughline.taskmanagement.dto.response.PendingExtensionRequestResponse;
 import com.throughline.taskmanagement.dto.response.ReassignmentResponse;
 import com.throughline.taskmanagement.dto.response.TaskActivityResponse;
@@ -38,6 +39,7 @@ import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.TaskActivity;
 import com.throughline.taskmanagement.model.TaskComment;
 import com.throughline.taskmanagement.model.TaskDeadlineExtensionRequest;
+import com.throughline.taskmanagement.model.TaskDocument;
 import com.throughline.taskmanagement.model.TaskReassignment;
 import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.model.TeamMember;
@@ -46,6 +48,7 @@ import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.TaskActivityRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
 import com.throughline.taskmanagement.repository.TaskDeadlineExtensionRequestRepository;
+import com.throughline.taskmanagement.repository.TaskDocumentRepository;
 import com.throughline.taskmanagement.repository.TaskReassignmentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
 import com.throughline.taskmanagement.repository.TeamMemberRepository;
@@ -64,6 +67,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -78,6 +82,7 @@ public class TaskServiceImpl implements TaskService {
     private final TaskCommentRepository taskCommentRepository;
     private final TaskReassignmentRepository taskReassignmentRepository;
     private final TaskDeadlineExtensionRequestRepository taskDeadlineExtensionRequestRepository;
+    private final TaskDocumentRepository taskDocumentRepository;
     private final TaskMapper taskMapper;
     private final NotificationService notificationService;
     private final TaskActivityRepository taskActivityRepository;
@@ -1121,6 +1126,90 @@ public class TaskServiceImpl implements TaskService {
 
         task.setPinned(request.pinned());
         return taskMapper.toDetailResponse(taskRepository.save(task));
+    }
+
+    private static final long MAX_DOCUMENT_SIZE_BYTES = 20L * 1024 * 1024;
+
+    // Common office/document/image types a "supporting document" for a task realistically
+    // is — not an arbitrary-file upload. Easy to extend later (a plain Set, no enum/CHECK
+    // constraint involved).
+    private static final Set<String> ALLOWED_DOCUMENT_CONTENT_TYPES = Set.of(
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "image/png",
+            "image/jpeg",
+            "text/plain"
+    );
+
+    @Override
+    public TaskDetailResponse addDocument(Long taskId, String fileName, String contentType, byte[] content, Long uploadedById) {
+        Task task = taskRepository.findWithDetailsById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        Person uploadedBy = personRepository.findById(uploadedById)
+                .orElseThrow(() -> new ResourceNotFoundException("uploadedById not found"));
+
+        if (content == null || content.length == 0) {
+            throw new InvalidAssignmentException("The uploaded file is empty.");
+        }
+        if (content.length > MAX_DOCUMENT_SIZE_BYTES) {
+            throw new InvalidAssignmentException("A supporting document can't be larger than 20MB.");
+        }
+        if (contentType == null || !ALLOWED_DOCUMENT_CONTENT_TYPES.contains(contentType)) {
+            throw new InvalidAssignmentException(
+                    "Unsupported file type — only PDF, Word, Excel, PowerPoint, PNG/JPEG images, and plain text are allowed.");
+        }
+
+        TaskDocument document = new TaskDocument();
+        document.setTask(task);
+        document.setFileName(fileName != null && !fileName.isBlank() ? fileName : "Untitled file");
+        document.setContentType(contentType);
+        document.setFileSize(content.length);
+        document.setContent(content);
+        document.setUploadedBy(uploadedBy);
+
+        TaskDocument saved = taskDocumentRepository.save(document);
+        task.getDocuments().add(saved);
+
+        return taskMapper.toDetailResponse(task);
+    }
+
+    @Override
+    public DocumentDownload getDocumentContent(Long taskId, Long documentId) {
+        TaskDocument document = taskDocumentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+        if (!document.getTask().getId().equals(taskId)) {
+            throw new InvalidAssignmentException("This document doesn't belong to this task.");
+        }
+        return new DocumentDownload(document.getFileName(), document.getContentType(), document.getContent());
+    }
+
+    @Override
+    public TaskDetailResponse deleteDocument(Long taskId, Long documentId, Long actorId) {
+        Task task = taskRepository.findWithDetailsById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        TaskDocument document = taskDocumentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+        if (!document.getTask().getId().equals(taskId)) {
+            throw new InvalidAssignmentException("This document doesn't belong to this task.");
+        }
+        Person actor = personRepository.findById(actorId)
+                .orElseThrow(() -> new ResourceNotFoundException("actorId not found"));
+
+        boolean isUploader = document.getUploadedBy().getId().equals(actorId);
+        if (!isUploader && !Role.isAtLeastDirector(actor.getRole())) {
+            throw new ForbiddenActionException(
+                    "Only whoever uploaded this document, or a Director/Executive/Super Admin, can remove it.");
+        }
+
+        task.getDocuments().remove(document);
+        taskDocumentRepository.delete(document);
+
+        return taskMapper.toDetailResponse(task);
     }
 
     /** Same "who's actually responsible for this task" concept used by TaskStalenessJob/

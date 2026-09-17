@@ -12,6 +12,7 @@ import com.throughline.taskmanagement.dto.request.SetPinnedRequest;
 import com.throughline.taskmanagement.dto.request.UpdateTaskRequest;
 import com.throughline.taskmanagement.dto.response.CommentResponse;
 import com.throughline.taskmanagement.dto.response.DeadlineExtensionResponse;
+import com.throughline.taskmanagement.dto.response.DocumentDownload;
 import com.throughline.taskmanagement.dto.response.PendingExtensionRequestResponse;
 import com.throughline.taskmanagement.dto.response.ReassignmentResponse;
 import com.throughline.taskmanagement.dto.response.TaskActivityResponse;
@@ -100,4 +101,18 @@ public interface TaskService {
      *  not derived from severity, so any task can be pinned/unpinned regardless of its
      *  severity classification. */
     TaskDetailResponse setPinned(Long taskId, SetPinnedRequest request);
+
+    /** Any authenticated person, same as addDiscussionComment — no restriction beyond
+     *  existing, since task-detail viewing itself has none either (see getTaskById). Rejects
+     *  an oversized file or one outside the allow-listed content types. */
+    TaskDetailResponse addDocument(Long taskId, String fileName, String contentType, byte[] content, Long uploadedById);
+
+    /** Open read, same as getTaskReassignments/getDeadlineHistory — whoever can see the task
+     *  can download anything attached to it. Fails if the document doesn't belong to taskId. */
+    DocumentDownload getDocumentContent(Long taskId, Long documentId);
+
+    /** Only the person who uploaded it, or a Director/Executive/Super Admin — enforced
+     *  here. Adding a document has no restriction beyond authentication (see addDocument);
+     *  removing one is the one document action that needs some standing over the task. */
+    TaskDetailResponse deleteDocument(Long taskId, Long documentId, Long actorId);
 }

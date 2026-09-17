@@ -3,6 +3,7 @@ package com.throughline.taskmanagement.service.impl;
 import com.throughline.taskmanagement.dto.request.ChangeDepartmentHeadRequest;
 import com.throughline.taskmanagement.dto.request.CreateDepartmentRequest;
 import com.throughline.taskmanagement.dto.request.RenameDepartmentRequest;
+import com.throughline.taskmanagement.dto.response.DepartmentActivityResponse;
 import com.throughline.taskmanagement.dto.response.DepartmentResponse;
 import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.exception.DuplicateResourceException;
@@ -11,12 +12,17 @@ import com.throughline.taskmanagement.exception.InvalidAssignmentException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.mapper.DepartmentMapper;
 import com.throughline.taskmanagement.model.Department;
+import com.throughline.taskmanagement.model.DepartmentActivity;
 import com.throughline.taskmanagement.model.Person;
+import com.throughline.taskmanagement.repository.DepartmentActivityRepository;
 import com.throughline.taskmanagement.repository.DepartmentRepository;
 import com.throughline.taskmanagement.repository.PersonRepository;
+import com.throughline.taskmanagement.repository.TeamRepository;
 import com.throughline.taskmanagement.service.DepartmentService;
 import com.throughline.taskmanagement.service.NotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,8 +35,10 @@ public class DepartmentServiceImpl implements DepartmentService {
 
     private final DepartmentRepository departmentRepository;
     private final PersonRepository personRepository;
+    private final TeamRepository teamRepository;
     private final DepartmentMapper departmentMapper;
     private final NotificationService notificationService;
+    private final DepartmentActivityRepository departmentActivityRepository;
 
     @Override
     public DepartmentResponse createDepartment(CreateDepartmentRequest request) {
@@ -99,6 +107,50 @@ public class DepartmentServiceImpl implements DepartmentService {
         department.setHeadDirector(requireDirectorPerson(request.newHeadDirectorId()));
 
         return departmentMapper.toResponse(departmentRepository.save(department));
+    }
+
+    @Override
+    public void deleteDepartment(Long id, Long actorId) {
+        Department department = departmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Department not found"));
+        Person actor = personRepository.findById(actorId)
+                .orElseThrow(() -> new ResourceNotFoundException("actorId not found"));
+        if (!Role.isAtLeastExecutive(actor.getRole())) {
+            throw new ForbiddenActionException("Only an Executive or Super Admin can delete a department.");
+        }
+        if (teamRepository.existsByDepartmentId(id)) {
+            throw new InvalidAssignmentException(
+                    "Can't delete a department that still has teams — move or delete them first.");
+        }
+        if (personRepository.existsByDepartmentId(id)) {
+            throw new InvalidAssignmentException(
+                    "Can't delete a department that still has people assigned to it — reassign them first.");
+        }
+
+        // Recorded before the delete, not after — same timing as TaskServiceImpl.
+        // recordActivity, since departmentName is read straight off the entity.
+        DepartmentActivity activity = new DepartmentActivity();
+        activity.setDepartmentName(department.getName());
+        activity.setPerformedBy(actor);
+        departmentActivityRepository.save(activity);
+
+        departmentRepository.delete(department);
+    }
+
+    @Override
+    public Page<DepartmentActivityResponse> getDepartmentActivity(Long requesterId, Pageable pageable) {
+        Person requester = personRepository.findById(requesterId)
+                .orElseThrow(() -> new ResourceNotFoundException("requesterId not found"));
+        if (!Role.isAtLeastDirector(requester.getRole())) {
+            throw new ForbiddenActionException("Only a Director or Super Admin can view department activity.");
+        }
+
+        return departmentActivityRepository.findAll(pageable).map(a -> new DepartmentActivityResponse(
+                a.getId(),
+                a.getDepartmentName(),
+                a.getPerformedBy().getFullName(),
+                a.getTimestamp()
+        ));
     }
 
     /** A department's head must actually hold DIRECTOR-or-above — heading a department

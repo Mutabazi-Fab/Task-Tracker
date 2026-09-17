@@ -44,8 +44,10 @@ const SEVERITY_OPTIONS: { label: string; value: TaskSeverity }[] = [
 interface CreateTaskFormProps {
   /** subtasks is whatever InlineSubtasksField has collected (possibly empty) — the caller
    *  (CreateTaskModal) creates the team task first, then loops over these to create one
-   *  leaf subtask per filled row underneath it. */
-  onSubmit: (payload: CreateTaskRequest, subtasks: InlineSubtaskRow[]) => void
+   *  leaf subtask per filled row underneath it. documents is whatever files were picked
+   *  under "Supporting documents" (possibly empty) — uploaded the same way, sequentially,
+   *  once the task itself exists. */
+  onSubmit: (payload: CreateTaskRequest, subtasks: InlineSubtaskRow[], documents: File[]) => void
   onCancel: () => void
   submitting: boolean
 }
@@ -101,6 +103,7 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
   const [severity, setSeverity] = useState<TaskSeverity | ''>('')
   const [openingNote, setOpeningNote] = useState('')
   const [subtaskRows, setSubtaskRows] = useState<InlineSubtaskRow[]>([])
+  const [documents, setDocuments] = useState<File[]>([])
 
   const hasTarget =
     assigneeKind === 'TEAM' ? assignedTeamId !== ''
@@ -153,6 +156,7 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
       // Only meaningful when assigning to a Team — a half-filled row (missing either the
       // person or the title) is dropped rather than blocking submission.
       assigneeKind === 'TEAM' ? subtaskRows.filter((r) => r.personId !== '' && r.title.trim() !== '') : [],
+      documents,
     )
   }
 
@@ -161,6 +165,15 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
       <TextField label="Title" value={title} onChange={setTitle} placeholder="What needs doing" required />
 
       <TextField label="Description" value={description} onChange={setDescription} placeholder="Optional detail" />
+
+      <div className={styles.field}>
+        <span className={styles.label}>Supporting documents (optional)</span>
+        <input
+          type="file"
+          multiple
+          onChange={(e) => setDocuments(e.target.files ? Array.from(e.target.files) : [])}
+        />
+      </div>
 
       {!isCeo && (
         <div className={styles.field}>

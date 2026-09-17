@@ -1,34 +1,60 @@
+import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ROUTES } from '../../app/routes'
 import { PageHeader } from '../../components/layout/PageHeader'
+import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { QueryBoundary } from '../../components/feedback/QueryBoundary'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useAuth } from '../auth/useAuth'
 import { useDepartment } from './hooks/useDepartment'
 import { useTeams } from '../teams/hooks/useTeams'
+import { CreateTeamModal } from '../teams/components/CreateTeamModal'
+import { DeleteDepartmentModal } from './components/DeleteDepartmentModal'
 import { DepartmentAdminControls } from './components/DepartmentAdminControls'
 import styles from './DepartmentPage.module.css'
 
 /** Name, head Director, and every Team that belongs to it — open to any authenticated
- *  caller (read access is open org-chart-wide, only writes are Super-Admin-gated). */
+ *  caller (read access is open org-chart-wide). Writes split by tier: creating a team here
+ *  or deleting the department is Executive-or-above (or a Director who heads it, for
+ *  creating a team); renaming and reassigning the head stay Super-Admin-only. */
 export function DepartmentPage() {
   const { departmentId } = useParams<{ departmentId: string }>()
   const id = Number(departmentId)
 
   const departmentQuery = useDepartment(id)
   const teamsQuery = useTeams()
-  const { isSuperAdmin } = useAuth()
+  const { currentUser, isDirector, isExecutive } = useAuth()
   const navigate = useNavigate()
+  const [createTeamOpen, setCreateTeamOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   return (
     <QueryBoundary query={departmentQuery}>
       {(department) => {
         const teams = (teamsQuery.data ?? []).filter((team) => team.departmentId === department.id)
+        // Mirrors TeamServiceImpl.isHeadOfDepartment exactly: Executive/Super Admin may
+        // stand up a team in any department; a plain Director only in the one they
+        // actually head — never merely one they belong to.
+        const canCreateTeam = isExecutive || (isDirector && currentUser?.id === department.headDirectorId)
+        // Same tier as creating a department in the first place — DepartmentServiceImpl.
+        // deleteDepartment refuses a plain Director even if they head it.
+        const canDeleteDepartment = isExecutive
 
         return (
           <>
-            <PageHeader breadcrumb="Throughline / Departments" title={department.name} onBack={() => navigate(-1)} />
+            <PageHeader
+              breadcrumb="Throughline / Departments"
+              title={department.name}
+              onBack={() => navigate(-1)}
+              right={
+                canDeleteDepartment ? (
+                  <Button variant="danger" onClick={() => setDeleteOpen(true)}>
+                    Delete department
+                  </Button>
+                ) : undefined
+              }
+            />
 
             <Card>
               <div className={styles.header}>
@@ -40,7 +66,14 @@ export function DepartmentPage() {
             </Card>
 
             <Card>
-              <span className={styles.sectionHeading}>Teams</span>
+              <div className={styles.header}>
+                <span className={styles.sectionHeading}>Teams</span>
+                {canCreateTeam && (
+                  <Button variant="primary" onClick={() => setCreateTeamOpen(true)}>
+                    Create team
+                  </Button>
+                )}
+              </div>
               {teams.length === 0 ? (
                 <EmptyState title="No teams in this department yet" />
               ) : (
@@ -57,7 +90,28 @@ export function DepartmentPage() {
               )}
             </Card>
 
-            {isSuperAdmin && <DepartmentAdminControls department={department} />}
+            {/* Super-Admin-only controls (rename, reassign head) — deleting now lives in the
+                page header above, next to the department's name. */}
+            {isExecutive && <DepartmentAdminControls department={department} />}
+
+            {canCreateTeam && (
+              <CreateTeamModal
+                open={createTeamOpen}
+                onClose={() => setCreateTeamOpen(false)}
+                fixedDepartmentId={department.id}
+                fixedDepartmentName={department.name}
+              />
+            )}
+
+            {canDeleteDepartment && (
+              <DeleteDepartmentModal
+                departmentId={department.id}
+                departmentName={department.name}
+                open={deleteOpen}
+                onClose={() => setDeleteOpen(false)}
+                onDeleted={() => navigate(ROUTES.departments, { replace: true })}
+              />
+            )}
           </>
         )
       }}

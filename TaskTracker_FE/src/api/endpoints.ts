@@ -41,6 +41,10 @@ export const endpoints = {
     pendingDeadlineExtensions: () => `${BASE}/tasks/deadline-extensions/pending`,
     pin: (id: number | string) => `${BASE}/tasks/${id}/pin`,
     discussionComments: (id: number | string) => `${BASE}/tasks/${id}/discussion-comments`,
+    documents: (id: number | string) => `${BASE}/tasks/${id}/documents`,
+    document: (id: number | string, documentId: number | string) => `${BASE}/tasks/${id}/documents/${documentId}`,
+    documentDownload: (id: number | string, documentId: number | string) =>
+      `${BASE}/tasks/${id}/documents/${documentId}/download`,
   },
   people: {
     list: () => `${BASE}/people`,
@@ -82,6 +86,8 @@ export const endpoints = {
     detail: (id: number | string) => `${BASE}/departments/${id}`,
     rename: (id: number | string) => `${BASE}/departments/${id}`,
     changeHead: (id: number | string) => `${BASE}/departments/${id}/head`,
+    remove: (id: number | string) => `${BASE}/departments/${id}`,
+    activity: () => `${BASE}/departments/activity`,
   },
   notifications: {
     list: () => `${BASE}/notifications`,

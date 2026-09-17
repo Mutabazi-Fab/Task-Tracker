@@ -9,6 +9,7 @@ import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.TaskComment;
 import com.throughline.taskmanagement.model.TaskDeadlineExtensionRequest;
+import com.throughline.taskmanagement.model.TaskDocument;
 import com.throughline.taskmanagement.model.TaskReassignment;
 import com.throughline.taskmanagement.model.Team;
 import org.springframework.stereotype.Component;
@@ -62,6 +63,19 @@ public class TaskMapper {
         );
     }
 
+    public DocumentResponse toDocumentResponse(TaskDocument document) {
+        if (document == null) return null;
+        return new DocumentResponse(
+                document.getId(),
+                document.getFileName(),
+                document.getContentType(),
+                document.getFileSize(),
+                document.getUploadedBy().getFullName(),
+                document.getUploadedBy().getId(),
+                document.getUploadedAt()
+        );
+    }
+
     public DeadlineExtensionResponse toDeadlineExtensionResponse(TaskDeadlineExtensionRequest request) {
         if (request == null) return null;
         return new DeadlineExtensionResponse(
@@ -109,29 +123,31 @@ public class TaskMapper {
         );
     }
 
-    /** A rollup task (TEAM/DEPARTMENT) never carries its own PROGRESS comments — its
-     *  percentage is purely derived from its children (see TaskServiceImpl.
-     *  recalculateParentRollup) — so without this, its Trend chart on the task detail page
-     *  is always empty, even though its rollup value genuinely does move over time as those
-     *  children log progress. Reconstructs that history by replaying every descendant leaf's
-     *  own comment timeline in chronological order, recomputing this task's rollup value at
-     *  each event the exact same way recalculateParentRollup computes it live — average of
-     *  the direct children's value — just evaluated at every historical instant instead of
-     *  only "now" (the reconstruction's value at the latest instant always matches the
-     *  task's actual stored progressPercentage, by construction).
+    /** A rollup task's (TEAM/DEPARTMENT) percentage is purely derived from its children (see
+     *  TaskServiceImpl.recalculateParentRollup) — so its Trend chart has to be reconstructed
+     *  from them too, by replaying every descendant leaf's own comment timeline in
+     *  chronological order and recomputing this task's rollup value at each event the exact
+     *  same way recalculateParentRollup computes it live — average of the direct children's
+     *  value — just evaluated at every historical instant instead of only "now" (the
+     *  reconstruction's value at the latest instant always matches the task's actual stored
+     *  progressPercentage, by construction).
      *
-     *  An individually-logged task (its own PROGRESS comments non-empty) is the base case —
-     *  its real history, unchanged from before. A task with neither its own comments nor any
-     *  children (a fresh task nobody's touched yet) yields an empty timeline, same as always. */
+     *  Which branch applies is decided by assigneeType, NOT by whether the task happens to
+     *  have its own PROGRESS-type comments: every task, rollup or not, gets one such comment
+     *  at creation (TaskServiceImpl.addOpeningComment never sets a type, and TaskComment.type
+     *  defaults to PROGRESS) — treating "has any own PROGRESS comment" as "is individually
+     *  tracked" was the original (buggy) signal here, and it meant a rollup task's real
+     *  reconstruction never ran: its lone opening-note comment short-circuited straight past
+     *  it, leaving the Trend chart showing just that one 0% point forever. An INDIVIDUAL
+     *  task's own comments ARE its real history, unchanged from before. */
     private List<TaskTimelineResponse> buildRollupTimeline(Task task) {
-        List<TaskTimelineResponse> ownProgress = task.getComments() == null ? List.of()
-                : task.getComments().stream()
-                        .filter(c -> c.getType() == CommentType.PROGRESS)
-                        .sorted(Comparator.comparing(TaskComment::getCreatedAt))
-                        .map(this::toTimelineResponse)
-                        .toList();
-        if (!ownProgress.isEmpty()) {
-            return ownProgress;
+        if (task.getAssigneeType() == AssigneeType.INDIVIDUAL) {
+            return task.getComments() == null ? List.of()
+                    : task.getComments().stream()
+                            .filter(c -> c.getType() == CommentType.PROGRESS)
+                            .sorted(Comparator.comparing(TaskComment::getCreatedAt))
+                            .map(this::toTimelineResponse)
+                            .toList();
         }
 
         List<Task> children = task.getSubtasks() == null ? List.of() : task.getSubtasks();
@@ -290,6 +306,8 @@ public class TaskMapper {
                 task.getSubtasks().stream().map(this::toSubtaskSummary).toList() : List.of();
         List<DeadlineExtensionResponse> deadlineExtensions = task.getDeadlineExtensionRequests() != null ?
                 task.getDeadlineExtensionRequests().stream().map(this::toDeadlineExtensionResponse).toList() : List.of();
+        List<DocumentResponse> documents = task.getDocuments() != null ?
+                task.getDocuments().stream().map(this::toDocumentResponse).toList() : List.of();
 
         return new TaskDetailResponse(
                 task.getId(),
@@ -322,6 +340,7 @@ public class TaskMapper {
                 comments,
                 reassignments,
                 deadlineExtensions,
+                documents,
                 timeline,
                 task.getCreatedAt(),
                 task.getUpdatedAt()

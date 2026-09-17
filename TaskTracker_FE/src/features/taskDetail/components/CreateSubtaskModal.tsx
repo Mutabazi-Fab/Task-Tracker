@@ -4,6 +4,7 @@ import { Modal } from '../../../components/ui/Modal'
 import { ErrorMessage } from '../../../components/ui/ErrorMessage'
 import { useCreateSubtask } from '../hooks/useCreateSubtask'
 import { createSubtask } from '../../tasks/api/tasks.api'
+import { addDocument } from '../api/taskDetail.api'
 import { CreateSubtaskForm } from './CreateSubtaskForm'
 import type { InlineSubtaskRow } from '../../tasks/components/InlineSubtasksField'
 import type { TaskSource } from '../../../types/task.types'
@@ -49,53 +50,80 @@ export function CreateSubtaskModal({
   const queryClient = useQueryClient()
   const [isCreatingLeafSubtasks, setIsCreatingLeafSubtasks] = useState(false)
   const [leafSubtaskError, setLeafSubtaskError] = useState<string | null>(null)
+  const [isUploadingDocuments, setIsUploadingDocuments] = useState(false)
+  const [documentError, setDocumentError] = useState<string | null>(null)
 
   async function handleSubmit(
     payload: Parameters<typeof createImplementationTask.mutateAsync>[0],
     subtasks: InlineSubtaskRow[],
+    documents: File[],
   ) {
     setLeafSubtaskError(null)
+    setDocumentError(null)
     const created = await createImplementationTask.mutateAsync(payload)
+    let hadFailure = false
 
-    if (subtasks.length === 0) {
-      onClose()
-      return
+    if (subtasks.length > 0) {
+      setIsCreatingLeafSubtasks(true)
+      try {
+        // Sequential, not Promise.all — task codes are assigned as MAX(sequence)+1 at
+        // request time with no locking, so firing these concurrently lets two requests read
+        // the same max and collide on the unique task_code constraint. Awaiting one at a
+        // time means each row's insert has already committed before the next one reads the
+        // max.
+        for (const row of subtasks) {
+          await createSubtask(created.id, {
+            title: row.title.trim(),
+            createdById: payload.createdById,
+            assignedPersonId: Number(row.personId),
+            dateAssigned: payload.dateAssigned,
+            deadline: payload.deadline,
+            openingNote: 'Added when the team was assigned.',
+          })
+        }
+      } catch (err) {
+        // The implementation task itself is already created and safe — only the inline leaf
+        // subtasks failed. Leaving the modal open means whoever's filling it in can see what
+        // went wrong; that task can still be found afterward and given subtasks the normal
+        // way even if this is abandoned.
+        const message = err && typeof err === 'object' && 'message' in err ? String(err.message) : null
+        setLeafSubtaskError(
+          message
+            ? `The implementation task was created, but adding its subtasks failed: ${message}`
+            : 'The implementation task was created, but adding its subtasks failed.',
+        )
+        hadFailure = true
+      } finally {
+        setIsCreatingLeafSubtasks(false)
+      }
     }
 
-    setIsCreatingLeafSubtasks(true)
-    try {
-      // Sequential, not Promise.all — task codes are assigned as MAX(sequence)+1 at request
-      // time with no locking, so firing these concurrently lets two requests read the same
-      // max and collide on the unique task_code constraint. Awaiting one at a time means
-      // each row's insert has already committed before the next one reads the max.
-      for (const row of subtasks) {
-        await createSubtask(created.id, {
-          title: row.title.trim(),
-          createdById: payload.createdById,
-          assignedPersonId: Number(row.personId),
-          dateAssigned: payload.dateAssigned,
-          deadline: payload.deadline,
-          openingNote: 'Added when the team was assigned.',
-        })
+    if (documents.length > 0) {
+      setIsUploadingDocuments(true)
+      try {
+        // Sequential for the same reason as leaf subtasks above.
+        for (const file of documents) {
+          await addDocument(created.id, file)
+        }
+      } catch (err) {
+        const message = err && typeof err === 'object' && 'message' in err ? String(err.message) : null
+        setDocumentError(
+          message
+            ? `The task was created, but uploading its documents failed: ${message}`
+            : 'The task was created, but uploading its documents failed.',
+        )
+        hadFailure = true
+      } finally {
+        setIsUploadingDocuments(false)
       }
-      // createImplementationTask's own onSuccess already invalidated the task list/
-      // dashboard/people/teams queries for it — this covers the leaf subtasks' own rollup
-      // effect on top of that.
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    }
+
+    // createImplementationTask's own onSuccess already invalidated the task list/
+    // dashboard/people/teams queries for it — this covers the leaf subtasks' rollup effect
+    // and the documents list on top of that.
+    queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    if (!hadFailure) {
       onClose()
-    } catch (err) {
-      // The implementation task itself is already created and safe — only the inline leaf
-      // subtasks failed. Leaving the modal open means whoever's filling it in can see what
-      // went wrong; that task can still be found afterward and given subtasks the normal
-      // way even if this is abandoned.
-      const message = err && typeof err === 'object' && 'message' in err ? String(err.message) : null
-      setLeafSubtaskError(
-        message
-          ? `The implementation task was created, but adding its subtasks failed: ${message}`
-          : 'The implementation task was created, but adding its subtasks failed.',
-      )
-    } finally {
-      setIsCreatingLeafSubtasks(false)
     }
   }
 
@@ -103,6 +131,7 @@ export function CreateSubtaskModal({
     <Modal open={open} onClose={onClose} title={isDepartmentImplementation ? 'New implementation task' : 'New subtask'}>
       {createImplementationTask.isError && <ErrorMessage message={createImplementationTask.error.message} />}
       {leafSubtaskError && <ErrorMessage message={leafSubtaskError} />}
+      {documentError && <ErrorMessage message={documentError} />}
       <CreateSubtaskForm
         teamId={teamId}
         isDepartmentImplementation={isDepartmentImplementation}
@@ -111,7 +140,7 @@ export function CreateSubtaskModal({
         parentSourceLabel={parentSourceLabel}
         onSubmit={handleSubmit}
         onCancel={onClose}
-        submitting={createImplementationTask.isPending || isCreatingLeafSubtasks}
+        submitting={createImplementationTask.isPending || isCreatingLeafSubtasks || isUploadingDocuments}
       />
     </Modal>
   )

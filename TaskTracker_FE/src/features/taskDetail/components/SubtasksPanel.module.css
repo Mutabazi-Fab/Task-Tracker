@@ -5,6 +5,10 @@
   margin-bottom: var(--space-3);
 }
 
+.title {
+  font-weight: 700;
+}
+
 .list {
   display: flex;
   flex-direction: column;

@@ -40,3 +40,14 @@
 .field {
   min-width: 160px;
 }
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.dangerLabel {
+  composes: sectionLabel;
+  color: var(--status-pending);
+}

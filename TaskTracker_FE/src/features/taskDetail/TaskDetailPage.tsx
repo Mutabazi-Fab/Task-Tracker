@@ -24,6 +24,7 @@ import { RequestExtensionModal } from './components/RequestExtensionModal'
 import { ExtendDeadlineModal } from './components/ExtendDeadlineModal'
 import { DeadlineExtensionHistoryPanel } from './components/DeadlineExtensionHistoryPanel'
 import { SubtasksPanel } from './components/SubtasksPanel'
+import { DocumentsPanel } from './components/DocumentsPanel'
 import { DeleteTaskModal } from './components/DeleteTaskModal'
 import type { TaskDetail } from '../../types/task.types'
 import styles from './TaskDetailPage.module.css'
@@ -177,10 +178,18 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
           at all. Every task, regardless of shape, still gets the Discussion panel below. */}
       {task.assigneeType === 'INDIVIDUAL' && <AddCommentForm taskId={task.id} currentPercentage={task.progressPercentage} />}
 
-      <Card>
-        <span className={styles.sectionHeading}>Discussion</span>
-        <DiscussionPanel taskId={task.id} comments={task.comments} />
-      </Card>
+      {/* Documents rides alongside Discussion as a narrow sidebar rather than its own
+          full-width panel — usually just a handful of files, not worth the same amount of
+          page real estate as a whole conversation thread. */}
+      <div className={styles.discussionRow}>
+        <Card>
+          <span className={styles.sectionHeading}>Discussion</span>
+          <DiscussionPanel taskId={task.id} comments={task.comments} />
+        </Card>
+        <Card>
+          <DocumentsPanel taskId={task.id} documents={task.documents} />
+        </Card>
+      </div>
 
       {task.assigneeType === 'INDIVIDUAL' && (
         <Card>

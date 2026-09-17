@@ -12,17 +12,19 @@ import { formatDateTime } from '../../lib/formatDate'
 import { useAuth } from '../auth/useAuth'
 import { useRoleChangeActivity } from '../people/hooks/useRoleChangeActivity'
 import { useAccountStatusChangeActivity } from '../people/hooks/useAccountStatusChangeActivity'
+import { useDepartmentActivity } from '../departments/hooks/useDepartmentActivity'
 import { useMarkCategoryRead } from '../notifications/hooks/useMarkCategoryRead'
 import { useTaskActivity } from './hooks/useTaskActivity'
 import styles from './ActivityPage.module.css'
 
-type ActivityFilter = 'ALL' | 'TASK' | 'ROLE' | 'STATUS'
+type ActivityFilter = 'ALL' | 'TASK' | 'ROLE' | 'STATUS' | 'DEPARTMENT'
 
 const FILTER_OPTIONS: { label: string; value: ActivityFilter }[] = [
   { label: 'All', value: 'ALL' },
   { label: 'Tasks', value: 'TASK' },
   { label: 'Roles', value: 'ROLE' },
   { label: 'Account status', value: 'STATUS' },
+  { label: 'Departments', value: 'DEPARTMENT' },
 ]
 
 const PAGE_SIZE = 15
@@ -37,13 +39,15 @@ type Row =
   | { id: string; kind: 'TASK'; timestamp: string; taskCode: string; title: string; parentTaskCode: string | null; action: 'CREATED' | 'DELETED'; assigneeSummary: string; actorName: string }
   | { id: string; kind: 'ROLE'; timestamp: string; personName: string; changeLabel: string; reason: string | null; actorName: string }
   | { id: string; kind: 'STATUS'; timestamp: string; personName: string; changeLabel: string; reason: string | null; actorName: string }
+  | { id: string; kind: 'DEPARTMENT'; timestamp: string; departmentName: string; actorName: string }
 
 /**
  * Director or Super Admin only — every notable admin action in the org, in one feed: task
- * creation/deletion, role changes, and account activation/deactivation. Merges three
- * separate audit tables client-side (see FETCH_SIZE) rather than one new backend query,
- * matching how the two people-side logs already worked before this page existed. Not
- * linked from the nav for a Member, and redirects away outright if landed on directly.
+ * creation/deletion, role changes, account activation/deactivation, and department
+ * deletion. Merges four separate audit tables client-side (see FETCH_SIZE) rather than one
+ * new backend query, matching how the two people-side logs already worked before this page
+ * existed. Not linked from the nav for a Member, and redirects away outright if landed on
+ * directly.
  */
 export function ActivityPage() {
   const { currentUser, isDirector } = useAuth()
@@ -53,6 +57,7 @@ export function ActivityPage() {
   const taskQuery = useTaskActivity(0, FETCH_SIZE)
   const roleQuery = useRoleChangeActivity(currentUser?.id ?? NaN)
   const statusQuery = useAccountStatusChangeActivity(currentUser?.id ?? NaN)
+  const departmentQuery = useDepartmentActivity(0, FETCH_SIZE)
   const markCategoryRead = useMarkCategoryRead()
 
   // Clears the Sidebar's "new activity" badge (currently just TASK_DELETED — see
@@ -64,7 +69,7 @@ export function ActivityPage() {
   }, [])
 
   const rows = useMemo<Row[] | undefined>(() => {
-    if (!taskQuery.data || !roleQuery.data || !statusQuery.data) return undefined
+    if (!taskQuery.data || !roleQuery.data || !statusQuery.data || !departmentQuery.data) return undefined
 
     const taskRows: Row[] = taskQuery.data.content.map((entry) => ({
       id: `task-${entry.id}`,
@@ -98,17 +103,25 @@ export function ActivityPage() {
       actorName: entry.changedByName,
     }))
 
-    return [...taskRows, ...roleRows, ...statusRows].sort(
+    const departmentRows: Row[] = departmentQuery.data.content.map((entry) => ({
+      id: `department-${entry.id}`,
+      kind: 'DEPARTMENT',
+      timestamp: entry.timestamp,
+      departmentName: entry.departmentName,
+      actorName: entry.performedByName,
+    }))
+
+    return [...taskRows, ...roleRows, ...statusRows, ...departmentRows].sort(
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     )
-  }, [taskQuery.data, roleQuery.data, statusQuery.data])
+  }, [taskQuery.data, roleQuery.data, statusQuery.data, departmentQuery.data])
 
   if (!isDirector) {
     return <Navigate to={ROUTES.dashboard} replace />
   }
 
-  const isLoading = taskQuery.isLoading || roleQuery.isLoading || statusQuery.isLoading
-  const error = taskQuery.error ?? roleQuery.error ?? statusQuery.error
+  const isLoading = taskQuery.isLoading || roleQuery.isLoading || statusQuery.isLoading || departmentQuery.isLoading
+  const error = taskQuery.error ?? roleQuery.error ?? statusQuery.error ?? departmentQuery.error
   const filteredRows = rows?.filter((row) => filter === 'ALL' || row.kind === filter)
   const totalPages = filteredRows ? Math.ceil(filteredRows.length / PAGE_SIZE) : 0
   const pageRows = filteredRows?.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
@@ -149,6 +162,16 @@ export function ActivityPage() {
                   </div>
                   <span className={row.action === 'CREATED' ? styles.created : styles.deleted}>{row.action}</span>
                   <span className={styles.assignee}>{row.assigneeSummary}</span>
+                  <span className={styles.actor}>by {row.actorName}</span>
+                  <span className={styles.timestamp}>{formatDateTime(row.timestamp)}</span>
+                </div>
+              ) : row.kind === 'DEPARTMENT' ? (
+                <div key={row.id} className={styles.row}>
+                  <div className={styles.titleCol}>
+                    <span className={styles.title}>{row.departmentName}</span>
+                  </div>
+                  <span className={styles.deleted}>DELETED</span>
+                  <span className={styles.assignee} />
                   <span className={styles.actor}>by {row.actorName}</span>
                   <span className={styles.timestamp}>{formatDateTime(row.timestamp)}</span>
                 </div>

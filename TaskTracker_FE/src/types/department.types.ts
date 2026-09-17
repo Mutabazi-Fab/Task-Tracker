@@ -33,3 +33,13 @@ export interface ChangeDepartmentHeadRequest {
   newHeadDirectorId: number
   changedById: number
 }
+
+/** One row of GET /departments/activity — every department deletion, org-wide. Director or
+ *  Super Admin only. departmentName is a snapshot taken at the moment of deletion, not a
+ *  live lookup — the department no longer exists to look up. */
+export interface DepartmentActivity {
+  id: number
+  departmentName: string
+  performedByName: string
+  timestamp: string
+}

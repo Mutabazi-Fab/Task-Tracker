@@ -3,7 +3,10 @@ package com.throughline.taskmanagement.service;
 import com.throughline.taskmanagement.dto.request.ChangeDepartmentHeadRequest;
 import com.throughline.taskmanagement.dto.request.CreateDepartmentRequest;
 import com.throughline.taskmanagement.dto.request.RenameDepartmentRequest;
+import com.throughline.taskmanagement.dto.response.DepartmentActivityResponse;
 import com.throughline.taskmanagement.dto.response.DepartmentResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -23,4 +26,15 @@ public interface DepartmentService {
 
     /** Super-Admin-only. newHeadDirectorId must already hold the DIRECTOR role or above. */
     DepartmentResponse changeDepartmentHead(Long id, ChangeDepartmentHeadRequest request);
+
+    /** Executive-or-above, same tier as createDepartment — the CEO who can stand a
+     *  department up can take one down too, not just Super Admin. Fails if the department
+     *  still has any team or any person directly assigned to it (both are required,
+     *  non-nullable associations) — those have to be moved or removed first, rather than
+     *  this silently cascading away a whole department's teams and people. */
+    void deleteDepartment(Long id, Long actorId);
+
+    /** Director or Super Admin only — every department deletion, org-wide. Same visibility
+     *  tier as TaskService.getTaskActivity. */
+    Page<DepartmentActivityResponse> getDepartmentActivity(Long requesterId, Pageable pageable);
 }

@@ -166,6 +166,10 @@ public class Task {
     @OrderBy("requestedAt ASC")
     private List<TaskDeadlineExtensionRequest> deadlineExtensionRequests = new ArrayList<>();
 
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("uploadedAt ASC")
+    private List<TaskDocument> documents = new ArrayList<>();
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

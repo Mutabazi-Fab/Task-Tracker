@@ -76,6 +76,7 @@ public record TaskDetailResponse(
     List<CommentResponse> comments,
     List<ReassignmentResponse> reassignments,
     List<DeadlineExtensionResponse> deadlineExtensions,
+    List<DocumentResponse> documents,
     List<TaskTimelineResponse> progressTimeline,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
