@@ -56,10 +56,8 @@ public interface PersonService {
      *  newest first. */
     Page<AccountStatusChangeResponse> getAccountStatusChangeActivity(Long requesterId, Pageable pageable);
 
-    /** Super-Admin-only. Sends the person a password reset code (same flow as the
-     *  self-service "forgot password") for when they've lost access and can't request it
-     *  themselves. Fails if this person has never signed up — there's no password yet to
-     *  reset. Notifies the affected person that this happened. */
+    /** Super-Admin-only. Sends the person a password reset code (same flow as self-service
+     *  "forgot password"). Fails if this person has never signed up. */
     void sendPasswordReset(Long personId, SendPasswordResetRequest request);
 
     /** Self-only — a purely personal "what I'm focused on today" pointer, up to 3 at once.

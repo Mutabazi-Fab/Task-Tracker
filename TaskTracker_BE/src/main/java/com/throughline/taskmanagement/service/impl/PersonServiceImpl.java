@@ -110,17 +110,14 @@ public class PersonServiceImpl implements PersonService {
         person.setRole(targetRole);
         person.setDepartment(department);
         person.setPassword(passwordEncoder.encode(request.password()));
-        // The Super Admin who set this password is already vouching for this person and
-        // this email address — unlike the old self-service signup flow, there's no OTP
-        // step proving inbox control, so this starts verified rather than stuck unable to
-        // log in until a verification step that no longer exists.
+        // The Super Admin setting this password already vouches for the email address —
+        // no OTP step needed, so this starts verified.
         person.setEmailVerified(true);
 
         Person saved = personRepository.save(person);
 
-        // Best-effort — the person record is created either way; a flaky mail send
-        // shouldn't block whoever's onboarding them from doing so, they can always be
-        // told the credentials directly instead.
+        // Best-effort — a flaky mail send shouldn't block onboarding; credentials can
+        // always be shared directly instead.
         try {
             String roleWord = targetRole == Role.MEMBER ? "a team member" : "a " + targetRole.name().toLowerCase();
             mailService.send(

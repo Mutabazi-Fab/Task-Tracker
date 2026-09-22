@@ -26,9 +26,7 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
     List<Person> findByRoleIn(List<Role> roles);
 
     // Backs DepartmentServiceImpl.deleteDepartment's safety check — a department can't be
-    // deleted while any person is still directly assigned to it (Person.department is
-    // required, not nullable, independent of team membership), so this must come back
-    // empty first.
+    // deleted while any person is still directly assigned to it.
     boolean existsByDepartmentId(Long departmentId);
 
     // No findByTeamId — a person can belong to multiple teams now, so "which team is this

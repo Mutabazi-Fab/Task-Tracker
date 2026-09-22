@@ -97,31 +97,43 @@ public class Task {
     @Column
     private LocalDate deadline;
 
-    /** Who actually originated this task, settable by whoever creates it at any depth.
-     *  Nullable — most tasks are ordinary internal work with no mandate to record. */
+    /** Who actually originated this task — settable by whoever creates it, at any depth,
+     *  no role restriction. Nullable — most tasks are just ordinary internal work with
+     *  no need to record where the mandate came from. */
     @Enumerated(EnumType.STRING)
     private TaskSource source;
 
-    /** Free text alongside source (e.g. "Director Maj. Musoni", "GPO", "E&Y") — not a
-     *  Person FK, since these are often external/organizational. Null unless source is set. */
+    /** Free text alongside source (e.g. "Director Maj. Musoni", "GPO", "E&Y", "Board of
+     *  Directors") — not a Person FK, since these are often external/organizational, not
+     *  app users. Null unless source is also set. */
     @Column(length = 200)
     private String sourceLabel;
 
     /** Executive-only, settable at creation only — see TaskServiceImpl.createTask/
-     *  createLeafSubtask/createImplementationTask. Nullable — most tasks carry no
+     *  createLeafSubtask/createImplementationTask, all of which reject a non-Executive
+     *  creator's attempt to set this, at any depth. Nullable — most tasks carry no
      *  severity classification at all. */
     @Enumerated(EnumType.STRING)
     private TaskSeverity severity;
 
-    /** Manual toggle (see TaskService.setPinned, Director-or-above), NOT hard-derived from
-     *  severity. CRITICAL severity sets this true as a one-time default at creation only
-     *  and is never re-enforced, so a CRITICAL task can be freely un-pinned once on track. */
+    /** A manual, independently-editable toggle (see TaskService.setPinned,
+     *  Director-or-above) — NOT hard-derived from severity, since "needs eyes right now"
+     *  genuinely changes over a task's life independent of its fixed severity
+     *  classification. CRITICAL severity sets this true as a one-time default at
+     *  creation only (see the creation paths in TaskServiceImpl) and is never
+     *  re-enforced afterward, so a CRITICAL task can be freely un-pinned once it's
+     *  actually on track. */
     @Column(nullable = false)
     private boolean pinned = false;
 
-    /** For a subtask: set via addProgressComment. For a top-level task: NEVER set by a
-     *  comment — it's the average of its subtasks' percentages, recalculated by
-     *  TaskServiceImpl.recalculateParentRollup whenever a subtask changes. */
+    /**
+     * For a subtask: set only via addProgressComment (the comment's percentage), exactly
+     * as before hierarchy existed. For a top-level task: NEVER set by a comment — it's the
+     * average of this task's subtasks' percentages (0 if it has none yet), recalculated by
+     * TaskServiceImpl.recalculateParentRollup whenever a subtask's percentage or existence
+     * changes. A comment can still be added directly to a top-level task, but it's a
+     * narrative record only and never moves this value.
+     */
     @Column(nullable = false)
     private int progressPercentage = 0;
 
@@ -152,8 +164,13 @@ public class Task {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    /** When TaskStalenessJob last flagged this task — null if never flagged, or cleared by
-     *  addProgressComment/recalculateParentRollup once progress genuinely moves. Prevents
-     *  re-notifying every day for the same stale stretch. */
+    /**
+     * When TaskStalenessJob last notified someone this task hadn't moved in a while — null
+     * if it's never been flagged, or if it moved since the last flag (see
+     * TaskServiceImpl.addProgressComment/recalculateParentRollup, which both clear this the
+     * moment progress genuinely changes). Prevents re-notifying every single day for the
+     * same stale stretch; a task that goes stale, gets nudged, moves, then stalls again
+     * later gets a fresh notification for that new stretch.
+     */
     private LocalDateTime staleAlertSentAt;
 }

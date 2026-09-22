@@ -162,13 +162,9 @@ public class TaskServiceImpl implements TaskService {
         Person createdBy = personRepository.findById(request.createdById())
                 .orElseThrow(() -> new ResourceNotFoundException("createdById not found"));
 
-        // A DEPARTMENT-typed parent is always depth 0 (only an Executive creates one) — its
-        // child is the new depth-1 "implementation task", team- or individual-assigned, org-
-        // wide. Every other parent shape (a plain top-level TEAM task, or a depth-1 TEAM
-        // implementation task) uses the original leaf-subtask case: always INDIVIDUAL,
-        // always a member of the parent's own team. An INDIVIDUAL-typed parent is never a
-        // valid parent at all — falls through to the "no assigned team" rejection below,
-        // same as before this phase.
+        // A DEPARTMENT-typed parent's child is the new depth-1 "implementation task"
+        // (team- or individual-assigned, org-wide); every other parent shape uses the
+        // ordinary leaf-subtask case (always INDIVIDUAL, always on the parent's own team).
         if (parent.getAssigneeType() == AssigneeType.DEPARTMENT) {
             return createImplementationTask(parent, request, createdBy);
         }
@@ -190,11 +186,8 @@ public class TaskServiceImpl implements TaskService {
         }
         Long teamId = parent.getAssignedTeam().getId();
 
-        // isDirectorRole is purely for the CreatedByRole label below (also true for a Super
-        // Admin, recorded the same way as a Director's — no separate audit value just for
-        // that). It's NOT the authorization outcome: a plain Director must additionally
-        // head this team's own department (see isHeadOfDepartment) to actually be allowed
-        // through, same restriction as createTask/createImplementationTask.
+        // isDirectorRole only feeds the CreatedByRole audit label below — the actual
+        // authorization check is isHeadOfDepartment/isThisTeamsLeader further down.
         boolean isDirectorRole = Role.isAtLeastDirector(createdBy.getRole());
         boolean headsThisDepartment = isHeadOfDepartment(createdBy, parent.getAssignedTeam().getDepartment());
         boolean isThisTeamsLeader = teamMemberRepository.findByTeamIdAndPersonId(teamId, createdBy.getId())
@@ -238,13 +231,10 @@ public class TaskServiceImpl implements TaskService {
         return taskMapper.toDetailResponse(savedSubtask);
     }
 
-    /** The new depth-1 case: parent is a Department-assigned Executive task. Its
-     *  "implementation task" is team- or individual-assigned, exactly like a plain
-     *  top-level task's own creation (see createTask) — no team-membership restriction,
-     *  since this is the Department turning an org-wide mandate into real work, not a Team
-     *  Leader staffing their own roster. Restricted to that Department's own head Director
-     *  (or an Executive/Super Admin override) — not just any Director, since a Director
-     *  who doesn't head this Department has no standing over its Executive-level mandate. */
+    /** The depth-1 case: parent is a Department task. Its "implementation task" is team-
+     *  or individual-assigned, like a fresh top-level task (see createTask), with no team-
+     *  membership restriction. Restricted to that Department's own head Director (or an
+     *  Executive/Super Admin override). */
     private TaskDetailResponse createImplementationTask(Task parent, CreateSubtaskRequest request, Person createdBy) {
         Department department = parent.getAssignedDepartment();
         if (!isHeadOfDepartment(createdBy, department)) {
@@ -298,10 +288,8 @@ public class TaskServiceImpl implements TaskService {
 
         parent.getSubtasks().add(savedTask);
         recalculateParentRollup(parent);
-        // Reuses the plain "you were handed a new task" notification, not
-        // notifySubtaskAssigned — this reads to its recipient exactly like a fresh
-        // top-level assignment (a whole team or a single person taking on new work), not
-        // like being handed one slice of an already-known team task.
+        // Uses the "new task" notification, not notifySubtaskAssigned — this reads as a
+        // fresh assignment, not one slice of an already-known team task.
         notificationService.notifyTaskAssigned(savedTask, createdBy);
         recordActivity(savedTask, TaskActivityAction.CREATED, createdBy);
 
@@ -324,15 +312,10 @@ public class TaskServiceImpl implements TaskService {
         task.getComments().add(comment);
     }
 
-    /** Recomputes a task's percentage as the average of its own subtasks (0 if none),
-     *  called whenever one of them changes. Self-recursive: a depth-1 task under a
-     *  Department root can itself have a parent (the depth-0 Department task), which must
-     *  bubble the same way once this task's own rollup changes — nothing guarantees exactly
-     *  one depth-1 child per Department task, so genuine average-of-children rollup all the
-     *  way up is the only correct behavior. For the plain 2-level case this is a no-op
-     *  beyond the first call, since a depth-0 task has no parent of its own. Never called
-     *  for a comment added directly to a task that's rolled-up (TEAM-assigned) — that's
-     *  narrative only. */
+    /** Recomputes a task's percentage as the average of its own subtasks (0 if none).
+     *  Self-recursive so it bubbles all the way up a 3-level Department hierarchy, not just
+     *  one level. Never called for a rolled-up (TEAM-assigned) task's own comments — those
+     *  are narrative only. */
     private void recalculateParentRollup(Task parent) {
         List<Task> subtasks = taskRepository.findByParentTaskId(parent.getId());
         int rollup = subtasks.isEmpty()
@@ -385,10 +368,7 @@ public class TaskServiceImpl implements TaskService {
         } else if (departmentId != null) {
             tasks = taskRepository.findByDepartmentId(departmentId, pinnedFirst);
         } else if (status != null) {
-            // Top-level tasks only, same reasoning as findByDepartmentId/AndStatus just
-            // above — this branch (and the plain findByParentTaskIsNull one right below)
-            // only ever runs when assignedPersonId is absent, i.e. never for a Member's own
-            // "My Tasks", where hiding subtasks would often leave them with nothing to see.
+            // Top-level only — this branch never runs for a Member's own "My Tasks" scope.
             tasks = taskRepository.findByStatusAndParentTaskIsNull(status, pinnedFirst);
         } else {
             tasks = taskRepository.findByParentTaskIsNull(pinnedFirst);
@@ -404,10 +384,8 @@ public class TaskServiceImpl implements TaskService {
         Task task = taskRepository.findWithDetailsById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        // Defense-in-depth: @Min/@Max on AddCommentRequest already reject an out-of-range
-        // percentage at the HTTP boundary, but this is the one place progress is actually
-        // written, so it must not trust the DTO alone. Skipped entirely when null — that's
-        // a valid, genuinely optional narrative-only comment, not a missing value to reject.
+        // Defense-in-depth beyond the DTO's own @Min/@Max — null is a valid, optional
+        // narrative-only comment, not a missing value to reject.
         if (request.percentageAtComment() != null
                 && (request.percentageAtComment() < 0 || request.percentageAtComment() > 100)) {
             throw new InvalidProgressException("percentageAtComment must be between 0 and 100");
@@ -417,45 +395,32 @@ public class TaskServiceImpl implements TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("Author not found"));
 
         long commentCount = taskCommentRepository.countByTaskId(taskId);
-        // TEAM and DEPARTMENT are both rolled up from children, never set by a comment
-        // directly — a DEPARTMENT task always has children (its implementation task), same
-        // reasoning as a plain team task's subtasks.
+        // TEAM and DEPARTMENT are always rolled up from children, never set directly.
         boolean isRolledUp = task.getAssigneeType() == AssigneeType.TEAM || task.getAssigneeType() == AssigneeType.DEPARTMENT;
-        // A narrative-only comment — no percentage sent at all — changes nothing about
-        // actual progress, whether that's because the task is rolled up (percentage is
-        // never trusted from a comment either way) or because the commenter explicitly
-        // chose to leave a note without logging a change.
+        // Either the task is rolled up, or no percentage was sent — nothing about actual
+        // progress changes either way.
         boolean isNarrativeOnly = isRolledUp || request.percentageAtComment() == null;
 
         TaskComment comment = new TaskComment();
         comment.setTask(task);
         comment.setAuthor(author);
-        // A narrative-only comment still needs SOME percentage on record for the trend/
-        // timeline chart, so it gets the task's own current progress instead of an
-        // arbitrary number, or one the commenter never actually supplied.
+        // A narrative-only comment still needs some percentage on record for the trend
+        // chart, so it snapshots the task's current value instead.
         comment.setPercentageAtComment(isNarrativeOnly ? task.getProgressPercentage() : request.percentageAtComment());
         comment.setBody(request.body());
         comment.setSequenceNumber((int) commentCount + 1);
-        // Always PROGRESS — this endpoint is the progress log specifically; a plain
-        // question/discussion message goes through addDiscussionComment instead, which
-        // never touches percentage/status at all (see CommentType).
+        // Always PROGRESS — a plain Q&A message goes through addDiscussionComment instead.
         comment.setType(CommentType.PROGRESS);
 
         taskCommentRepository.save(comment);
         task.getComments().add(comment);
 
         if (isNarrativeOnly) {
-            // No change to progress/status, and staleAlertSentAt is deliberately left
-            // untouched — a note that changes nothing shouldn't quietly defeat the
-            // stalled-task check by looking like real activity.
+            // staleAlertSentAt stays untouched — a note that changes nothing shouldn't
+            // quietly look like real progress to the stalled-task check.
         } else {
-            // Individually-assigned: a normal subtask (parentTask != null), or a task from
-            // before the hierarchy rework that's individually-assigned at the top level
-            // (parentTask == null but never got migrated to a real subtask) — either way,
-            // the comment's percentage IS this task's real progress. Checking assigneeType
-            // here rather than "parentTask == null" is what makes that legacy case work:
-            // the old check treated any parentless task as team-only/narrative-only, so a
-            // legacy individual task's comments silently never moved its percentage.
+            // Checking assigneeType (not parentTask == null) is what correctly covers a
+            // legacy individually-assigned top-level task too, not just ordinary subtasks.
             task.setProgressPercentage(request.percentageAtComment());
             recalculateStatus(task);
             task.setStaleAlertSentAt(null);
@@ -467,12 +432,9 @@ public class TaskServiceImpl implements TaskService {
         return taskMapper.toDetailResponse(taskRepository.save(task));
     }
 
-    /** A plain Q&A message — fully open (any authenticated person may post on any task,
-     *  same as the progress log always has been; see the plan's confirmed decision to keep
-     *  discussion visibility/authorship completely open rather than restricting it to a
-     *  private Executive-Director channel). Never touches percentage/status/
-     *  staleAlertSentAt. Threading is one level deep, same as Instagram: replying to a
-     *  reply attaches to that reply's own top-level parent instead of nesting further. */
+    /** A plain Q&A message, fully open to any authenticated person on any task. Never
+     *  touches percentage/status/staleAlertSentAt. Threading is one level deep — a reply to
+     *  a reply attaches to its own top-level parent instead of nesting further. */
     @Override
     public TaskDetailResponse addDiscussionComment(Long taskId, AddDiscussionCommentRequest request) {
         Task task = taskRepository.findWithDetailsById(taskId)
@@ -527,10 +489,8 @@ public class TaskServiceImpl implements TaskService {
 
         boolean isDepartmentTask = task.getAssigneeType() == AssigneeType.DEPARTMENT;
         if (isDepartmentTask) {
-            // A different, higher tier than the team-leader-or-Director rule below — moving
-            // a whole Department task to a different Department is the same authority as
-            // creating one in the first place (see createTask), not something a Director
-            // who happens to lead a team gets a say in.
+            // Moving a whole Department task is the same authority as creating one — not a
+            // plain team-leader-or-Director call.
             if (!Role.isAtLeastExecutive(reassignedBy.getRole())) {
                 throw new ForbiddenActionException(
                         "Only an Executive or Super Admin can reassign a Department-level task to a different department.");
@@ -546,11 +506,9 @@ public class TaskServiceImpl implements TaskService {
         reassignment.setFromTeam(task.getAssignedTeam());
         reassignment.setFromDepartment(task.getAssignedDepartment());
 
-        // "Top-level-shaped" covers a true depth-0 task AND a depth-1 implementation task
-        // under a Department root — both are staffed the same free-form way (team OR
-        // individual, no membership restriction). Only a real leaf subtask (depth 1 under a
-        // plain team task, or depth 2 under a Department's team-assigned implementation
-        // task) is restricted to reassignSubtask's "same team, individual only" rule.
+        // "Top-level-shaped" covers a real depth-0 task and a depth-1 Department
+        // implementation task — both staffed freely. Only a true leaf subtask is
+        // restricted to reassignSubtask's "same team, individual only" rule.
         boolean isTopLevelShaped = isTopLevelShaped(task);
         if (isDepartmentTask) {
             reassignDepartmentTask(task, request, reassignment);
@@ -576,11 +534,8 @@ public class TaskServiceImpl implements TaskService {
         return taskMapper.toDetailResponse(savedTask);
     }
 
-    /** Moves a Department-level task (always depth 0) to a different Department entirely —
-     *  e.g. the CEO's office realizes what was handed to IT actually belongs to
-     *  Cybersecurity. Never changes assigneeType (stays DEPARTMENT), only which Department
-     *  owns it — its (not yet created, or already-created) implementation task is
-     *  untouched by this, same as reassigning a top-level task never touches its subtasks. */
+    /** Moves a Department-level task to a different Department. Never changes assigneeType,
+     *  only which Department owns it — its implementation task, if any, is untouched. */
     private void reassignDepartmentTask(Task task, ReassignTaskRequest request, TaskReassignment reassignment) {
         if (request.newDepartmentId() == null) {
             throw new InvalidAssignmentException("newDepartmentId is required to reassign a Department-level task.");
@@ -597,20 +552,15 @@ public class TaskServiceImpl implements TaskService {
         task.setAssignedDepartment(newDepartment);
     }
 
-    /** True for a real depth-0 task, and for a depth-1 implementation task directly under a
-     *  Department root — both are staffed the same free-form way as a brand-new top-level
-     *  task. False for an ordinary leaf subtask, which is restricted to one team. */
+    /** True for a real depth-0 task, or a depth-1 Department implementation task — both
+     *  staffed as freely as a brand-new top-level task. False for an ordinary leaf subtask. */
     private boolean isTopLevelShaped(Task task) {
         return task.getParentTask() == null || task.getParentTask().getAssigneeType() == AssigneeType.DEPARTMENT;
     }
 
-    /** Executive/Super Admin always qualifies. A plain DIRECTOR only qualifies when they
-     *  are the actual head of this department (Department.headDirector) — not merely a
-     *  Director who happens to belong to it. "The one they head" is the whole boundary for
-     *  every cross-department write action in this class: creating a task/subtask for a
-     *  team or person outside it, reassigning or deleting a task that lives there, pinning
-     *  one, etc. A Director who doesn't head a department has no more standing over its
-     *  teams/tasks than a Director from a completely unrelated one. */
+    /** Executive/Super Admin always qualifies. A Director only qualifies if they actually
+     *  head this department (Department.headDirector), not merely belong to it — the
+     *  boundary for every cross-department write action in this class. */
     private boolean isHeadOfDepartment(Person person, Department department) {
         if (Role.isAtLeastExecutive(person.getRole())) {
             return true;
@@ -622,11 +572,8 @@ public class TaskServiceImpl implements TaskService {
                 && department.getHeadDirector().getId().equals(person.getId());
     }
 
-    /** Same department-derivation rule used elsewhere (e.g. TaskRepository.findByDepartmentId's
-     *  explicit LEFT-JOIN dance in JPQL, here just three fields on an already-loaded Task,
-     *  exactly one of which is ever set): assignedDepartment directly for a DEPARTMENT-type
-     *  task, the team's own department for a TEAM-type one, the assignee's own department
-     *  for an INDIVIDUAL one. */
+    /** A task's own department: assignedDepartment directly, the team's department, or the
+     *  assignee's own department — exactly one of these is ever set. */
     private Department resolveTaskDepartment(Task task) {
         return switch (task.getAssigneeType()) {
             case DEPARTMENT -> task.getAssignedDepartment();
@@ -645,15 +592,10 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    /** Deleting is narrower than "any Director" — called only once the caller is already
-     *  confirmed Director-or-above (see deleteTask's own role floor). A Director may only
-     *  delete a task they personally created (assignedBy == them) AND that still lives
-     *  within the department they head — both, not just ownership: createTask/createSubtask
-     *  now already prevent a Director from creating anything outside their own department
-     *  going forward, but this is the defense-in-depth check for older data or any other
-     *  path that might otherwise let it slip through. Executive/Super Admin can always
-     *  delete anything, regardless of who created it or where — the same override tier used
-     *  everywhere else in this app (reassignment, deadline decisions). */
+    /** Called once the caller is already confirmed Director-or-above. A Director may only
+     *  delete a task they personally created, within the department they head — a
+     *  defense-in-depth check beyond what createTask/createSubtask already enforce.
+     *  Executive/Super Admin can always delete anything, regardless of who created it. */
     private void requireCanDelete(Person actor, Task task) {
         if (Role.isAtLeastExecutive(actor.getRole())) {
             return;
@@ -667,13 +609,8 @@ public class TaskServiceImpl implements TaskService {
     }
 
     /** Only a Director who heads this task's own department, an Executive/Super Admin, or
-     *  the leader of the team that currently owns this task, may reassign it — an ordinary
-     *  team member cannot, and a Director from an unrelated department cannot either, even
-     *  though they outrank a plain Member. "The team that currently owns this task" is the
-     *  task's OWN team when it's top-level-shaped (a real depth-0 task, or a depth-1
-     *  Department implementation task — see isTopLevelShaped), or its parent's team for an
-     *  ordinary leaf subtask; "this task's own department" is resolveTaskDepartment's
-     *  derivation off wherever it currently sits, before this reassignment moves it. */
+     *  the leader of the team that currently owns this task, may reassign it — not an
+     *  ordinary member, and not a Director from an unrelated department. */
     private void requireCanReassign(Person actor, Task task) {
         if (isHeadOfDepartment(actor, resolveTaskDepartment(task))) {
             return;
@@ -801,13 +738,9 @@ public class TaskServiceImpl implements TaskService {
         return taskMapper.toDetailResponse(taskRepository.save(task));
     }
 
-    /** Bounds dateAssigned on both sides — mirrors maxAssignableDate/minAssignableDate on
-     *  the frontend, which keep the date picker from offering either mistake in the first
-     *  place, but this is the authoritative check. Forward: a typo guard only (e.g. picking
-     *  2036 instead of 2026). Backward: a real integrity rule, not just a typo guard — real
-     *  backfilling (recording a task that actually started last quarter, before anyone got
-     *  around to entering it) fits comfortably inside 3 months; anything older reads as a
-     *  fat-fingered date and skews "how old is this task" reporting/audit history. */
+    /** Bounds dateAssigned: no more than a year ahead (typo guard), and no more than 3
+     *  months in the past (real backfilling fits that; anything older is likely a mistyped
+     *  date). The authoritative check — mirrors the frontend's own date-picker limits. */
     private void requireReasonableDate(LocalDate dateAssigned) {
         if (dateAssigned.isAfter(LocalDate.now().plusYears(1))) {
             throw new InvalidAssignmentException("dateAssigned can't be more than a year in the future.");
@@ -817,22 +750,17 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    /** A deadline before the task even starts makes no sense — checked once at creation,
-     *  same "typo guard" spirit as requireReasonableDate. Never re-checked afterward: the
-     *  extension workflow only ever moves a deadline later (see requestDeadlineExtension/
-     *  extendDeadlineDirectly), so it can never regress behind dateAssigned once past this. */
+    /** A deadline before the task starts makes no sense — checked once at creation. Never
+     *  re-checked afterward, since the extension workflow only ever moves it later. */
     private void requireDeadlineNotBeforeAssignment(LocalDate dateAssigned, LocalDate deadline) {
         if (deadline.isBefore(dateAssigned)) {
             throw new InvalidAssignmentException("deadline can't be before dateAssigned.");
         }
     }
 
-    /** source/sourceLabel are open to anyone creating a task, at any depth. severity is
-     *  Executive-only — a Director creating a depth-1 task under a Department root still
-     *  can't set it, even when the Department task above it is CRITICAL. CRITICAL sets
-     *  pinned = true as a one-time default here, at creation only — pinning itself stays
-     *  a separate, independently-editable toggle afterward (see setPinned), never
-     *  re-enforced from here. */
+    /** source/sourceLabel are open to any creator. severity is Executive-only — even a
+     *  Director creating a task under a CRITICAL Department root can't set it. CRITICAL
+     *  auto-pins once, at creation only; pinning stays independently editable afterward. */
     private void applySourceAndSeverity(Task task, TaskSource source, String sourceLabel, TaskSeverity severity, Person createdBy) {
         task.setSource(source);
         task.setSourceLabel(sourceLabel);
@@ -868,18 +796,14 @@ public class TaskServiceImpl implements TaskService {
 
         Task parent = task.getParentTask();
 
-        // Recorded before the delete, not after — recordActivity reads taskCode/title/
-        // assignee straight off the entity, which won't exist to read from once it's gone.
-        // Only this one task gets a DELETED entry, not each subtask a cascade takes with
-        // it — the log is "what did a Director/Super Admin just do", not a full cascade trace.
+        // Both recorded before the delete — they read taskCode/title off the entity, which
+        // won't exist to read from once it's gone. Only this one task gets a log entry, not
+        // the whole cascade it takes with it.
         recordActivity(task, TaskActivityAction.DELETED, actor);
-        // Same "before it's gone" timing as recordActivity, and the same reasoning —
-        // notifyTaskDeleted reads the task's own title/code off the entity too.
         notificationService.notifyTaskDeleted(task, actor);
 
-        // Deleting a top-level task cascades to its subtasks (Task.subtasks is
-        // CascadeType.ALL + orphanRemoval). Deleting a subtask needs the parent's rollup
-        // recomputed afterward, since its subtask set just shrank.
+        // Cascades to subtasks (Task.subtasks is CascadeType.ALL + orphanRemoval). Deleting
+        // a subtask needs the parent's rollup recomputed afterward.
         taskRepository.delete(task);
 
         if (parent != null) {
@@ -1081,26 +1005,19 @@ public class TaskServiceImpl implements TaskService {
         List<TaskDeadlineExtensionRequest> pending =
                 taskDeadlineExtensionRequestRepository.findByStatusOrderByRequestedAtDesc(ExtensionRequestStatus.PENDING);
 
-        // A Super Admin's override authority (see requireCanApprove/requireCanReject/
-        // isDeadlineOverrideTier) means they CAN decide any request, but neither
-        // resolveDeadlineDecider nor resolveDeadlineApprover ever actually resolves TO them
-        // — a Super Admin doesn't create tasks in the normal flow, so they'd never naturally
-        // show up as anyone's decider/approver and this inbox would always read empty for
-        // them even though the authority is real. Show every pending request, org-wide,
-        // instead — the one tier that genuinely oversees all of it.
+        // A Super Admin never naturally resolves as anyone's decider/approver (they don't
+        // create tasks in the normal flow), so this inbox would always read empty for them
+        // despite their real override authority — show every pending request instead.
         if (viewer.getRole() == Role.SUPER_ADMIN) {
             return pending.stream()
                     .map(request -> taskMapper.toPendingExtensionResponse(request, true))
                     .toList();
         }
 
-        // The rejecter always sees it immediately. The approver only sees it once it's been
-        // explicitly forwarded to them (see forwardExtensionRequestToApprover) — on a
-        // CEO-mandated chain that's a distinct person from the rejecter, and the whole point
-        // of forwarding is that the CEO's inbox doesn't fill up with every request the
-        // moment it's made, only the ones a Director actually decided are worth escalating.
-        // On an ordinary Director-originated chain, rejecter and approver are the same
-        // person, so this is unaffected — they see their own requests right away either way.
+        // The rejecter sees it immediately; the approver only once it's explicitly
+        // forwarded (see forwardExtensionRequestToApprover) — keeps the CEO's inbox from
+        // filling with every request automatically on a CEO-mandated chain. On an ordinary
+        // Director-originated chain, rejecter and approver are the same person either way.
         return pending.stream()
                 .filter(request -> {
                     Task task = request.getTask();
@@ -1108,9 +1025,8 @@ public class TaskServiceImpl implements TaskService {
                     boolean isApprover = resolveDeadlineApprover(task).getId().equals(viewerId);
                     return isDecider || (isApprover && request.getForwardedAt() != null);
                 })
-                // canApproveDeadline tells the frontend which action(s) this particular
-                // viewer actually has on each row, so a Director who's only the rejecter
-                // doesn't get shown an Approve button that would just fail.
+                // Tells the frontend which action(s) this viewer actually has, so a
+                // rejecter-only Director doesn't see an Approve button that would just fail.
                 .map(request -> taskMapper.toPendingExtensionResponse(request, canApproveDeadline(viewer, request.getTask())))
                 .toList();
     }
@@ -1251,11 +1167,8 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    /** Rejecting a request: this task's own deadline decider (see resolveDeadlineDecider),
-     *  or the override tier. A "no" changes nothing the mandate above this task depended on,
-     *  so — unlike approving, see canApproveDeadline — this is never escalated further even
-     *  on a CEO-mandated chain (see isCeoMandated): the Director a request lands on doesn't
-     *  need the CEO's sign-off just to decline it. */
+    /** Rejecting: this task's own deadline decider, or the override tier. Never escalated
+     *  further, even on a CEO-mandated chain — a "no" doesn't need the CEO's sign-off. */
     private boolean canRejectDeadline(Person actor, Task task) {
         return isDeadlineOverrideTier(task, actor) || resolveDeadlineDecider(task).getId().equals(actor.getId());
     }
@@ -1267,18 +1180,12 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    /** Approving a request, or extending directly (an implicit, immediate approval — see
-     *  extendDeadlineDirectly): changes the deadline that whatever mandate sits above this
-     *  task was built around, so on a CEO-mandated chain (its root task was assigned by an
-     *  Executive/Super Admin — see isCeoMandated) only an Executive-or-above may grant it,
-     *  no matter how far down the hierarchy this particular task sits or who directly
-     *  created it — a Director who made this task an implementation task under the CEO's
-     *  own Department task can still reject a request on it (see canRejectDeadline), but
-     *  can't be the one to say yes. Everywhere else (an ordinary Director-originated
-     *  hierarchy), unchanged: same authority as rejecting. Also backs
-     *  PendingExtensionRequestResponse.canApprove, so the "Requests" inbox can hide/disable
-     *  the Approve action for a viewer who can only ever reject a given request instead of
-     *  showing a button that would just fail. */
+    /** Approving (or a direct extension — an implicit, immediate approval): on a
+     *  CEO-mandated chain, only Executive-or-above may grant it, no matter how far down the
+     *  hierarchy or who created this particular task — a Director can still reject such a
+     *  request, just not approve it. Otherwise the same authority as rejecting. Also backs
+     *  the "Requests" inbox's canApprove flag, so it can hide an Approve button that would
+     *  just fail. */
     private boolean canApproveDeadline(Person actor, Task task) {
         if (isCeoMandated(task) && !Role.isAtLeastExecutive(actor.getRole())) {
             return false;
@@ -1304,25 +1211,16 @@ public class TaskServiceImpl implements TaskService {
         return current;
     }
 
-    /** True when this task's whole hierarchy originates from an Executive/Super Admin's own
-     *  mandate — i.e. its root is a Department task the CEO (or Super Admin) assigned
-     *  directly, not an ordinary top-level task a plain Director created on their own
-     *  initiative. Everything below such a root — the Director's implementation task, and
-     *  any leaf subtask under that — inherits the same "only the CEO actually approves"
-     *  rule (see requireCanApprove), regardless of who directly created each individual
-     *  task along the way. */
+    /** True when this task's hierarchy originates from an Executive/Super Admin's own
+     *  mandate (a Department task, not an ordinary Director-created one). Everything below
+     *  that root inherits the same "only the CEO actually approves" rule. */
     private boolean isCeoMandated(Task task) {
         return Role.isAtLeastExecutive(findRoot(task).getAssignedBy().getRole());
     }
 
-    /** The true approving authority for this task's deadline. Same walk as
-     *  resolveDeadlineDecider below, except it doesn't stop at the first Director-tier
-     *  assignedBy it finds: on a CEO-mandated chain (see isCeoMandated), the actual approver
-     *  is the root's own assignedBy — the CEO (or Super Admin) who set that mandate — even
-     *  though a Director further down is who the request first lands on and who resolves as
-     *  its rejecter. Identical to resolveDeadlineDecider whenever the chain isn't
-     *  CEO-mandated (an ordinary Director-originated hierarchy has only one authority
-     *  either way). */
+    /** The true approving authority: on a CEO-mandated chain, the root's own assignedBy
+     *  (the CEO), even though a Director further down is who the request first lands on and
+     *  resolves as its rejecter. Identical to resolveDeadlineDecider otherwise. */
     private Person resolveDeadlineApprover(Task task) {
         Task root = findRoot(task);
         if (Role.isAtLeastExecutive(root.getAssignedBy().getRole())) {
@@ -1331,14 +1229,9 @@ public class TaskServiceImpl implements TaskService {
         return resolveDeadlineDecider(task);
     }
 
-    /** Deadline decisions are a Director's job, not a Team Leader's — a Team Leader can
-     *  create a leaf subtask (see createLeafSubtask), which makes them that subtask's own
-     *  assignedBy, but they're still just a Member as far as authority over a deadline
-     *  goes. So: use this task's own assignedBy if they already hold Director-or-above,
-     *  otherwise walk up to its parent (whose creator is always Director-or-above — every
-     *  task shape ABOVE a plain leaf subtask is created by a Director, an Executive, or a
-     *  Department's head Director, all of which satisfy this) and use that. Chain of
-     *  command: whoever's actually doing the work requests, but a real Director decides. */
+    /** Deadline decisions are a Director's job, not a Team Leader's, even though a Team
+     *  Leader can be a leaf subtask's own assignedBy. Uses this task's own assignedBy if
+     *  already Director-or-above, else walks up to the nearest ancestor whose creator is. */
     private Person resolveDeadlineDecider(Task task) {
         Task current = task;
         while (current != null) {
@@ -1347,8 +1240,7 @@ public class TaskServiceImpl implements TaskService {
             }
             current = current.getParentTask();
         }
-        // Unreachable in practice — every hierarchy is rooted in a Director/Executive-
-        // created task, so the loop above always returns before running out of ancestors.
+        // Unreachable — every hierarchy is rooted in a Director-or-above-created task.
         return task.getAssignedBy();
     }
 }

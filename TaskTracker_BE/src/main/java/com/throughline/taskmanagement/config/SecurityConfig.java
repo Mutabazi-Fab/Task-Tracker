@@ -23,18 +23,11 @@ import java.util.List;
 
 /**
  * JWT, stateless. Every route requires a valid Bearer token except login/logout and the
- * account-recovery flows (you need to be able to log in before you have one). There is no
- * public self-registration endpoint — only a Super Admin can create a login-enabled account
- * (see PersonServiceImpl.createPerson), so nothing under /auth is permitAll for account
- * creation. Now that the frontend (Phase 7) attaches a token to every request, this is
- * authenticated() everywhere else — it used to be permitAll() while the frontend still
- * couldn't send one.
+ * account-recovery flows. There is no public self-registration endpoint — only a Super
+ * Admin can create a login-enabled account (see PersonServiceImpl.createPerson).
  *
- * No DaoAuthenticationProvider bean here on purpose: Spring Boot's security
- * auto-configuration builds one automatically from the CustomUserDetailsService
- * and PasswordEncoder beans it finds — constructing it by hand isn't needed
- * and just couples this class to that provider's constructor shape, which
- * has changed across Spring Security versions.
+ * No DaoAuthenticationProvider bean here on purpose: Spring Boot's auto-configuration
+ * builds one automatically from the CustomUserDetailsService and PasswordEncoder beans.
  */
 @Configuration
 @EnableWebSecurity
@@ -45,14 +38,9 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
 
-    /**
-     * Plain-text, on request — NOT the default and NOT recommended. NoOpPasswordEncoder
-     * stores/compares passwords as-is, no hashing at all. Anyone with database access
-     * (pgAdmin, a backup, a leak) can read every password directly. Swap back to
-     * `new BCryptPasswordEncoder()` to restore hashing — nothing else in the auth code
-     * needs to change either way, since it only ever goes through this PasswordEncoder
-     * abstraction.
-     */
+    /** Plain-text, on request — NOT recommended. Swap to `new BCryptPasswordEncoder()` to
+     *  restore hashing; nothing else needs to change since auth only goes through this
+     *  PasswordEncoder abstraction. */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return NoOpPasswordEncoder.getInstance();
@@ -91,11 +79,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/verify-email", "/api/v1/auth/resend-otp",
                                 "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password"
                         ).permitAll()
-                        // Phase 7: the frontend now sends a token on every request, so every
-                        // other route requires one too. Role/ownership rules beyond "is this
-                        // a real logged-in person" still live in each service method (the
-                        // requireDirector/requireDirectorOrTeamLeader-style checks) — this
-                        // layer only answers "who are you", not "are you allowed to do this".
+                        // Role/ownership rules beyond "is this a real logged-in person" live
+                        // in each service method — this layer only answers "who are you".
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

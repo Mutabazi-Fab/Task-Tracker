@@ -28,22 +28,16 @@ public record TaskListResponse(
     int reassignmentCount,
     CommentResponse lastComment,
     Long parentTaskId,
-    // Null for a top-level task (team- or individually-assigned) — set only for a real
-    // subtask, so a list view can tell "assigned to one person directly" apart from
-    // "a subtask of some team's top-level task", which otherwise both show the identical
-    // assigneeType INDIVIDUAL with nothing else distinguishing them.
+    // Null for a top-level task — set only for a real subtask, so a list view can tell
+    // "assigned to one person directly" apart from "a subtask of a team's top-level task".
     String parentTaskCode,
-    // The parent task's actual title — for UI copy like "under {parentTaskTitle}" instead
-    // of the less legible task code. Null wherever parentTaskCode is.
+    // For UI copy like "under {parentTaskTitle}" instead of the less legible task code.
     String parentTaskTitle,
     CreatedByRole createdByRole,
-    // Empty for a leaf subtask (can't nest further). For a top-level task, or a depth-1
-    // TEAM-assigned implementation task, lets a list view (e.g. the Director's Dashboard)
-    // show who created each subtask and who it's assigned to without a second call per row.
+    // Empty for a leaf subtask. Lets a list view show who created each subtask and who
+    // it's assigned to without a second call per row.
     List<SubtaskSummaryResponse> subtasks,
-    // 0 for a real top-level task (plain or Department-assigned), 1 for a direct child
-    // (an ordinary subtask, or a Department's implementation task), 2 for a grandchild
-    // (only possible under a Department-rooted hierarchy).
+    // 0 top-level, 1 direct child, 2 grandchild (Department-rooted hierarchy only).
     int depth,
     // Backs the "New" badge on a task list row — the frontend compares this against "now"
     // itself rather than the backend precomputing a boolean, so the badge disappears on its

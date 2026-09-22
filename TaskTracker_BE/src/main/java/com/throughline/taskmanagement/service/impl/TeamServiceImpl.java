@@ -164,10 +164,8 @@ public class TeamServiceImpl implements TeamService {
                 .orElse("no one");
         target.setLeader(true);
 
-        // Logged the same way an add/remove is — who changed it, to whom, and when — so
-        // this is answerable later without trusting anyone's memory of it. No reason is
-        // collected from the caller (this is a quick confirm, not a form), so one is
-        // generated from what actually changed instead of being left blank.
+        // Logged the same way an add/remove is. No reason is collected from the caller (a
+        // quick confirm, not a form), so one is generated from what actually changed.
         String reason = String.format("Team leadership reassigned from %s to %s.", previousLeaderName, target.getPerson().getFullName());
         logMembershipChange(team, target.getPerson(), TeamMembershipChangeAction.LEADER_CHANGED, changedBy, reason);
 
@@ -330,11 +328,8 @@ public class TeamServiceImpl implements TeamService {
     }
 
     /** Executive/Super Admin always qualifies. A plain DIRECTOR only qualifies when they
-     *  are the actual head of this department (Department.headDirector) — not merely a
-     *  member of it. A Director who belongs to a department without heading it has no more
-     *  standing over it than a Director from an unrelated department entirely; "the one
-     *  they head" is the whole boundary, per explicit product decision. Mirrors
-     *  TaskServiceImpl.createImplementationTask's identical restriction one level up. */
+     *  are the actual head of this department (Department.headDirector), not merely a
+     *  member of it. Mirrors TaskServiceImpl's identical restriction one level up. */
     private boolean isHeadOfDepartment(Person person, Department department) {
         if (Role.isAtLeastExecutive(person.getRole())) {
             return true;

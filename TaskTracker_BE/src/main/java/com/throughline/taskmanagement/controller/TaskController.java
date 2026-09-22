@@ -41,12 +41,10 @@ import java.util.List;
 
 /**
  * Every "who's doing this" field (createdById/authorId/reassignedById) is re-derived from
- * the caller's actual login (CurrentPersonResolver), not trusted from the request — see
- * TeamController for the same pattern. assignedPersonId on the two read endpoints is
- * likewise forced to the caller's own id unless they're a Director/Super Admin, who see
- * everything — a Member can no longer get "all tasks" just by leaving that param off. Once
- * scoped to a person, "their tasks" means what TaskRepository.findVisibleToPerson defines:
- * tasks assigned to them directly PLUS top-level tasks assigned to any team they belong to.
+ * the caller's actual login (CurrentPersonResolver), never trusted from the request.
+ * assignedPersonId on the read endpoints is likewise forced to the caller's own id unless
+ * they're a Director/Super Admin — see TaskRepository.findVisibleToPerson for what "their
+ * tasks" actually resolves to.
  */
 @RestController
 @RequestMapping("/api/v1/tasks")
@@ -297,11 +295,9 @@ public class TaskController {
         return viewer.getId();
     }
 
-    /** A plain Director (role DIRECTOR exactly — Executive/Super Admin stay fully
-     *  unrestricted) only ever sees tasks that belong to their own department; this is what
-     *  actually enforces that once assignedPersonId comes back null from
-     *  scopeToSelfUnlessDirector above. Null for anyone else, including a Director with no
-     *  department set at all — that's a data-hygiene gap, not a reason to show them nothing. */
+    /** A plain Director (role DIRECTOR exactly) only sees tasks in their own department,
+     *  once assignedPersonId comes back null from scopeToSelfUnlessDirector above. Null for
+     *  anyone else. */
     private Long departmentScopeForViewer(Person viewer) {
         if (viewer.getRole() != Role.DIRECTOR) {
             return null;

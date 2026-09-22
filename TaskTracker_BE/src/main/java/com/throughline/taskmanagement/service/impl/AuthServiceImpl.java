@@ -138,10 +138,8 @@ public class AuthServiceImpl implements AuthService {
     public void forgotPassword(ForgotPasswordRequest request) {
         Person person = personRepository.findByEmailIgnoreCase(request.email()).orElse(null);
 
-        // Deliberately silent for: unknown email, a never-claimed account (no password set
-        // yet — there's nothing to "forget"), or still within the resend cooldown. The
-        // caller sees the same generic outcome regardless (see AuthController), so this
-        // can't be used to probe which emails are registered or already claimed.
+        // Deliberately silent for unknown email, a never-claimed account, or the resend
+        // cooldown — same generic outcome either way, so this can't probe registered emails.
         if (person == null || person.getPassword() == null) {
             return;
         }

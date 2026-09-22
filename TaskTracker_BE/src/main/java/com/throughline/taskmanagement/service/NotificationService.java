@@ -43,12 +43,9 @@ public interface NotificationService {
      *  individual task/subtask, the team's Leader for a top-level team task. */
     void notifyTaskStalled(Task task, Person recipient, long daysSinceUpdate);
 
-    /** Called by TaskServiceImpl right after a top-level task is created. There's no
-     *  single "assignee" for a team-assigned task, so the team's Leader stands in as the
-     *  accountable person; an individually-assigned task notifies that person directly.
-     *  Never notifies whoever created the task, even if a Team Leader created it for their
-     *  own team and happens to lead it (there's no self-assignment case here — creation is
-     *  Director/Super-Admin-only). */
+    /** Called right after a top-level task is created. A team-assigned task notifies its
+     *  Leader (there's no single "assignee"); an individually-assigned task notifies that
+     *  person directly. Never notifies whoever created the task. */
     void notifyTaskAssigned(Task task, Person assignedBy);
 
     /** Called by TaskServiceImpl right after a subtask is created. Notifies the assigned
@@ -73,17 +70,13 @@ public interface NotificationService {
      *  notifyTaskReassigned. */
     void notifyDepartmentTaskReassigned(Task task, TaskReassignment reassignment);
 
-    /** Called by TaskServiceImpl right after a deadline extension is requested. Notifies
-     *  this task's own deadline decider — usually the person who'll decide it outright, but
-     *  on a CEO-mandated chain (see TaskServiceImpl.isCeoMandated) that's the Director the
-     *  request lands on first, not yet the CEO/Super Admin who must actually approve it —
-     *  see notifyDeadlineExtensionForwarded for when they find out. */
+    /** Called right after a deadline extension is requested. Notifies this task's deadline
+     *  decider — on a CEO-mandated chain, that's the Director it lands on first, not yet
+     *  the CEO (see notifyDeadlineExtensionForwarded for when they find out). */
     void notifyDeadlineExtensionRequested(TaskDeadlineExtensionRequest request);
 
-    /** Called by TaskServiceImpl right after a Director forwards a CEO-mandated request to
-     *  its true approver. Notifies that approver (the CEO/Super Admin) — the request only
-     *  reaches their "Requests" inbox from this point on, not automatically the moment it
-     *  was made (see TaskServiceImpl.forwardExtensionRequestToApprover). */
+    /** Called when a Director forwards a CEO-mandated request to its true approver.
+     *  Notifies that approver — their "Requests" inbox only sees it from this point on. */
     void notifyDeadlineExtensionForwarded(TaskDeadlineExtensionRequest request, Person forwardedBy);
 
     /** Called by TaskServiceImpl right after an extension request is approved. Notifies
@@ -99,14 +92,10 @@ public interface NotificationService {
      *  notifyTaskAssigned/notifyTaskStalled would resolve to. */
     void notifyDeadlineExtended(Task task, LocalDate previousDeadline, Person extendedBy);
 
-    /** Called by TaskServiceImpl right after a new TOP-LEVEL discussion message (no
-     *  parentComment) is posted. Notifies whoever's accountable for the task the same way
-     *  a subtask assignment does: every member of the owning team when there is one (this
-     *  task's own team if it's TEAM-assigned, or its parent's team for an ordinary leaf
-     *  subtask — so a Director commenting on one member's subtask reaches the whole team,
-     *  not just that one assignee), the individual assignee for a standalone INDIVIDUAL
-     *  task, or the Department's head Director for a DEPARTMENT task. Never notifies the
-     *  comment's own author. */
+    /** Called right after a new top-level discussion message (no parentComment) is posted.
+     *  Notifies the owning team when there is one (so a comment on one member's subtask
+     *  reaches the whole team), else the individual assignee or the Department's head
+     *  Director. Never notifies the comment's own author. */
     void notifyDiscussionCommentPosted(TaskComment comment);
 
     /** Called by TaskServiceImpl right after a reply (parentComment set) is posted.

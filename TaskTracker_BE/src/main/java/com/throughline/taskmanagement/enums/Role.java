@@ -2,20 +2,15 @@ package com.throughline.taskmanagement.enums;
 
 /**
  * Global role, in ascending order of authority: MEMBER < DIRECTOR < EXECUTIVE < SUPER_ADMIN.
- * "Team Leader" is deliberately NOT a value here — leadership is scoped per-team
- * (TeamMember.isLeader), so a person can lead one team and be a plain member of another.
- * Same reasoning for "Department Head" — that's Department.headDirector, not a Role value.
+ * "Team Leader" and "Department Head" are deliberately NOT values here — those are scoped
+ * (TeamMember.isLeader, Department.headDirector), so one person can hold either on some
+ * teams/departments and not others.
  *
- * EXECUTIVE sits just above DIRECTOR — everything a Director can do, plus creating a
- * top-level task assigned to a whole Department rather than a team or person directly (see
- * AssigneeType.DEPARTMENT). It is a distinct seat on the org chart, not a rename of
- * SUPER_ADMIN — Super Admin keeps its existing, separate meaning (system/people
- * governance: role changes, account activation, department administration).
- *
- * SUPER_ADMIN has every permission DIRECTOR and EXECUTIVE have, plus a few exclusively its
- * own (granting any role, deactivating accounts, department administration) — see
- * {@link #isAtLeastDirector}, {@link #isAtLeastExecutive}, and the requireSuperAdmin-gated
- * methods in PersonServiceImpl/DepartmentServiceImpl.
+ * EXECUTIVE sits just above DIRECTOR: everything a Director can do, plus creating a
+ * top-level task assigned to a whole Department (see AssigneeType.DEPARTMENT). SUPER_ADMIN
+ * has everything DIRECTOR and EXECUTIVE have, plus system/people governance (role changes,
+ * account activation, department administration) — see {@link #isAtLeastDirector},
+ * {@link #isAtLeastExecutive}.
  */
 public enum Role {
     DIRECTOR,
@@ -23,22 +18,14 @@ public enum Role {
     MEMBER,
     SUPER_ADMIN;
 
-    /**
-     * True for DIRECTOR, EXECUTIVE, and SUPER_ADMIN — every "Director-only" check in the
-     * app should call this rather than compare directly against Role.DIRECTOR, so Executive
-     * and Super Admin never end up unable to do something a Director can. Null-safe (a null
-     * role — an account that predates auth entirely — is never "at least Director").
-     */
+    /** True for DIRECTOR, EXECUTIVE, and SUPER_ADMIN — use this rather than comparing
+     *  directly against Role.DIRECTOR. Null-safe. */
     public static boolean isAtLeastDirector(Role role) {
         return role == DIRECTOR || role == EXECUTIVE || role == SUPER_ADMIN;
     }
 
-    /**
-     * True for EXECUTIVE and SUPER_ADMIN only — the handful of CEO-tier gates a Director
-     * (even a Director heading a Department) doesn't pass: creating a task assigned
-     * straight to a Department, setting a task's severity, and the org-wide executive
-     * dashboard view.
-     */
+    /** True for EXECUTIVE and SUPER_ADMIN only — the CEO-tier gates a Director doesn't
+     *  pass: creating a Department-assigned task, setting severity, the executive dashboard. */
     public static boolean isAtLeastExecutive(Role role) {
         return role == EXECUTIVE || role == SUPER_ADMIN;
     }

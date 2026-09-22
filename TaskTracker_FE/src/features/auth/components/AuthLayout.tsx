@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import zigamaIcon from '../../../icon/Zigama icon.jpeg'
+import zigamaIcon from '../../../icon/Zigama icon_1.png'
 import styles from './AuthLayout.module.css'
 
 interface AuthLayoutProps {

@@ -196,11 +196,9 @@ public class DashboardServiceImpl implements DashboardService {
             throw new ForbiddenActionException("Only an Executive or Super Admin has an Executive Dashboard.");
         }
 
-        // Not "every top-level task" any more — depth alone doesn't say what actually
-        // deserves an Executive's attention. Shows anything CRITICAL (at any depth — a
-        // CRITICAL subtask matters just as much as a CRITICAL Department task) plus
-        // anything an Executive/Super Admin personally assigned, org-wide, not just this
-        // particular viewer's own (unlike getDirectorTasks' "my initiatives" scoping above).
+        // Depth alone doesn't say what deserves an Executive's attention. Shows anything
+        // CRITICAL (any depth) plus anything an Executive/Super Admin personally assigned,
+        // org-wide — not scoped to this viewer's own, unlike getDirectorTasks above.
         return taskRepository.findBySeverityOrAssignedByRoleIn(
                         TaskSeverity.CRITICAL, List.of(Role.EXECUTIVE, Role.SUPER_ADMIN), pageable)
                 .map(t -> {
@@ -234,9 +232,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     // Shared by getExecutiveDepartmentHealth and getExecutiveKpis so the KPI tile's
-    // on-track percentage and the roll-up table it summarizes can never disagree — both
-    // read off this exact same list. Same N+1-per-entity, in-Java-aggregation style as
-    // getTeamLeaderboard/getPeopleSummary above, applied per-department instead.
+    // on-track percentage and the roll-up table can never disagree — both read this list.
     private List<DepartmentHealthResponse> buildDepartmentHealth() {
         List<Department> departments = departmentRepository.findAll();
         LocalDate today = LocalDate.now();

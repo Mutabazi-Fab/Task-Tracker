@@ -12,14 +12,9 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * Append-only, same shape as {@link TaskReassignment}: every request for more time on a
- * task's deadline, and how it was decided, kept in full even after a decision is made (a
- * row is never deleted or reused for a second request). A direct extension by whoever set
- * the deadline (see TaskServiceImpl.extendDeadlineDirectly) still creates one of these,
- * self-approved, so "who moved this deadline and when" has exactly one place to look
- * regardless of which path was taken.
- */
+/** Append-only, same shape as {@link TaskReassignment} — a row is never deleted or reused.
+ *  A direct extension (see TaskServiceImpl.extendDeadlineDirectly) still creates one of
+ *  these, self-approved, so "who moved this deadline and when" has one place to look. */
 @Entity
 @Table(name = "task_deadline_extension_requests", indexes = {
         @Index(name = "idx_task_deadline_ext_requests_task_id", columnList = "task_id")
@@ -76,11 +71,8 @@ public class TaskDeadlineExtensionRequest {
 
     /** Null until explicitly forwarded — see TaskServiceImpl.forwardExtensionRequestToApprover.
      *  Only ever set on a CEO-mandated chain (see TaskServiceImpl.isCeoMandated), where the
-     *  Director a request first lands on can reject it on their own but can't approve it: the
-     *  CEO/Super Admin only gets to see and act on the request in their own "Requests" inbox
-     *  once the Director has deliberately sent it their way — not automatically the moment it
-     *  was made. Always null for an ordinary Director-originated task, where decider and
-     *  approver are the same person and there's nobody to forward it to. */
+     *  Director it first lands on can reject but not approve. Always null for an ordinary
+     *  Director-originated task, where decider and approver are the same person. */
     @ManyToOne
     @JoinColumn(name = "forwarded_by_id")
     private Person forwardedBy;

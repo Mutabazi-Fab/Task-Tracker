@@ -32,12 +32,10 @@ public interface TaskService {
     TaskDetailResponse createSubtask(Long parentTaskId, CreateSubtaskRequest request);
     TaskDetailResponse getTaskById(Long id);
     TaskDetailResponse getTaskByCode(String taskCode);
-    /** assignedPersonId is optional — a Member's frontend always passes their own id, since
-     *  "all tasks" isn't theirs to see; a Director/Executive/Super Admin omits it. departmentId
-     *  is the second, independent scope: a plain Director passes their own department's id
-     *  (an Executive/Super Admin omits it too, staying fully unrestricted) — checked only
-     *  when assignedPersonId is absent, since a Member's personal scope already answers
-     *  "what's theirs to see" more precisely than a department ever could. */
+    /** assignedPersonId is optional — a Member's frontend always passes their own id; a
+     *  Director/Executive/Super Admin omits it. departmentId is the second, independent
+     *  scope (a plain Director's own department), checked only when assignedPersonId is
+     *  absent. */
     Page<TaskListResponse> getAllTasks(TaskStatus status, Long assignedPersonId, Long departmentId, Pageable pageable);
     TaskDetailResponse addProgressComment(Long taskId, AddCommentRequest request);
     /** A plain Q&A message, fully open — any authenticated person may post on any task,
@@ -73,13 +71,10 @@ public interface TaskService {
      *  it untouched. Fails if the request is already decided or belongs to a different task. */
     TaskDetailResponse decideDeadlineExtension(Long taskId, Long extensionRequestId, DecideDeadlineExtensionRequest request);
 
-    /** Only meaningful on a CEO-mandated chain (see TaskServiceImpl.isCeoMandated), where
-     *  the Director a request lands on can reject it themselves but can't approve it —
-     *  forwardedById must have that same rejecting standing. Sends the request into the
-     *  true approver's (the CEO/Super Admin's) own "Requests" inbox from this point on —
-     *  before this call, only the Director sees it there. Fails if already forwarded,
-     *  already decided, belongs to a different task, or the task doesn't actually need CEO
-     *  approval in the first place. */
+    /** Only meaningful on a CEO-mandated chain (see TaskServiceImpl.isCeoMandated) — the
+     *  Director a request lands on can reject it but can't approve it, so this sends it
+     *  into the true approver's (CEO/Super Admin's) "Requests" inbox. Fails if already
+     *  forwarded, already decided, or the task doesn't need CEO approval. */
     TaskDetailResponse forwardExtensionRequestToApprover(Long taskId, Long extensionRequestId, Long forwardedById);
 
     /** Same authority as deciding a request — moves the deadline immediately, no approval
@@ -91,10 +86,9 @@ public interface TaskService {
      *  getTaskReassignments. */
     Page<DeadlineExtensionResponse> getDeadlineHistory(Long taskId, Pageable pageable);
 
-    /** Every still-PENDING deadline-extension request across the whole org where deciderId
-     *  is the one who'd actually decide it (see TaskServiceImpl.resolveDeadlineDecider) —
-     *  the "Requests" inbox, so a Director/Executive sees everything waiting on them in one
-     *  place instead of hunting through each task's own history panel. Newest first. */
+    /** Every still-PENDING deadline-extension request org-wide where deciderId is the one
+     *  who'd decide it (see TaskServiceImpl.resolveDeadlineDecider) — the "Requests" inbox.
+     *  Newest first. */
     List<PendingExtensionRequestResponse> getPendingExtensionRequests(Long deciderId);
 
     /** Director-or-above only, enforced here. A manual, independently-editable toggle —

@@ -145,10 +145,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void notifyTaskAssigned(Task task, Person assignedBy) {
         if (task.getAssigneeType() == AssigneeType.TEAM) {
-            // Every member, not just the Leader — the whole team is now on the hook for
-            // this, and any of them could be the one handed the eventual subtask, so each
-            // should see it land even before anyone's individually assigned. Mirrors the
-            // team-wide broadcast already used for notifySubtaskAssigned/Reassigned below.
+            // Every member, not just the Leader — the whole team is on the hook for this.
             Team team = task.getAssignedTeam();
             String message = String.format("Your team was assigned a new task \"%s\" by %s.",
                     task.getTitle(), assignedBy.getFullName());
@@ -208,8 +205,7 @@ public class NotificationServiceImpl implements NotificationService {
         Person reassignedBy = reassignment.getReassignedBy();
 
         if (reassignment.getToAssigneeType() == AssigneeType.TEAM) {
-            // Same reasoning as notifyTaskAssigned's TEAM branch above — every member of
-            // the new team, not just its Leader.
+            // Every member of the new team, not just its Leader — same as notifyTaskAssigned.
             Team newTeam = reassignment.getToTeam();
             String message = String.format("Your team was assigned the task \"%s\" by %s: %s",
                     task.getTitle(), reassignedBy.getFullName(), reassignment.getReason());
@@ -288,11 +284,8 @@ public class NotificationServiceImpl implements NotificationService {
                 requestedBy.getFullName(), task.getTitle(), task.getTaskCode(),
                 request.getRequestedDeadline(), request.getJustification());
         send(decider, NotificationType.DEADLINE_EXTENSION_REQUESTED, message, task.getId());
-        // On a CEO-mandated chain (see TaskServiceImpl.isCeoMandated), the CEO/Super Admin
-        // is a different person from decider above and doesn't hear about this yet — only
-        // once the Director explicitly forwards it (see notifyDeadlineExtensionForwarded).
-        // Not automatic: the whole point of forwarding is that the CEO's inbox only fills
-        // up with requests a Director actually decided are worth escalating.
+        // On a CEO-mandated chain, the CEO doesn't hear about this yet — only once the
+        // Director explicitly forwards it (see notifyDeadlineExtensionForwarded).
     }
 
     @Override
@@ -308,13 +301,9 @@ public class NotificationServiceImpl implements NotificationService {
         send(approver, NotificationType.DEADLINE_EXTENSION_REQUESTED, message, task.getId());
     }
 
-    /** Same chain-of-command resolution as TaskServiceImpl.resolveDeadlineDecider: a
-     *  deadline decision is a Director's job, never a Team Leader's, even when a Team
-     *  Leader is technically this task's own assignedBy (they created it as a leaf
-     *  subtask — see TaskServiceImpl.createLeafSubtask). Walk up to the nearest ancestor
-     *  whose assignedBy is already Director-or-above and notify them instead. This is who
-     *  may REJECT a request — see resolveDeadlineApprover below for who may approve one,
-     *  which is a different person on a CEO-mandated chain. */
+    /** Mirrors TaskServiceImpl.resolveDeadlineDecider — walks up to the nearest ancestor
+     *  whose assignedBy is Director-or-above. Who may REJECT; see resolveDeadlineApprover
+     *  for who may approve, a different person on a CEO-mandated chain. */
     private Person resolveDeadlineDecider(Task task) {
         Task current = task;
         while (current != null) {
@@ -326,11 +315,9 @@ public class NotificationServiceImpl implements NotificationService {
         return task.getAssignedBy();
     }
 
-    /** Same chain-of-command reasoning as TaskServiceImpl.resolveDeadlineApprover: walks up
-     *  to this task's own root, and if THAT was assigned by an Executive/Super Admin (a
-     *  CEO-mandated chain), returns that root's own assignedBy instead of the nearer
-     *  Director resolveDeadlineDecider would find — the CEO who set the mandate is who must
-     *  approve, even when a Director further down is who the request first lands on. */
+    /** Mirrors TaskServiceImpl.resolveDeadlineApprover — walks up to this task's root; if
+     *  its own assignedBy is Executive-or-above (a CEO-mandated chain), that's the true
+     *  approver, even though a Director further down is who the request first lands on. */
     private Person resolveDeadlineApprover(Task task) {
         Task root = task;
         while (root.getParentTask() != null) {
@@ -396,10 +383,8 @@ public class NotificationServiceImpl implements NotificationService {
         Task task = comment.getTask();
         Person author = comment.getAuthor();
 
-        // Resolve the "owning team" the same way TaskMapper.owningTeamId does: this task's
-        // own team if it's TEAM-assigned, or its parent's team for an ordinary leaf
-        // subtask — so a comment on one member's subtask reaches the whole team it belongs
-        // to, not just that one assignee.
+        // Same "owning team" resolution as TaskMapper.owningTeamId — so a comment on one
+        // member's subtask reaches the whole team, not just that one assignee.
         Team owningTeam = task.getAssigneeType() == AssigneeType.TEAM
                 ? task.getAssignedTeam()
                 : (task.getParentTask() != null ? task.getParentTask().getAssignedTeam() : null);
@@ -467,15 +452,9 @@ public class NotificationServiceImpl implements NotificationService {
                 deletedBy.getFullName(), task.getTitle(), task.getTaskCode());
         broadcastToDirectorsExcept(deletedBy, NotificationType.TASK_DELETED, message, task.getId());
 
-        // The person who was actually doing this work deserves to know it's gone too — just
-        // this one deletion, not the whole org-wide Activity feed a Director/Super Admin
-        // gets. Only for an INDIVIDUAL-assigned task (a Member's own work); a TEAM/
-        // DEPARTMENT-assigned one has no single "the person working on it" to single out.
-        // Skipped when the assignee is Director-or-above — they're already covered by the
-        // broadcast above and would otherwise get this twice. Reuses the same type/message
-        // as that broadcast; still non-navigable in the bell either way (see
-        // NotificationBell's deliberate TASK_DELETED exclusion — the task is already gone by
-        // the time anyone could click through).
+        // The person actually doing this work deserves to know too — only for an
+        // INDIVIDUAL-assigned task, and skipped when they're Director-or-above (already
+        // covered by the broadcast above, which would otherwise reach them twice).
         if (task.getAssigneeType() == AssigneeType.INDIVIDUAL) {
             Person assignee = task.getAssignedPerson();
             boolean isActor = assignee.getId().equals(deletedBy.getId());
@@ -486,11 +465,8 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    /** Every Director-or-above except whoever just did the thing being announced — backs
-     *  the three broadcast notifications above. Not scoped to a department/team the way
-     *  task notifications are, on purpose: a new team, a new department, or a deleted task
-     *  is org-wide-governance-shaped news, the same tier that already sees the Activity
-     *  feed and the Departments admin controls. */
+    /** Every Director-or-above except whoever did the thing being announced — backs the
+     *  three broadcasts above. Deliberately org-wide, not department/team-scoped. */
     private void broadcastToDirectorsExcept(Person exclude, NotificationType type, String message, Long relatedEntityId) {
         for (Person recipient : personRepository.findByRoleIn(List.of(Role.DIRECTOR, Role.EXECUTIVE, Role.SUPER_ADMIN))) {
             if (!recipient.getId().equals(exclude.getId())) {

@@ -92,10 +92,8 @@ public class TaskMapper {
         );
     }
 
-    /** Same source row as toDeadlineExtensionResponse, but carrying the task's own
-     *  identity — the "Requests" inbox is aggregated across tasks, so the viewer needs to
-     *  know which task each row belongs to; a single task's own history panel already knows
-     *  that from context and doesn't. */
+    /** Same source row as toDeadlineExtensionResponse, but carrying the task's own identity
+     *  — the "Requests" inbox is aggregated across tasks, unlike a single task's history panel. */
     public PendingExtensionRequestResponse toPendingExtensionResponse(TaskDeadlineExtensionRequest request, boolean canApprove) {
         if (request == null) return null;
         Task task = request.getTask();
@@ -124,22 +122,14 @@ public class TaskMapper {
     }
 
     /** A rollup task's (TEAM/DEPARTMENT) percentage is purely derived from its children (see
-     *  TaskServiceImpl.recalculateParentRollup) — so its Trend chart has to be reconstructed
-     *  from them too, by replaying every descendant leaf's own comment timeline in
-     *  chronological order and recomputing this task's rollup value at each event the exact
-     *  same way recalculateParentRollup computes it live — average of the direct children's
-     *  value — just evaluated at every historical instant instead of only "now" (the
-     *  reconstruction's value at the latest instant always matches the task's actual stored
-     *  progressPercentage, by construction).
+     *  TaskServiceImpl.recalculateParentRollup), so its Trend chart is reconstructed by
+     *  replaying every descendant leaf's comment timeline and recomputing the rollup average
+     *  at each historical instant instead of only "now".
      *
-     *  Which branch applies is decided by assigneeType, NOT by whether the task happens to
-     *  have its own PROGRESS-type comments: every task, rollup or not, gets one such comment
-     *  at creation (TaskServiceImpl.addOpeningComment never sets a type, and TaskComment.type
-     *  defaults to PROGRESS) — treating "has any own PROGRESS comment" as "is individually
-     *  tracked" was the original (buggy) signal here, and it meant a rollup task's real
-     *  reconstruction never ran: its lone opening-note comment short-circuited straight past
-     *  it, leaving the Trend chart showing just that one 0% point forever. An INDIVIDUAL
-     *  task's own comments ARE its real history, unchanged from before. */
+     *  Branch is decided by assigneeType, NOT by whether the task has its own PROGRESS
+     *  comments — every task gets one opening comment at creation regardless, so that signal
+     *  used to short-circuit a rollup task straight past its real reconstruction, leaving the
+     *  chart stuck at one 0% point forever. An INDIVIDUAL task's own comments ARE its history. */
     private List<TaskTimelineResponse> buildRollupTimeline(Task task) {
         if (task.getAssigneeType() == AssigneeType.INDIVIDUAL) {
             return task.getComments() == null ? List.of()
@@ -247,12 +237,9 @@ public class TaskMapper {
         );
     }
 
-    /** Same chain-of-command resolution as TaskServiceImpl.resolveDeadlineDecider /
-     *  NotificationServiceImpl's copy of it: deadline decisions are a Director's job, even
-     *  when this task's own assignedBy is a mere Team Leader (who can create a leaf
-     *  subtask — see TaskServiceImpl.createLeafSubtask — but has no authority over its
-     *  deadline). Walk up to the nearest ancestor whose assignedBy is already Director-or-
-     *  above. */
+    /** Same chain-of-command resolution as TaskServiceImpl/NotificationServiceImpl's own
+     *  copy: walk up to the nearest ancestor whose assignedBy is already Director-or-above,
+     *  since a mere Team Leader has no authority over a deadline. */
     private Person resolveDeadlineDecider(Task task) {
         Task current = task;
         while (current != null) {
@@ -283,12 +270,9 @@ public class TaskMapper {
         Long assigneeId = assigneeIdOf(task);
         Person deadlineDecider = resolveDeadlineDecider(task);
 
-        // "The team that currently owns this task": the task's OWN team when it's TEAM-
-        // assigned (a real top-level task, or a depth-1 Department implementation task);
-        // otherwise its parent's team, but only when that parent is itself TEAM-assigned
-        // (an ordinary leaf subtask) — a DEPARTMENT- or INDIVIDUAL-assigned task has no
-        // "owning team" of its own to inherit. Checking the task's OWN assigneeType first,
-        // rather than "parentTask == null", is what makes this correct one level deeper.
+        // The task's own team when it's TEAM-assigned, else its parent's team if the parent
+        // is TEAM-assigned (an ordinary leaf subtask). Checking the task's OWN assigneeType
+        // first, rather than "parentTask == null", makes this correct one level deeper.
         Long owningTeamId = task.getAssigneeType() == AssigneeType.TEAM
                 ? (task.getAssignedTeam() != null ? task.getAssignedTeam().getId() : null)
                 : (task.getParentTask() != null && task.getParentTask().getAssignedTeam() != null

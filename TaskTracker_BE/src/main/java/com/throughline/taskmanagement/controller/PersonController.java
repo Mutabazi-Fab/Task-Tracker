@@ -23,9 +23,8 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Every "who's doing this" field (createdById/changedById/requesterId) is re-derived from
- * the caller's actual login (CurrentPersonResolver), not trusted from the request — see
- * TeamController for the same pattern. getAllPeople is likewise scoped to the caller's
- * real role: a Director/Super Admin sees everyone, anyone else sees only their teammates.
+ * the caller's actual login (CurrentPersonResolver), never trusted from the request.
+ * getAllPeople is likewise scoped to the caller's real role.
  */
 @RestController
 @RequestMapping("/api/v1/people")
