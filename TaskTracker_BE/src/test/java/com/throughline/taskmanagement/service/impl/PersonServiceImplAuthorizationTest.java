@@ -20,20 +20,20 @@ import com.throughline.taskmanagement.repository.TaskCommentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
 import com.throughline.taskmanagement.repository.TeamMemberRepository;
 import com.throughline.taskmanagement.service.AuthService;
-import com.throughline.taskmanagement.service.MailService;
 import com.throughline.taskmanagement.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -60,9 +60,7 @@ class PersonServiceImplAuthorizationTest {
     @Mock private PersonMapper personMapper;
     @Mock private TaskMapper taskMapper;
     @Mock private NotificationService notificationService;
-    @Mock private MailService mailService;
     @Mock private AuthService authService;
-    @Mock private PasswordEncoder passwordEncoder;
 
     private PersonServiceImpl personService;
 
@@ -70,8 +68,7 @@ class PersonServiceImplAuthorizationTest {
     void setUp() {
         personService = new PersonServiceImpl(personRepository, teamMemberRepository, taskRepository,
                 taskCommentRepository, roleChangeRepository, accountStatusChangeRepository, departmentRepository,
-                personDailyGoalRepository, personMapper, taskMapper, notificationService, mailService, authService,
-                passwordEncoder);
+                personDailyGoalRepository, personMapper, taskMapper, notificationService, authService);
         // Only some tests exercise getPersonStatistics/getPersonTaskHistory's downstream
         // repository calls, but requireCanViewPerson runs first in all three — stub the
         // harmless empty-list ones leniently so tests that never reach them don't fail
@@ -191,10 +188,10 @@ class PersonServiceImplAuthorizationTest {
     }
 
     // ---- createPerson ----
-    // There is no public self-registration — only a Super Admin may create a new,
-    // login-enabled account at all (not just a non-Member one), and the password they set
-    // must come through hashed and the account must start usable (emailVerified=true),
-    // since there's no more OTP step to unlock it afterward.
+    // There is no public self-registration — only a Super Admin may create a new account
+    // at all (not just a non-Member one). The Super Admin vouches for who someone is, not
+    // for a password: the account starts passwordless and unverified, and a sign-up code
+    // gets emailed out (AuthService.sendSignUpCode) for the person to claim it themselves.
 
     @Test
     void superAdminMayCreateANewPerson() {
@@ -204,18 +201,18 @@ class PersonServiceImplAuthorizationTest {
         when(personRepository.findById(19L)).thenReturn(Optional.of(superAdmin));
         when(personRepository.existsByEmail("new@example.com")).thenReturn(false);
         when(departmentRepository.findById(2L)).thenReturn(Optional.of(department));
-        when(passwordEncoder.encode("password123")).thenReturn("hashed-password123");
         when(personRepository.save(any(Person.class))).thenAnswer(inv -> inv.getArgument(0));
 
         CreatePersonRequest request = new CreatePersonRequest(
-                "New Person", "new@example.com", "Engineer", null, 19L, Role.MEMBER, 2L, "password123");
+                "New Person", "new@example.com", "Engineer", null, 19L, Role.MEMBER, 2L);
 
         assertDoesNotThrow(() -> personService.createPerson(request));
 
         org.mockito.ArgumentCaptor<Person> captor = org.mockito.ArgumentCaptor.forClass(Person.class);
         org.mockito.Mockito.verify(personRepository).save(captor.capture());
-        assertEquals("hashed-password123", captor.getValue().getPassword());
-        assertTrue(captor.getValue().isEmailVerified());
+        assertNull(captor.getValue().getPassword());
+        assertFalse(captor.getValue().isEmailVerified());
+        org.mockito.Mockito.verify(authService).sendSignUpCode(captor.getValue());
     }
 
     @Test
@@ -224,23 +221,9 @@ class PersonServiceImplAuthorizationTest {
         when(personRepository.findById(1L)).thenReturn(Optional.of(director));
 
         CreatePersonRequest request = new CreatePersonRequest(
-                "New Person", "new@example.com", "Engineer", null, 1L, null, 2L, "password123");
+                "New Person", "new@example.com", "Engineer", null, 1L, null, 2L);
 
         assertThrows(ForbiddenActionException.class, () -> personService.createPerson(request));
-    }
-
-    @Test
-    void createPersonRejectsAShortPassword() {
-        Person superAdmin = personWithRole(19L, Role.SUPER_ADMIN);
-        Department department = new Department();
-        department.setId(2L);
-        when(personRepository.findById(19L)).thenReturn(Optional.of(superAdmin));
-        when(departmentRepository.findById(2L)).thenReturn(Optional.of(department));
-
-        CreatePersonRequest request = new CreatePersonRequest(
-                "New Person", "new@example.com", "Engineer", null, 19L, null, 2L, "short");
-
-        assertThrows(InvalidAssignmentException.class, () -> personService.createPerson(request));
     }
 
     // ---- getAllPeople scoping ----

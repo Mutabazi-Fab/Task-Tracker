@@ -13,6 +13,7 @@ import { DepartmentPage } from '../features/departments/DepartmentPage'
 import { SearchResultsPage } from '../features/search/SearchResultsPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
+import { SignUpPage } from '../features/auth/SignUpPage'
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
 import { ProtectedRoute } from '../features/auth/ProtectedRoute'
@@ -37,8 +38,9 @@ function protectedPage(page: React.ReactNode) {
 }
 
 /** The actual <Route> tree. /login renders outside AppShell (no logged-in identity yet)
- *  and is wrapped in PublicOnlyRoute so an already-logged-in person skips past it. There's
- *  no public /signup route — only a Super Admin can create a new account. */
+ *  and is wrapped in PublicOnlyRoute so an already-logged-in person skips past it. /sign-up
+ *  is not public self-registration — only a Super Admin can create the account in the first
+ *  place; this just completes one that already exists, passwordless and unverified. */
 export function AppRoutes() {
   return (
     <Routes>
@@ -55,6 +57,14 @@ export function AppRoutes() {
         element={
           <PublicOnlyRoute>
             <VerifyEmailPage />
+          </PublicOnlyRoute>
+        }
+      />
+      <Route
+        path={ROUTES.signUp}
+        element={
+          <PublicOnlyRoute>
+            <SignUpPage />
           </PublicOnlyRoute>
         }
       />

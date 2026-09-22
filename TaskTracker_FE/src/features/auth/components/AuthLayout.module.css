@@ -129,9 +129,23 @@
   font-family: var(--font-sans);
   font-size: 13px;
   color: var(--muted);
+  text-align: center;
 }
 
 .footerLink {
   color: var(--accent-strong);
   font-weight: 600;
+}
+
+/* Show/hide password toggle — shared by every auth-form password field (login, sign-up,
+   reset-password) rather than redefined per page. */
+.eyeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.eyeButton:hover {
+  color: var(--ink);
 }

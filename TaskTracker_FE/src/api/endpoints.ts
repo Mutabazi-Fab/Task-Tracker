@@ -12,6 +12,7 @@ export const endpoints = {
     logout: () => `${BASE}/auth/logout`,
     me: () => `${BASE}/auth/me`,
     verifyEmail: () => `${BASE}/auth/verify-email`,
+    signUp: () => `${BASE}/auth/sign-up`,
     resendOtp: () => `${BASE}/auth/resend-otp`,
     forgotPassword: () => `${BASE}/auth/forgot-password`,
     resetPassword: () => `${BASE}/auth/reset-password`,

@@ -11,17 +11,23 @@ import type { ApiError } from '../../api/axiosClient'
 import styles from './components/AuthLayout.module.css'
 import verifyStyles from './VerifyEmailPage.module.css'
 
-/** Reached from ForgotPasswordPage, which sends the email along via router state — falls
- *  back to asking for it if someone lands here directly (a refresh, a bad link). */
-export function ResetPasswordPage() {
-  const { forgotPassword, resetPassword } = useAuth()
+const MIN_PASSWORD_LENGTH = 8
+
+/**
+ * Completes an account a Super Admin already created: not public self-registration, the
+ * account has to already exist, passwordless and unverified, waiting on this step. Reached
+ * from login, when that account's email is sent along via router state — falls back to
+ * asking for it if someone lands here directly (a refresh, a bad link).
+ */
+export function SignUpPage() {
+  const { signUp, resendOtp } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
   const stateEmail = (location.state as { email?: string } | null)?.email ?? ''
 
   const [email, setEmail] = useState(stateEmail)
-  const [code, setCode] = useState('')
+  const [otp, setOtp] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +35,7 @@ export function ResetPasswordPage() {
   const [submitting, setSubmitting] = useState(false)
   const [resending, setResending] = useState(false)
 
-  const isValid = email.trim() !== '' && code.trim() !== '' && newPassword.length >= 8
+  const isValid = email.trim() !== '' && otp.trim() !== '' && newPassword.length >= MIN_PASSWORD_LENGTH
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -39,12 +45,18 @@ export function ResetPasswordPage() {
     setError(null)
     setResendMessage(null)
     try {
-      const auth = await resetPassword({ email: email.trim(), code: code.trim(), newPassword })
+      const auth = await signUp({ email: email.trim(), otp: otp.trim(), newPassword })
       if (auth.token) {
         navigate(ROUTES.dashboard, { replace: true })
       }
     } catch (err) {
-      setError((err as ApiError).message)
+      const message = (err as ApiError).message
+      setError(message)
+      // The code they typed is dead either way — clearing it stops them from just hitting
+      // "Sign up" again with the same expired/wrong code instead of requesting a new one.
+      if (message === 'This code has expired. Request a new one.') {
+        setOtp('')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -57,8 +69,10 @@ export function ResetPasswordPage() {
     setError(null)
     setResendMessage(null)
     try {
-      await forgotPassword({ email: email.trim() })
-      setResendMessage('If an account with that email exists, a new code has been sent.')
+      await resendOtp({ email: email.trim() })
+      setResendMessage('A new code has been sent.')
+    } catch (err) {
+      setError((err as ApiError).message)
     } finally {
       setResending(false)
     }
@@ -66,9 +80,9 @@ export function ResetPasswordPage() {
 
   return (
     <AuthLayout
-      title="Reset Password"
-      subtitle="Enter the code we sent you and choose a new password"
-      footerText="Remembered it?"
+      title="Sign Up"
+      subtitle="Enter the code we emailed you and choose your password"
+      footerText="Already signed up?"
       footerLinkTo={ROUTES.login}
       footerLinkLabel="Sign in"
     >
@@ -86,9 +100,9 @@ export function ResetPasswordPage() {
         {stateEmail !== '' && <p className={verifyStyles.emailNotice}>Code sent to {stateEmail}</p>}
 
         <TextField
-          label="Reset code"
-          value={code}
-          onChange={setCode}
+          label="Sign-up code"
+          value={otp}
+          onChange={setOtp}
           placeholder="6-digit code"
           inputMode="numeric"
           maxLength={6}
@@ -96,11 +110,11 @@ export function ResetPasswordPage() {
         />
 
         <TextField
-          label="New password"
+          label="Choose a password"
           type={showPassword ? 'text' : 'password'}
           value={newPassword}
           onChange={setNewPassword}
-          placeholder="At least 8 characters"
+          placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
           autoComplete="new-password"
           required
           trailing={
@@ -119,7 +133,7 @@ export function ResetPasswordPage() {
         {resendMessage && <p className={verifyStyles.resendNotice}>{resendMessage}</p>}
 
         <Button type="submit" disabled={!isValid || submitting}>
-          {submitting ? 'Resetting…' : 'Reset password'}
+          {submitting ? 'Signing up…' : 'Sign up'}
         </Button>
 
         <button type="button" className={verifyStyles.resendButton} onClick={handleResend} disabled={resending}>

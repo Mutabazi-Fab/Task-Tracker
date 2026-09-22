@@ -7,8 +7,7 @@ interface AuthLayoutProps {
   title: string
   subtitle: string
   children: ReactNode
-  // Optional — LoginPage has nowhere to send a footer link to (there's no public sign-up
-  // page), so it omits these entirely and no footer renders at all.
+  // Optional — omit all three and no footer renders at all.
   footerText?: string
   footerLinkTo?: string
   footerLinkLabel?: string

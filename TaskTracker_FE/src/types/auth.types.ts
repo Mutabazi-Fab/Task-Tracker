@@ -6,10 +6,19 @@ export interface LoginRequest {
   password: string
 }
 
-/** Body for POST /auth/verify-email. */
+/** Body for POST /auth/verify-email. Legacy path only, for accounts that predate
+ *  Super-Admin-only creation — a new account uses SignUpRequest below instead. */
 export interface VerifyEmailRequest {
   email: string
   otp: string
+}
+
+/** Body for POST /auth/sign-up. Completes an account a Super Admin already created: the
+ *  code emailed to them plus the password they're choosing for themselves. */
+export interface SignUpRequest {
+  email: string
+  otp: string
+  newPassword: string
 }
 
 /** Body for POST /auth/resend-otp. */

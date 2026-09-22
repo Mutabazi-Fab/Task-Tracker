@@ -6,6 +6,7 @@ import type {
   LoginRequest,
   ResendOtpRequest,
   ResetPasswordRequest,
+  SignUpRequest,
   VerifyEmailRequest,
 } from '../../../types/auth.types'
 import type { Person } from '../../../types/person.types'
@@ -18,6 +19,13 @@ export async function login(request: LoginRequest): Promise<AuthResponse> {
 /** Checks the code and, on success, logs the person in (issues a real token) in the same step. */
 export async function verifyEmail(request: VerifyEmailRequest): Promise<AuthResponse> {
   const { data } = await axiosClient.post<AuthResponse>(endpoints.auth.verifyEmail(), request)
+  return data
+}
+
+/** Completes an account a Super Admin already created and, on success, logs the person in
+ *  (issues a real token) in the same step — same shape as verifyEmail. */
+export async function signUp(request: SignUpRequest): Promise<AuthResponse> {
+  const { data } = await axiosClient.post<AuthResponse>(endpoints.auth.signUp(), request)
   return data
 }
 

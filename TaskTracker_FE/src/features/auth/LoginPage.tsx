@@ -47,6 +47,10 @@ export function LoginPage() {
         navigate(ROUTES.verifyEmail, { state: { email: email.trim() } })
         return
       }
+      if (message === 'Please finish signing up before logging in.') {
+        navigate(ROUTES.signUp, { state: { email: email.trim() } })
+        return
+      }
       setError(message)
     } finally {
       setSubmitting(false)
@@ -57,6 +61,9 @@ export function LoginPage() {
     <AuthLayout
       title="Welcome Back"
       subtitle="Sign in to keep tracking your team's progress"
+      footerText="First time logging in?"
+      footerLinkTo={ROUTES.signUp}
+      footerLinkLabel="Sign up"
     >
       <form className={styles.form} onSubmit={handleSubmit}>
         <AuthField

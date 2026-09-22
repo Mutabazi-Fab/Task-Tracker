@@ -20,13 +20,10 @@ interface CreatePersonFormProps {
   submitting: boolean
 }
 
-const MIN_PASSWORD_LENGTH = 8
-
 /** Only a Super Admin ever reaches this form (see PeopleListPage's gate on the "New
  *  person" button) — there's no public self-registration, so this is the only way a new
- *  account gets created, and it's created fully login-ready: whatever password is set here
- *  is what the person logs in with, so the Super Admin is expected to hand it to them
- *  directly afterward. */
+ *  account gets created. It starts out passwordless and unverified: the person gets a
+ *  sign-up email with a code, and sets their own password at /sign-up. */
 export function CreatePersonForm({ onSubmit, onCancel, submitting }: CreatePersonFormProps) {
   const { currentUser } = useAuth()
   const departmentsQuery = useDepartments()
@@ -37,14 +34,12 @@ export function CreatePersonForm({ onSubmit, onCancel, submitting }: CreatePerso
   const [rank, setRank] = useState('')
   const [role, setRole] = useState<Role>('MEMBER')
   const [departmentId, setDepartmentId] = useState('')
-  const [password, setPassword] = useState('')
 
   const isValid =
     fullName.trim() !== '' &&
     email.trim() !== '' &&
     jobTitle.trim() !== '' &&
     departmentId !== '' &&
-    password.length >= MIN_PASSWORD_LENGTH &&
     currentUser !== null
 
   function handleSubmit(e: React.FormEvent) {
@@ -59,7 +54,6 @@ export function CreatePersonForm({ onSubmit, onCancel, submitting }: CreatePerso
       createdById: currentUser.id,
       role,
       departmentId: Number(departmentId),
-      password,
     })
   }
 
@@ -90,16 +84,6 @@ export function CreatePersonForm({ onSubmit, onCancel, submitting }: CreatePerso
         value={role}
         onChange={(v) => setRole(v as Role)}
         options={ROLE_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
-      />
-
-      <TextField
-        label="Password"
-        type="password"
-        value={password}
-        onChange={setPassword}
-        placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
-        autoComplete="new-password"
-        required
       />
 
       <div className={styles.actions}>

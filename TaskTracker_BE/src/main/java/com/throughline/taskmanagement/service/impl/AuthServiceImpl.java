@@ -4,6 +4,7 @@ import com.throughline.taskmanagement.dto.request.LoginRequest;
 import com.throughline.taskmanagement.dto.request.ForgotPasswordRequest;
 import com.throughline.taskmanagement.dto.request.ResendOtpRequest;
 import com.throughline.taskmanagement.dto.request.ResetPasswordRequest;
+import com.throughline.taskmanagement.dto.request.SignUpRequest;
 import com.throughline.taskmanagement.dto.request.VerifyEmailRequest;
 import com.throughline.taskmanagement.dto.response.AuthResponse;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
@@ -21,6 +22,7 @@ import com.throughline.taskmanagement.security.LoginRateLimiter;
 import com.throughline.taskmanagement.service.AuthService;
 import com.throughline.taskmanagement.service.MailService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +49,9 @@ public class AuthServiceImpl implements AuthService {
     private final MailService mailService;
     private final LoginRateLimiter rateLimiter;
 
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
+
     @Override
     public AuthResponse login(LoginRequest request) {
         // Checked before anything else — a locked-out email can't be used to keep
@@ -54,11 +59,20 @@ public class AuthServiceImpl implements AuthService {
         rateLimiter.checkAllowed(request.email());
 
         Person person = personRepository.findByEmailIgnoreCase(request.email()).orElse(null);
-        if (person == null || person.getPassword() == null
-                || !passwordEncoder.matches(request.password(), person.getPassword())) {
-            // Only a genuine wrong-email/wrong-password guess counts against the limit —
-            // an existing account correctly identified but deactivated/unverified below
-            // isn't "guessing," so those paths don't record a failure.
+        if (person == null) {
+            rateLimiter.recordFailure(request.email());
+            throw new InvalidCredentialsException("Invalid email or password.");
+        }
+
+        if (person.getPassword() == null) {
+            // A Super Admin created this account but it hasn't been signed into yet — this
+            // isn't a wrong guess, so it doesn't count against the rate limit, same as the
+            // deactivated/unverified checks below. Distinct message so the frontend can
+            // route to sign-up instead of showing a generic error.
+            throw new ForbiddenActionException("Please finish signing up before logging in.");
+        }
+
+        if (!passwordEncoder.matches(request.password(), person.getPassword())) {
             rateLimiter.recordFailure(request.email());
             throw new InvalidCredentialsException("Invalid email or password.");
         }
@@ -131,7 +145,40 @@ public class AuthServiceImpl implements AuthService {
             }
         }
 
-        sendOtp(person);
+        sendSignUpCode(person);
+    }
+
+    @Override
+    public AuthResponse signUp(SignUpRequest request) {
+        // Same brute-force shape as verifyEmail/resetPassword — a 6-digit code an attacker
+        // could grind through given enough attempts — so it gets the same guard.
+        rateLimiter.checkAllowed(request.email());
+
+        Person person = personRepository.findByEmailIgnoreCase(request.email())
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+
+        if (person.getPassword() != null) {
+            throw new InvalidAssignmentException("This account has already signed up. Try logging in instead.");
+        }
+        if (person.getOtpCode() == null || person.getOtpExpiresAt() == null
+                || person.getOtpExpiresAt().isBefore(LocalDateTime.now())) {
+            rateLimiter.recordFailure(request.email());
+            throw new InvalidCredentialsException("This code has expired. Request a new one.");
+        }
+        if (!person.getOtpCode().equals(request.otp())) {
+            rateLimiter.recordFailure(request.email());
+            throw new InvalidCredentialsException("Incorrect sign-up code.");
+        }
+
+        rateLimiter.recordSuccess(request.email());
+        person.setPassword(passwordEncoder.encode(request.newPassword()));
+        person.setEmailVerified(true);
+        person.setOtpCode(null);
+        person.setOtpExpiresAt(null);
+        Person saved = personRepository.save(person);
+
+        String token = jwtService.generateToken(saved.getEmail());
+        return new AuthResponse(token, saved.getId(), saved.getFullName(), saved.getEmail(), saved.getRole(), true);
     }
 
     @Override
@@ -206,11 +253,13 @@ public class AuthServiceImpl implements AuthService {
         personRepository.save(person);
 
         try {
-            mailService.send(
+            mailService.sendCode(
                     person.getEmail(),
                     "Reset your Throughline password",
-                    "Your password reset code is " + code + ". It expires in " + RESET_CODE_TTL_MINUTES
-                            + " minutes. If you didn't request this, you can safely ignore this email.");
+                    "Enter this code to reset your password. It expires in " + RESET_CODE_TTL_MINUTES + " minutes.",
+                    code,
+                    frontendUrl + "/reset-password",
+                    "Reset password");
         } catch (Exception e) {
             throw new EmailDeliveryException("Could not send the password reset email. Please try again.");
         }
@@ -223,20 +272,24 @@ public class AuthServiceImpl implements AuthService {
         return personMapper.toResponse(person, teamMemberRepository.findByPersonId(person.getId()));
     }
 
-    private void sendOtp(Person person) {
+    @Override
+    public void sendSignUpCode(Person person) {
         String otp = String.format("%06d", OTP_RANDOM.nextInt(1_000_000));
         person.setOtpCode(otp);
         person.setOtpExpiresAt(LocalDateTime.now().plusMinutes(OTP_TTL_MINUTES));
         personRepository.save(person);
 
         try {
-            mailService.send(
+            mailService.sendCode(
                     person.getEmail(),
-                    "Your Throughline verification code",
-                    "Your verification code is " + otp + ". It expires in " + OTP_TTL_MINUTES + " minutes."
-            );
+                    "Complete your Throughline sign-up",
+                    "You've been added to Throughline. Enter this code to set your password. It expires in "
+                            + OTP_TTL_MINUTES + " minutes.",
+                    otp,
+                    frontendUrl + "/sign-up",
+                    "Complete sign-up");
         } catch (Exception e) {
-            throw new EmailDeliveryException("Could not send the verification email. Please try again.");
+            throw new EmailDeliveryException("Could not send the sign-up email. Please try again.");
         }
     }
 }

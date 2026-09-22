@@ -4,6 +4,7 @@ import com.throughline.taskmanagement.dto.request.ForgotPasswordRequest;
 import com.throughline.taskmanagement.dto.request.LoginRequest;
 import com.throughline.taskmanagement.dto.request.ResendOtpRequest;
 import com.throughline.taskmanagement.dto.request.ResetPasswordRequest;
+import com.throughline.taskmanagement.dto.request.SignUpRequest;
 import com.throughline.taskmanagement.dto.request.VerifyEmailRequest;
 import com.throughline.taskmanagement.dto.response.AuthResponse;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
@@ -33,6 +34,14 @@ public class AuthController {
     @PostMapping("/verify-email")
     public ResponseEntity<AuthResponse> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
         return ResponseEntity.ok(authService.verifyEmail(request));
+    }
+
+    /** Completes an account a Super Admin already created: sign-up code + the password the
+     *  person is choosing for themselves. Not public self-registration — the account has to
+     *  already exist, pending this step. */
+    @PostMapping("/sign-up")
+    public ResponseEntity<AuthResponse> signUp(@Valid @RequestBody SignUpRequest request) {
+        return ResponseEntity.ok(authService.signUp(request));
     }
 
     @PostMapping("/resend-otp")

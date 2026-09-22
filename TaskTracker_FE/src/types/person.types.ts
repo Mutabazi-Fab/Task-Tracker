@@ -30,8 +30,9 @@ export interface Person {
 }
 
 /** Body for POST /people (reused for PUT /people/{id}, which ignores createdById/role/
- *  departmentId/password). createdById must resolve to a Super Admin, enforced
- *  server-side; departmentId and password (8+ chars) are required at creation. */
+ *  departmentId). createdById must resolve to a Super Admin, enforced server-side;
+ *  departmentId is required at creation. No password — the account is created
+ *  passwordless and unverified, and the person sets their own password via /sign-up. */
 export interface CreatePersonRequest {
   fullName: string
   email: string
@@ -40,7 +41,6 @@ export interface CreatePersonRequest {
   createdById?: number
   role?: Role
   departmentId?: number
-  password?: string
 }
 
 /** Body for PUT /people/{id}/role. Super-Admin-only; reason is mandatory (both here and

@@ -61,10 +61,15 @@ written for someone opening this project for the first time.
   hold one on some teams/departments and not others. See
   [Roles & permissions](#roles--permissions).
 - **Auth.** JWT-based login. There is no public self-registration: only a Super Admin can
-  create a new, login-ready account, which starts pre-verified. (A legacy OTP
-  email-verification flow still exists for any account that predates that.) Forgot your
-  password? There's a self-service reset-by-email-code flow, plus a Super-Admin-triggered
-  version for when someone's locked out and can't request it themselves.
+  create a new account, but they set who someone is, not their password. A new account
+  starts passwordless and unverified; the person gets a one-time sign-up code by email and
+  chooses their own password at `/sign-up`, which also verifies them and logs them in. An
+  expired code clears itself from the form on the failed attempt so it can't be resubmitted
+  by mistake, and resending a fresh one is always one click away.
+  (A legacy email-verification-only flow still exists for any account that predates this,
+  from back when a Super Admin set the initial password directly.) Forgot your password?
+  There's a self-service reset-by-email-code flow, plus a Super-Admin-triggered version for
+  when someone's locked out and can't request it themselves.
 - **Visibility is role-scoped, server-side**, not just hidden in the UI. A Member only ever
   sees tasks assigned to them directly or to a team they belong to, their own teammates on
   the People page, and (for a team/department they aren't on) just its name and who leads
@@ -103,7 +108,7 @@ written for someone opening this project for the first time.
 | **Director** | A department's day-to-day manager | Creates teams/tasks, sees their whole department, decides deadlines for their own tasks |
 | **Department Head** *(per-department, not a global role)* | The one Director accountable for a whole Department | Turns the CEO's Department-level mandate into a real implementation task |
 | **Executive** | The CEO | Hands mandates to whole Departments, sets task severity, approves CEO-mandated deadline extensions, org-wide read view |
-| **Super Admin** | System/HR governance | Everything Executive can do, plus creating accounts, granting roles, (de)activating accounts, department administration |
+| **Super Admin** | System governance & technical support | Not a business role like the others: exists to administer the system itself and the org structure inside it. Everything Executive can do, plus creating user accounts (the only way anyone gets into the system in the first place), granting/revoking roles, (de)activating accounts, department administration |
 
 ## Use case diagram
 
@@ -486,8 +491,10 @@ exactly that port; there's no environment variable to point it elsewhere yet.
 
 Go to `http://localhost:5173/login` and sign in with the Super Admin email/password from
 step 3. From there, use the People page to create a Department, then Directors and
-ordinary Members; whoever you create gets an invite email (if mail is configured)
-telling them to log in at that same email address with the password you gave them.
+ordinary Members. Creating a person no longer takes a password from you: the account
+starts out passwordless and unverified, and whoever you create gets a sign-up email (if
+mail is configured) with a one-time code; they enter it at `/sign-up` and choose their own
+password there, the same one-time step every new account goes through from now on.
 
 ## Configuration reference
 
@@ -524,7 +531,7 @@ Split across the two gitignored files from step 2 above.
 | **Director** | Full visibility over their own department; create teams and top-level tasks (team- or individually-assigned) within it; create implementation tasks under a Department task their department heads; decide/forward deadline extensions for their own tasks; their own "My Initiatives" and "Critical & CEO-assigned" dashboards |
 | **Department Head** *(per department, not a global role)* | The Director accountable for turning a Department-level task the CEO assigned into a real team-or-individual implementation task |
 | **Executive** | Everything a Director can do, org-wide, plus: create tasks assigned straight to a whole Department, set task severity, approve deadline extensions on CEO-mandated chains, create new departments, the org-wide Executive dashboard (department health roll-up, KPI tiles) |
-| **Super Admin** | Everything an Executive can do, plus: create new people/accounts, promote/demote anyone to any role, deactivate/reactivate any account, rename departments and reassign their head, view every org-wide audit log |
+| **Super Admin** | A governance/system-support role, not a business one: owns the org's technical administration rather than its day-to-day work. Everything an Executive can do, plus: create new people/accounts (the only route onto the platform — there is no public self-registration), promote/demote anyone to any role, deactivate/reactivate any account, rename departments and reassign their head, view every org-wide audit log |
 
 ## Security: what must never be committed
 
@@ -535,12 +542,14 @@ Split across the two gitignored files from step 2 above.
 - Anything containing a database password, the JWT signing secret, a Gmail App Password,
   or real personal data of any kind.
 - **Passwords are stored in plain text in this project**: a deliberate, explicit choice
-  (see the `NoOpPasswordEncoder` comment in `SecurityConfig.java`). That means anyone with
-  database access can read every password directly. That's an acceptable trade-off for a
-  local/internal/demo tool; it is **not** acceptable if this is ever exposed to real users
-  or the public internet. Swapping back to `new BCryptPasswordEncoder()` is a one-line
-  change in `SecurityConfig`, and nothing else in the auth code needs to change either
-  way.
+  (see the `NoOpPasswordEncoder` comment in `SecurityConfig.java`), made during development
+  so a forgotten password can just be looked up and remembered instead of reset every time,
+  and so it's easy to eyeball the right value directly in the database while testing. That
+  means anyone with database access can read every password directly. That's an acceptable
+  trade-off for a local/internal/demo tool; it is **not** acceptable for deployment, and
+  hashing passwords properly before then is planned as standard practice, not optional
+  hardening. Swapping back to `new BCryptPasswordEncoder()` is a one-line change in
+  `SecurityConfig`, and nothing else in the auth code needs to change either way.
 
 If this repository has ever been pushed to a public remote with real credentials inside
 either config file, treat those credentials as burned: rotate `app.jwt.secret` (a fresh

@@ -36,14 +36,11 @@ import com.throughline.taskmanagement.repository.TaskCommentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
 import com.throughline.taskmanagement.repository.TeamMemberRepository;
 import com.throughline.taskmanagement.service.AuthService;
-import com.throughline.taskmanagement.service.MailService;
 import com.throughline.taskmanagement.service.NotificationService;
 import com.throughline.taskmanagement.service.PersonService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,12 +62,7 @@ public class PersonServiceImpl implements PersonService {
     private final PersonMapper personMapper;
     private final TaskMapper taskMapper;
     private final NotificationService notificationService;
-    private final MailService mailService;
     private final AuthService authService;
-    private final PasswordEncoder passwordEncoder;
-
-    @Value("${app.frontend-url}")
-    private String frontendUrl;
 
     @Override
     public PersonResponse createPerson(CreatePersonRequest request) {
@@ -95,13 +87,6 @@ public class PersonServiceImpl implements PersonService {
         Department department = departmentRepository.findById(request.departmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("departmentId not found"));
 
-        if (request.password() == null || request.password().isBlank()) {
-            throw new InvalidAssignmentException("password is required.");
-        }
-        if (request.password().length() < 8) {
-            throw new InvalidAssignmentException("Password must be at least 8 characters.");
-        }
-
         Person person = new Person();
         person.setFullName(request.fullName());
         person.setEmail(request.email());
@@ -109,24 +94,17 @@ public class PersonServiceImpl implements PersonService {
         person.setRank(request.rank());
         person.setRole(targetRole);
         person.setDepartment(department);
-        person.setPassword(passwordEncoder.encode(request.password()));
-        // The Super Admin setting this password already vouches for the email address —
-        // no OTP step needed, so this starts verified.
-        person.setEmailVerified(true);
+        // No password yet, and not verified — the Super Admin vouches for who this person
+        // is, not for a password. AuthService.sendSignUpCode below emails them a code to
+        // set their own password (see AuthService.signUp), the same way a fresh account
+        // always has going forward.
 
         Person saved = personRepository.save(person);
 
-        // Best-effort — a flaky mail send shouldn't block onboarding; credentials can
-        // always be shared directly instead.
+        // Best-effort — a flaky mail send shouldn't block onboarding; the Super Admin can
+        // always trigger a resend later (see AuthController's resend-otp).
         try {
-            String roleWord = targetRole == Role.MEMBER ? "a team member" : "a " + targetRole.name().toLowerCase();
-            mailService.send(
-                    saved.getEmail(),
-                    "You've been added to Throughline",
-                    String.format(
-                            "%s added you to Throughline as %s. Log in at %s using this email address (%s) and "
-                                    + "the password provided to you.",
-                            createdBy.getFullName(), roleWord, frontendUrl, saved.getEmail()));
+            authService.sendSignUpCode(saved);
         } catch (Exception e) {
             // Ignored on purpose — see comment above.
         }

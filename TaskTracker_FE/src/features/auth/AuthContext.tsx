@@ -6,6 +6,7 @@ import type {
   LoginRequest,
   ResendOtpRequest,
   ResetPasswordRequest,
+  SignUpRequest,
   VerifyEmailRequest,
 } from '../../types/auth.types'
 import type { Person } from '../../types/person.types'
@@ -16,6 +17,7 @@ import {
   logout as logoutRequest,
   resendOtp as resendOtpRequest,
   resetPassword as resetPasswordRequest,
+  signUp as signUpRequest,
   verifyEmail as verifyEmailRequest,
 } from './api/auth.api'
 
@@ -34,6 +36,9 @@ export interface AuthContextValue {
   login: (request: LoginRequest, remember: boolean) => Promise<void>
   /** Returns AuthResponse rather than void — a code may need another attempt. On success also logs the person in. */
   verifyEmail: (request: VerifyEmailRequest) => Promise<AuthResponse>
+  /** Completes an account a Super Admin already created. Same "may need another attempt"
+   *  shape as verifyEmail; on success also logs the person in with the password they just chose. */
+  signUp: (request: SignUpRequest) => Promise<AuthResponse>
   resendOtp: (request: ResendOtpRequest) => Promise<void>
   /** Always resolves — the caller shows the same generic "if an account exists, a code was sent" message regardless. */
   forgotPassword: (request: ForgotPasswordRequest) => Promise<void>
@@ -133,6 +138,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return auth
   }, [hydrate])
 
+  const signUp = useCallback(async (request: SignUpRequest): Promise<AuthResponse> => {
+    const auth = await signUpRequest(request)
+    if (auth.token) {
+      storeToken(auth.token, true)
+      await hydrate()
+    }
+    return auth
+  }, [hydrate])
+
   const resendOtp = useCallback(async (request: ResendOtpRequest) => {
     await resendOtpRequest(request)
   }, [])
@@ -172,12 +186,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSuperAdmin: currentUser?.role === 'SUPER_ADMIN',
       login,
       verifyEmail,
+      signUp,
       resendOtp,
       forgotPassword,
       resetPassword,
       logout,
     }),
-    [status, currentUser, login, verifyEmail, resendOtp, forgotPassword, resetPassword, logout],
+    [status, currentUser, login, verifyEmail, signUp, resendOtp, forgotPassword, resetPassword, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

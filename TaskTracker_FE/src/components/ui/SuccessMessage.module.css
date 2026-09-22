@@ -1,0 +1,26 @@
+/* Green — the same --status-completed colour the app already uses for a finished task,
+   reused here so a real success reads as one at a glance (mirrors ErrorMessage). */
+.wrap {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--status-completed-bg);
+  border-left: 3px solid var(--status-completed);
+  border-radius: var(--radius-sm);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--status-completed);
+  flex-shrink: 0;
+}
+
+.message {
+  font-size: 13px;
+  color: var(--status-completed);
+}
