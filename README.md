@@ -2,62 +2,331 @@
 
 Throughline is a task-progress tracking system built around one rule: **every percentage
 is justified by a dated comment, and every reassignment is justified by a reason.** It's
-themed around a Rwandan military/banking hierarchy (ranks, Directors, teams), but
-underneath that theming it's a general-purpose "who's doing what, and how far along is
-it, and who said so" tracker.
+themed around a Rwandan military/banking hierarchy (ranks, Directors, an Executive/CEO
+seat, Departments), but underneath that theming it's a general-purpose "who's doing what,
+how far along is it, who said so, and who signed off on it" tracker.
 
 This README covers the whole system — both the Spring Boot backend and the React
-frontend — how to run it on your own machine, how its configuration works, and what must
-never end up in version control.
+frontend — how to navigate the codebase, how to download and run it on your own machine,
+how its configuration works, its data model, and what must never end up in version
+control. It is written for someone opening this project for the first time.
 
 ## Contents
 
 - [What it does](#what-it-does)
+- [Who uses it — roles at a glance](#who-uses-it--roles-at-a-glance)
+- [Use case diagram](#use-case-diagram)
+- [Domain model — class diagram](#domain-model--class-diagram)
 - [Tech stack](#tech-stack)
 - [Project structure](#project-structure)
 - [Prerequisites](#prerequisites)
-- [Running it locally, step by step](#running-it-locally-step-by-step)
+- [Downloading and running it locally, step by step](#downloading-and-running-it-locally-step-by-step)
 - [Configuration reference](#configuration-reference)
 - [Roles & permissions](#roles--permissions)
 - [Security — what must never be committed](#security--what-must-never-be-committed)
+- [Testing](#testing)
 - [Known limitations](#known-limitations)
 - [Where to look next](#where-to-look-next)
 
 ## What it does
 
-- **Task hierarchy.** A top-level task is always assigned to a whole *team* (only a
-  Director or Super Admin can create one). A team can break its task into *subtasks*,
-  each assigned to one *individual* member of that team (the team's own Leader can do
-  this too, not just a Director/Super Admin).
+- **Four-tier task hierarchy.** The Executive (CEO) seat can hand a mandate straight to a
+  whole **Department**. That Department's head Director turns it into a real
+  **implementation task** — assigned to a team or an individual, one level deeper. A
+  Director can also skip the Department step entirely and create an ordinary top-level task
+  assigned straight to a **team** (which can be broken into **subtasks** for individual
+  members) or straight to one **person**. Depth is capped at 2, and only a Department-rooted
+  chain ever reaches it.
 - **Progress only moves one way.** A task's percentage never gets edited directly — it
-  changes only when someone adds a dated progress comment, and the task's status
-  (Pending/Ongoing/Completed) is derived from that percentage automatically.
-- **Reassignment needs a reason, and isn't open to everyone.** Reassigning a task
-  requires a mandatory written reason, and is restricted to a Director, a Super Admin, or
-  that specific task's Team Leader — an ordinary team member can't do it.
-- **Teams.** A person can belong to more than one team at once. Each team has exactly one
-  Leader. Every membership change (added/removed) is logged with who did it and why.
-- **People & roles.** Three global roles, ascending: `MEMBER < DIRECTOR < SUPER_ADMIN`.
-  "Team Leader" is a *separate*, per-team concept — a Member can lead one team and be a
-  plain member of another at the same time. See [Roles & permissions](#roles--permissions).
-- **Auth.** JWT-based login/signup. A brand-new signup has to verify their email with a
-  one-time code sent by real Gmail SMTP before they can log in. Forgot your password?
-  There's a self-service reset-by-email-code flow, plus a Super-Admin-triggered version
-  of the same flow for when someone's locked out and can't request it themselves.
-- **Visibility is role-scoped, server-side.** A Member logging in only ever sees: tasks
-  assigned to them directly or to a team they belong to; only their own teammates on the
-  People page; and, for a team they aren't on, just its name and who leads it — nothing
-  else. Directors and Super Admins see everything, everywhere.
-- **Notifications.** In-app notifications for role changes, account (de)activation, team
-  membership changes, and admin-triggered password resets — always sent to the affected
-  person, not the person who made the change.
-- **Director/Super Admin dashboard.** Org-wide KPIs, a progress-over-time trend line, a
-  status-mix donut, a team leaderboard, a people summary, and a "my initiatives" section
-  for tasks that Director personally created.
+  changes only when someone adds a dated progress comment on an individually-tracked task.
+  A team/department task's percentage is always the automatic roll-up (average) of its
+  children. Status (Pending/Ongoing/Completed) is derived from the percentage.
+- **Reassignment needs a reason, and isn't open to everyone.** A mandatory written reason
+  is required, and only a Director/Executive/Super Admin, or the task's own Team Leader,
+  can do it — scoped to who actually has standing over that specific task.
+- **Deadline extensions follow the chain of command.** Whoever is doing the work requests
+  more time; the request goes to that task's real decider (never just whoever created it —
+  a Team Leader can create a leaf subtask but never owns its deadline). On a chain that
+  originated from the CEO's own mandate, a Director can still reject a request but can only
+  *forward* it for approval — only the CEO/Super Admin can actually approve one.
+  Deadlines can also be extended directly, without the request/approval round-trip, and
+  that is still logged as a self-approved entry so the audit trail has no gap.
+- **Teams and Departments.** A person can belong to more than one team at once; each team
+  has exactly one Leader. Every team and every person belongs to exactly one Department.
+  Every membership change (added/removed/leader reassigned) is logged with who did it and
+  why.
+- **People & roles.** Four global roles, ascending:
+  `MEMBER < DIRECTOR < EXECUTIVE < SUPER_ADMIN`. "Team Leader" and "Department Head" are
+  *not* global roles — they're scoped per-team / per-department, so the same person can
+  hold one on some teams/departments and not others. See
+  [Roles & permissions](#roles--permissions).
+- **Auth.** JWT-based login. There is no public self-registration — only a Super Admin can
+  create a new, login-ready account, which starts pre-verified. (A legacy OTP
+  email-verification flow still exists for any account that predates that.) Forgot your
+  password? There's a self-service reset-by-email-code flow, plus a Super-Admin-triggered
+  version for when someone's locked out and can't request it themselves.
+- **Visibility is role-scoped, server-side**, not just hidden in the UI. A Member only ever
+  sees tasks assigned to them directly or to a team they belong to, their own teammates on
+  the People page, and — for a team/department they aren't on — just its name and who leads
+  it. A plain Director is scoped to their own department. Executive/Super Admin see
+  everything, everywhere.
+- **Daily goals.** A Member can flag up to 3 of their own assigned tasks (including their
+  own subtasks) as "what I'm focused on today," shown at the top of their dashboard —
+  meant to cut through the noise when someone has many tasks at once.
+- **Supporting documents.** Any file (memo, spec, directive) can be attached to a task and
+  downloaded later by anyone who can already see that task.
+- **Extensible Source categories.** A task can record where it originated (e.g.
+  Initiative, Regulator, Auditor, Board) from an open, admin-extensible list, plus a free
+  "Source Detail" field with reusable, saved suggestions (e.g. "BNR" under Regulator).
+- **In-app notifications**, always sent to the affected person, for: task/subtask
+  assignment and reassignment, deadline-extension requests/approvals/rejections/forwards,
+  discussion replies, team membership changes, role changes, account (de)activation,
+  admin-triggered password resets, and new teams/departments/task-deletions (the latter
+  three back small "new activity" badges next to the relevant sidebar item).
+- **Director/Executive dashboards.** Org-wide KPIs, a progress-over-time trend line, a
+  status-mix donut, a team leaderboard, a people summary, a "my initiatives" panel, and
+  — for Executive/Super Admin — a department-by-department traffic-light health roll-up
+  and a "Critical & CEO-assigned" panel.
 - **Global search** across people and tasks from the top bar, from anywhere in the app.
-- **Audit trail.** A Super-Admin-only page lists every role change ever made, org-wide.
+- **Audit trail.** A merged Director-or-above Activity feed covering task creation/
+  deletion, role changes, account activation/deactivation, and department deletion, all in
+  one place.
 - **Accounts are deactivated, never deleted** — a Super Admin can lock an account without
   losing that person's task/comment/reassignment history.
+
+## Who uses it — roles at a glance
+
+| Role | Who they are in the theming | What sets them apart |
+|---|---|---|
+| **Member** | An ordinary staff member | Sees only their own work; can log progress, comment, pick daily goals |
+| **Team Leader** *(per-team, not a global role)* | Whoever leads one specific team | Can create/reassign that team's own tasks, same standing as a Director but scoped to their team |
+| **Director** | A department's day-to-day manager | Creates teams/tasks, sees their whole department, decides deadlines for their own tasks |
+| **Department Head** *(per-department, not a global role)* | The one Director accountable for a whole Department | Turns the CEO's Department-level mandate into a real implementation task |
+| **Executive** | The CEO | Hands mandates to whole Departments, sets task severity, approves CEO-mandated deadline extensions, org-wide read view |
+| **Super Admin** | System/HR governance | Everything Executive can do, plus creating accounts, granting roles, (de)activating accounts, department administration |
+
+## Use case diagram
+
+Four actors use this system — **Member**, **Director**, **Executive/CEO**, and **Super
+Admin** — plus one external actor, the **Email System**, which delivers OTP/invite/
+notification/reset emails on the app's behalf. Every role can log in, recover a locked-out
+account, search people and tasks, and receive notifications. From there each role's reach
+narrows: a Member only manages their own assigned work and daily focus goals; a Director
+and the Executive both manage tasks and deadline extensions (a Director within their own
+department, the Executive org-wide, with Department-level authority besides); and a Super
+Admin owns org-structure governance — teams, departments, and people/roles — on top of the
+same dashboard and audit-log visibility a Director and Executive get. `<<include>>` arrows
+mark a step a use case always performs (e.g. "Manage tasks" always includes creating and
+reassigning a task); `<<extend>>` arrows mark an optional one that only sometimes applies
+(e.g. forwarding a deadline-extension request to the CEO only happens on a CEO-mandated
+task chain).
+
+![Throughline use case diagram](TaskTracker_FE/src/icon/Use%20case%20diagram.jpg)
+
+## Domain model — class diagram
+
+This is the real JPA entity model (`TaskTracker_BE/.../model/*.java`), trimmed of getters/
+setters and the smaller append-only audit tables (`RoleChange`, `AccountStatusChange`,
+`TeamMembershipChange`, `TaskActivity`, `DepartmentActivity` — each is the same shape:
+who/what changed, who changed it, an optional reason, and a timestamp, all insert-only,
+never updated). `Person` sits at the center of the org chart: each one belongs to exactly
+one `Department` and holds a `Role`, and can join several `Team`s through the `TeamMember`
+join entity. `Task` is the other core entity — assigned to a `Team`, a `Person`, or a whole
+`Department`, optionally nested under a `parentTask`, and carrying its own progress log
+(`TaskComment`), reassignment history, deadline-extension requests, and attached
+documents. `PersonDailyGoal` links a person to up to 3 tasks they're focused on right now,
+`TaskSourceCategory`/`TaskSourceEntry` back the task-origin picklist, and `Notification`
+is every person's own inbox.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {
+  'background': '#ffffff',
+  'primaryColor': '#ffffff',
+  'primaryBorderColor': '#000000',
+  'primaryTextColor': '#000000',
+  'secondaryColor': '#ffffff',
+  'tertiaryColor': '#ffffff',
+  'lineColor': '#000000',
+  'classText': '#000000',
+  'nodeBorder': '#000000'
+}}}%%
+classDiagram
+    class Person {
+        +Long id
+        +String fullName
+        +String email
+        +String jobTitle
+        +String rank
+        +Role role
+        +boolean emailVerified
+        +boolean active
+        +LocalDateTime createdAt
+    }
+
+    class Role {
+        <<enumeration>>
+        MEMBER
+        DIRECTOR
+        EXECUTIVE
+        SUPER_ADMIN
+    }
+
+    class Department {
+        +Long id
+        +String name
+        +LocalDateTime createdAt
+    }
+
+    class Team {
+        +Long id
+        +String name
+        +LocalDateTime createdAt
+    }
+
+    class TeamMember {
+        +Long id
+        +boolean isLeader
+        +LocalDateTime joinedAt
+    }
+
+    class Task {
+        +Long id
+        +String taskCode
+        +String title
+        +String description
+        +AssigneeType assigneeType
+        +int depth
+        +TaskStatus status
+        +int progressPercentage
+        +LocalDate dateAssigned
+        +LocalDate deadline
+        +String source
+        +String sourceLabel
+        +TaskSeverity severity
+        +boolean pinned
+        +LocalDateTime createdAt
+    }
+
+    class AssigneeType {
+        <<enumeration>>
+        INDIVIDUAL
+        TEAM
+        DEPARTMENT
+    }
+
+    class TaskStatus {
+        <<enumeration>>
+        PENDING
+        ONGOING
+        COMPLETED
+    }
+
+    class TaskSeverity {
+        <<enumeration>>
+        LOW
+        MEDIUM
+        HIGH
+        CRITICAL
+    }
+
+    class TaskComment {
+        +Long id
+        +int percentageAtComment
+        +String body
+        +CommentType type
+        +int sequenceNumber
+        +LocalDateTime createdAt
+    }
+
+    class CommentType {
+        <<enumeration>>
+        PROGRESS
+        DISCUSSION
+    }
+
+    class TaskReassignment {
+        +Long id
+        +AssigneeType fromAssigneeType
+        +AssigneeType toAssigneeType
+        +String reason
+        +LocalDateTime reassignedAt
+    }
+
+    class TaskDeadlineExtensionRequest {
+        +Long id
+        +LocalDate currentDeadline
+        +LocalDate requestedDeadline
+        +String justification
+        +ExtensionRequestStatus status
+        +String decisionNote
+        +LocalDateTime requestedAt
+        +LocalDateTime decidedAt
+        +LocalDateTime forwardedAt
+    }
+
+    class ExtensionRequestStatus {
+        <<enumeration>>
+        PENDING
+        APPROVED
+        REJECTED
+    }
+
+    class TaskDocument {
+        +Long id
+        +String fileName
+        +String contentType
+        +long fileSize
+        +byte[] content
+        +LocalDateTime uploadedAt
+    }
+
+    class TaskSourceCategory {
+        +Long id
+        +String name
+        +LocalDateTime createdAt
+    }
+
+    class TaskSourceEntry {
+        +Long id
+        +String source
+        +String label
+        +LocalDateTime createdAt
+    }
+
+    class PersonDailyGoal {
+        +Long id
+        +LocalDateTime addedAt
+    }
+
+    class Notification {
+        +Long id
+        +NotificationType type
+        +String message
+        +Long relatedEntityId
+        +boolean isRead
+        +LocalDateTime createdAt
+    }
+
+    Person "0..1" --> "1" Department : belongs to
+    Person "1" --> "0..1" Role
+    Department "1" --> "0..*" Team : has
+    Department "1" --> "1" Person : headed by
+    Team "1" --> "0..*" TeamMember : roster
+    Person "1" --> "0..*" TeamMember : memberships
+    Task "0..1" --> "0..1" Task : parentTask
+    Task "0..1" --> "0..1" Team : assignedTeam
+    Task "0..1" --> "0..1" Person : assignedPerson
+    Task "0..1" --> "0..1" Department : assignedDepartment
+    Task "1" --> "1" Person : assignedBy
+    Task "1" --> "0..*" TaskComment : progress log
+    Task "1" --> "0..*" TaskReassignment : history
+    Task "1" --> "0..*" TaskDeadlineExtensionRequest : requests
+    Task "1" --> "0..*" TaskDocument : attachments
+    Person "1" --> "0..3" PersonDailyGoal : today's focus
+    PersonDailyGoal "0..*" --> "1" Task
+    Person "1" --> "0..*" Notification : inbox
+    TaskSourceCategory "1" --> "0..*" TaskSourceEntry : suggestions under
+```
 
 ## Tech stack
 
@@ -73,8 +342,23 @@ library).
 
 ```
 Task_Tracker/
+├── README.md          This file
 ├── TaskTracker_BE/    Spring Boot API — runs on http://localhost:8080
+│   ├── src/main/java/com/throughline/taskmanagement/
+│   │   ├── model/          JPA entities (the class diagram above)
+│   │   ├── repository/     Spring Data repositories
+│   │   ├── service/        Business logic interfaces + impl/
+│   │   ├── controller/     REST endpoints
+│   │   ├── dto/             request/ and response/ records
+│   │   ├── enums/          Role, TaskStatus, AssigneeType, ...
+│   │   └── security/       JWT filter, current-user resolution
+│   └── src/test/java/...   Real-database integration tests (see Testing)
 └── TaskTracker_FE/    React app (Vite) — runs on http://localhost:5173
+    └── src/
+        ├── features/        one folder per feature area (tasks, taskDetail, people, teams, departments, dashboard, auth, notifications, search)
+        ├── components/      shared UI (ui/) and layout (layout/) building blocks
+        ├── api/             axios client + endpoint URL builders
+        └── types/           TypeScript types mirroring the backend DTOs
 ```
 
 They're two independent projects that only talk to each other over HTTP — there's no
@@ -86,10 +370,21 @@ terminal.
 - **Java 21** (JDK)
 - **Node.js** 18+ and npm
 - **PostgreSQL**, running locally (or reachable), with a database you'll create in step 1
+- **Git**, to clone the repository
 - *(Optional — needed only for real outgoing email)* a Gmail account with an **App
   Password** generated for it (not your normal Gmail password — see step 2 below)
 
-## Running it locally, step by step
+## Downloading and running it locally, step by step
+
+### 0. Get the code
+
+```bash
+git clone <the repository's URL>
+cd Task_Tracker
+```
+
+(If you were handed a zip file instead of a git URL, just unzip it and `cd` into the
+resulting folder — everything below is the same either way.)
 
 ### 1. Create the database
 
@@ -157,11 +452,11 @@ A couple of things worth being precise about here:
 
 ### 3. Bootstrap the first Super Admin
 
-There's no self-service way to create a Super Admin through the app itself — signup
-always creates a Member, and even a Director creating a new person can only ever hand
-them Member by default (only an *existing* Super Admin can promote anyone to
-Director/Super Admin). So the very first one has to be inserted directly, after the
-backend has booted at least once (so the `persons` table and its columns already exist):
+There's no self-service way to create a Super Admin through the app itself — the only way
+to get a new account at all is an *existing* Super Admin creating one from the People page
+(and even a Director creating a new person can only ever hand them Member by default). So
+the very first account has to be inserted directly, after the backend has booted at least
+once (so the `persons` table and its columns already exist):
 
 ```sql
 INSERT INTO persons (full_name, email, password, job_title, rank, role, email_verified, active, created_at)
@@ -201,9 +496,9 @@ exactly that port; there's no environment variable to point it elsewhere yet.
 ### 6. Log in
 
 Go to `http://localhost:5173/login` and sign in with the Super Admin email/password from
-step 3. From there, use the People page to create Directors and ordinary Members —
-whoever you create gets an invite email (if mail is configured) telling them to sign up
-at that same email address to activate their own account.
+step 3. From there, use the People page to create a Department, then Directors and
+ordinary Members — whoever you create gets an invite email (if mail is configured)
+telling them to log in at that same email address with the password you gave them.
 
 ## Configuration reference
 
@@ -235,19 +530,18 @@ Split across the two gitignored files from step 2 above.
 
 | Role | Can do |
 |---|---|
-| **Member** | See only: tasks assigned to them directly, tasks assigned to any team they belong to, their own teammates on the People page, and (for teams they aren't on) just the team's name and Leader — nothing more |
-| **Director** | Everything a Member sees, plus: create teams, create top-level tasks (always team-assigned), create new people (capped at Member role by default), full org-wide visibility on People/Teams/Tasks, their own "My Initiatives" dashboard |
-| **Super Admin** | Everything a Director can do, plus: promote/demote anyone to Director or Super Admin, deactivate/reactivate any account, view the org-wide role-change audit log, trigger a password-reset email for someone else |
-| **Team Leader** *(not a global role)* | Scoped **per team** — someone can lead one team and be a plain Member of another at the same time. A team's Leader can create subtasks under that team's tasks and reassign that team's tasks, the same authority a Director/Super Admin has, but only for their own team |
+| **Member** | See only: tasks assigned to them directly, tasks assigned to any team they belong to, their own teammates on the People page, and (for teams/departments they aren't on) just the name and who leads it. Log progress and comments on their own work, pick up to 3 daily focus goals |
+| **Team Leader** *(per team, not a global role)* | Everything a Member sees, plus: create/reassign subtasks and reassign the top-level task for their own team, same standing as a Director but scoped to just that one team |
+| **Director** | Full visibility over their own department; create teams and top-level tasks (team- or individually-assigned) within it; create implementation tasks under a Department task their department heads; decide/forward deadline extensions for their own tasks; their own "My Initiatives" and "Critical & CEO-assigned" dashboards |
+| **Department Head** *(per department, not a global role)* | The Director accountable for turning a Department-level task the CEO assigned into a real team-or-individual implementation task |
+| **Executive** | Everything a Director can do, org-wide, plus: create tasks assigned straight to a whole Department, set task severity, approve deadline extensions on CEO-mandated chains, create new departments, the org-wide Executive dashboard (department health roll-up, KPI tiles) |
+| **Super Admin** | Everything an Executive can do, plus: create new people/accounts, promote/demote anyone to any role, deactivate/reactivate any account, rename departments and reassign their head, view every org-wide audit log |
 
 ## Security — what must never be committed
 
-- `TaskTracker_BE/src/main/resources/application.properties` — gitignored, and was also
-  explicitly untracked from git (`git rm --cached`) after already having been committed
-  for a while — see the warning below for why that untracking alone isn't a complete fix.
-- `TaskTracker_BE/src/main/resources/application-secrets.properties` — already gitignored
-  from the start, never committed.
-- `TaskTracker_BE/seed-data/` — already gitignored; contains real names/emails used during
+- `TaskTracker_BE/src/main/resources/application.properties` — gitignored.
+- `TaskTracker_BE/src/main/resources/application-secrets.properties` — gitignored.
+- `TaskTracker_BE/seed-data/` — gitignored; contains real names/emails used during
   development.
 - Anything containing a database password, the JWT signing secret, a Gmail App Password,
   or real personal data of any kind.
@@ -259,25 +553,33 @@ Split across the two gitignored files from step 2 above.
   change in `SecurityConfig`, and nothing else in the auth code needs to change either
   way.
 
-> ** Already-exposed secret, at the time of writing.** `application.properties` was
-> tracked in git from the very first commit, carrying the real JWT signing secret and
-> database password in plain text — and this repository has already been pushed to a
-> public GitHub remote. It's since been untracked (`git rm --cached`, alongside adding it
-> to `.gitignore`) so it stops being committed **going forward** — but that change only
-> takes effect once it's actually committed, and even then it does nothing to the *past*:
-> every old commit still has the real values in it, recoverable by anyone who looks at
-> this repo's history. Rotating `app.jwt.secret` (swapping in a freshly generated random
-> string) is strongly recommended before relying on this project for anything beyond
-> local development — it would immediately invalidate every existing login token
-> (everyone, including you, would need to log in again). Fully scrubbing the old values
-> out of git history itself (e.g. with `git filter-repo`) is a further, more disruptive
-> step beyond that — it rewrites every commit hash, so anyone else with a clone would need
-> to re-clone rather than pull.
+If this repository has ever been pushed to a public remote with real credentials inside
+either config file, treat those credentials as burned: rotate `app.jwt.secret` (a fresh
+random string immediately invalidates every existing login token — everyone, including
+you, needs to log in again) and change the exposed Postgres/Gmail credentials. Untracking
+a file from git (`git rm --cached`) only stops *future* commits from carrying it — it does
+nothing to old commits that already have it, which remain fully recoverable from history
+for anyone with a clone. Fully scrubbing old values out of history (e.g. with
+`git filter-repo`) is a further, disruptive step beyond that, since it rewrites every
+commit hash.
+
+## Testing
+
+- **Backend** has a real integration test suite (`TaskTracker_BE/src/test/java/...`) —
+  `@SpringBootTest` classes that run against the actual seeded database (not mocks), which
+  has repeatedly caught real bugs a mocked test can't (e.g. a Hibernate query silently
+  compiling a nullable-association path as an `INNER JOIN` and dropping rows). Run it with:
+  ```bash
+  cd TaskTracker_BE
+  ./mvnw test          # macOS/Linux
+  mvnw.cmd test         # Windows
+  ```
+- **Frontend** has no automated test suite — verification is `npx tsc --noEmit` (type
+  check) and `npx vite build` (production build), run from `TaskTracker_FE/`.
 
 ## Known limitations
 
-- **No automated test suite.** Only the default Spring Boot boilerplate test exists on
-  the backend; there's nothing on the frontend.
+- **No automated frontend test suite** — see [Testing](#testing) above.
 - **Forgot-password / reset-password only work for a real, deliverable email address.**
   Seeded test accounts using a fake domain (`@example.com`) can never actually receive a
   reset code — the request itself will still "succeed" (by design, to avoid leaking which
@@ -288,11 +590,12 @@ Split across the two gitignored files from step 2 above.
   ever equal a bcrypt hash again. The only fix is an admin directly overwriting that
   person's `password` column via SQL.
 - **`ddl-auto=update` only ever adds schema — it never alters or drops anything
-  existing.** Twice in this project's history, adding a new value to a Java enum (`Role`,
-  `NotificationType`) required manually dropping a stale Postgres `CHECK` constraint in
-  pgAdmin, because Hibernate had generated that constraint against the enum's *old,
-  shorter* list of values and will never update it on its own. If a newly added enum value
-  fails to insert with a constraint violation, this finds the culprit:
+  existing.** Several times in this project's history, adding a new value to a Java enum
+  (`Role`, `NotificationType`), or loosening a column from a fixed enum to open text
+  (`Task.source`), required manually dropping a stale Postgres `CHECK` constraint in
+  pgAdmin/psql, because Hibernate had generated that constraint against the column's *old*
+  shape and will never update it on its own. If a value that should be valid fails to
+  insert with a constraint violation, this finds the culprit:
   ```sql
   SELECT conname, pg_get_constraintdef(oid)
   FROM pg_constraint
@@ -303,9 +606,8 @@ Split across the two gitignored files from step 2 above.
 
 - `TaskTracker_BE/README.md` — an early curl-based API reference. Parts of it (especially
   the People/Teams request & response shapes) reflect an earlier version of the API, from
-  before the task hierarchy/multi-team/auth rework — treat it as historical background,
-  not a current source of truth.
-- `TaskTracker_FE/README.md` — the frontend's folder structure and conventions. Still
-  accurate, aside from a couple of notes calling the People/Teams pages "read-only" —
-  they've since grown full admin/management UI (create person, role/deactivation
-  controls, team creation, add/remove members).
+  before the task hierarchy/multi-team/Department/auth rework — treat it as historical
+  background, not a current source of truth.
+- `TaskTracker_FE/README.md` — the frontend's folder structure and conventions.
+- `TaskTracker_BE/seed-data/README.md` — how the current demo/seed dataset was built, if
+  you want to reset the database to a known, fully-populated org chart.
