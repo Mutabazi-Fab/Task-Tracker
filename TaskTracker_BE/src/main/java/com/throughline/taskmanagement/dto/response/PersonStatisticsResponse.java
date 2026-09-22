@@ -14,5 +14,8 @@ public record PersonStatisticsResponse(
     // Per-team breakdown — e.g. "50% avg on Auditing App team, 100% on Compliance team" —
     // alongside (not instead of) the org-wide totals above, which still matter for
     // whole-org views like the dashboard leaderboard.
-    List<PersonTeamStatisticsResponse> teamBreakdown
+    List<PersonTeamStatisticsResponse> teamBreakdown,
+    // Up to 3 tasks this person has personally flagged as "what I'm focused on today" — see
+    // PersonDailyGoal/PersonServiceImpl.addDailyGoal. Empty, not null, when none are set.
+    List<TaskListResponse> dailyGoalTasks
 ) {}

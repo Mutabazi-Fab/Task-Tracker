@@ -10,6 +10,7 @@ import { useTeams } from '../../teams/hooks/useTeams'
 import { usePeople } from '../../people/hooks/usePeople'
 import { maxAssignableDate, minAssignableDate } from '../../../lib/dateLimits'
 import { InlineSubtasksField, type InlineSubtaskRow } from '../../tasks/components/InlineSubtasksField'
+import { SourceDetailField } from '../../tasks/components/SourceDetailField'
 import type { CreateSubtaskRequest, TaskSeverity, TaskSource } from '../../../types/task.types'
 import styles from '../../tasks/components/CreateTaskForm.module.css'
 
@@ -125,6 +126,17 @@ export function CreateSubtaskForm({
     // A different team means a different roster — any rows picked against the old one
     // would point at people who aren't even on this team.
     setSubtaskRows([])
+  }
+
+  function handleSourceChange(next: string) {
+    const value = next as TaskSource
+    setSource(value)
+    // Zigama has exactly one regulator — don't make anyone type it. Only fills when the
+    // field is currently empty, so it never clobbers something the user already typed. Never
+    // fires when sourceInherited is true, since that Source select is disabled then.
+    if (value === 'REGULATOR' && sourceLabel.trim() === '') {
+      setSourceLabel('BNR')
+    }
   }
 
   const hasTarget = isDepartmentImplementation
@@ -245,19 +257,22 @@ export function CreateSubtaskForm({
       <SelectField
         label={sourceInherited ? 'Source (set by the CEO)' : 'Source (optional)'}
         value={source}
-        onChange={(v) => setSource(v as TaskSource)}
+        onChange={handleSourceChange}
         placeholder="Where this came from"
         options={SOURCE_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
         disabled={sourceInherited}
       />
-      {source && (
+      {source && sourceInherited && (
         <TextField
-          label={sourceInherited ? 'Source detail (set by the CEO)' : 'Source detail'}
+          label="Source detail (set by the CEO)"
           value={sourceLabel}
           onChange={setSourceLabel}
           placeholder="e.g. Director Maj. Musoni, GPO, E&Y, Board of Directors"
-          disabled={sourceInherited}
+          disabled
         />
+      )}
+      {source && !sourceInherited && (
+        <SourceDetailField source={source} value={sourceLabel} onChange={setSourceLabel} label="Source detail" />
       )}
 
       {isExecutive && (

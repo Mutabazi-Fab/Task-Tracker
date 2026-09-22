@@ -85,3 +85,18 @@ export async function fetchAccountStatusChangeActivity(requesterId: number): Pro
   })
   return data.content
 }
+
+/** Self-only, enforced server-side — taskId must already be one of the caller's own
+ *  assigned tasks. Rejects a 4th daily goal rather than evicting the oldest. Returns the
+ *  refreshed statistics (including the updated dailyGoalTasks list) so callers don't need a
+ *  separate refetch. */
+export async function addDailyGoal(personId: number, taskId: number): Promise<PersonStatistics> {
+  const { data } = await axiosClient.post<PersonStatistics>(endpoints.people.addDailyGoal(personId), { taskId })
+  return data
+}
+
+/** Self-only, enforced server-side. Silently fine if the task wasn't a daily goal already. */
+export async function removeDailyGoal(personId: number, taskId: number): Promise<PersonStatistics> {
+  const { data } = await axiosClient.delete<PersonStatistics>(endpoints.people.removeDailyGoal(personId, taskId))
+  return data
+}

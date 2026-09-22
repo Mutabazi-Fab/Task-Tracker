@@ -35,6 +35,15 @@ export type TaskSource = 'INITIATIVE' | 'AUDITOR' | 'REGULATOR' | 'BOARD'
  *  independently-editable toggle afterward (see SetPinnedRequest). */
 export type TaskSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 
+/** A saved, reusable "Source Detail" suggestion for one TaskSource category — e.g. "BNR"
+ *  under REGULATOR. Source Detail itself stays free text everywhere; this is only ever a
+ *  pickable suggestion, never a restriction on what can be typed. */
+export interface TaskSourceEntry {
+  id: number
+  source: TaskSource
+  label: string
+}
+
 /** Who structured a subtask — the Director themself, or the Team Leader of the team
  *  owning its parent task. Null for a task that predates the hierarchy. */
 export type CreatedByRole = 'DIRECTOR' | 'TEAM_LEADER'

@@ -1,3 +1,5 @@
+import type { TaskListItem } from './task.types'
+
 /** Global role, ascending: MEMBER < DIRECTOR < EXECUTIVE < SUPER_ADMIN. "Team Leader" is
  *  scoped per-team instead (see TeamMember on the backend), not a value here. Null for a
  *  person created before roles existed and never migrated. Executive is the CEO's seat —
@@ -115,6 +117,9 @@ export interface PersonStatistics {
   tasksHandedOff: number
   fullyCompleted: boolean
   teamBreakdown: PersonTeamStatistics[]
+  // Up to 3 tasks this person has personally flagged as "what I'm focused on today" — see
+  // DailyGoalCard. Empty, not null/undefined, when none are set.
+  dailyGoalTasks: TaskListItem[]
 }
 
 /** How this person relates to a task that shows up in their history. */

@@ -10,6 +10,7 @@ import { useTeams } from '../../teams/hooks/useTeams'
 import { useDepartments } from '../../departments/hooks/useDepartments'
 import { maxAssignableDate, minAssignableDate } from '../../../lib/dateLimits'
 import { InlineSubtasksField, type InlineSubtaskRow } from './InlineSubtasksField'
+import { SourceDetailField } from './SourceDetailField'
 import type { CreateTaskRequest, TaskSeverity, TaskSource } from '../../../types/task.types'
 import styles from './CreateTaskForm.module.css'
 
@@ -134,6 +135,16 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
     setSubtaskRows([])
   }
 
+  function handleSourceChange(next: string) {
+    const value = next as TaskSource
+    setSource(value)
+    // Zigama has exactly one regulator — don't make anyone type it. Only fills when the
+    // field is currently empty, so it never clobbers something the user already typed.
+    if (value === 'REGULATOR' && sourceLabel.trim() === '') {
+      setSourceLabel('BNR')
+    }
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!isValid || !currentUser) return
@@ -238,18 +249,11 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
       <SelectField
         label="Source (optional)"
         value={source}
-        onChange={(v) => setSource(v as TaskSource)}
+        onChange={handleSourceChange}
         placeholder="Where this came from"
         options={SOURCE_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
       />
-      {source && (
-        <TextField
-          label="Source detail"
-          value={sourceLabel}
-          onChange={setSourceLabel}
-          placeholder="e.g. Director Maj. Musoni, GPO, E&Y, Board of Directors"
-        />
-      )}
+      {source && <SourceDetailField source={source} value={sourceLabel} onChange={setSourceLabel} label="Source detail" />}
 
       {isExecutive && (
         <SelectField

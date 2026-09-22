@@ -1,5 +1,6 @@
 package com.throughline.taskmanagement.service.impl;
 
+import com.throughline.taskmanagement.dto.request.AddDailyGoalRequest;
 import com.throughline.taskmanagement.dto.request.ChangeRoleRequest;
 import com.throughline.taskmanagement.dto.request.CreatePersonRequest;
 import com.throughline.taskmanagement.dto.request.SendPasswordResetRequest;
@@ -10,21 +11,25 @@ import com.throughline.taskmanagement.dto.response.PersonTaskHistoryResponse;
 import com.throughline.taskmanagement.dto.response.AccountStatusChangeResponse;
 import com.throughline.taskmanagement.dto.response.PersonTeamStatisticsResponse;
 import com.throughline.taskmanagement.dto.response.RoleChangeResponse;
+import com.throughline.taskmanagement.dto.response.TaskListResponse;
 import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.exception.DuplicateResourceException;
 import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.InvalidAssignmentException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.mapper.PersonMapper;
+import com.throughline.taskmanagement.mapper.TaskMapper;
 import com.throughline.taskmanagement.model.AccountStatusChange;
 import com.throughline.taskmanagement.model.Department;
 import com.throughline.taskmanagement.model.Person;
+import com.throughline.taskmanagement.model.PersonDailyGoal;
 import com.throughline.taskmanagement.model.RoleChange;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.model.TeamMember;
 import com.throughline.taskmanagement.repository.AccountStatusChangeRepository;
 import com.throughline.taskmanagement.repository.DepartmentRepository;
+import com.throughline.taskmanagement.repository.PersonDailyGoalRepository;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.RoleChangeRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
@@ -56,7 +61,9 @@ public class PersonServiceImpl implements PersonService {
     private final RoleChangeRepository roleChangeRepository;
     private final AccountStatusChangeRepository accountStatusChangeRepository;
     private final DepartmentRepository departmentRepository;
+    private final PersonDailyGoalRepository personDailyGoalRepository;
     private final PersonMapper personMapper;
+    private final TaskMapper taskMapper;
     private final NotificationService notificationService;
     private final MailService mailService;
     private final AuthService authService;
@@ -358,6 +365,12 @@ public class PersonServiceImpl implements PersonService {
 
         boolean fullyCompleted = tasksAssigned > 0 && tasksCompleted == tasksAssigned;
 
+        List<PersonDailyGoal> goals = personDailyGoalRepository.findByPersonIdOrderByAddedAtAsc(personId);
+        List<TaskListResponse> dailyGoalTasks = goals.stream()
+                .map(goal -> taskMapper.toListResponse(goal.getTask(),
+                        taskCommentRepository.findFirstByTaskIdOrderByCreatedAtDesc(goal.getTask().getId()).orElse(null)))
+                .toList();
+
         return new PersonStatisticsResponse(
                 avgProgress,
                 tasksAssigned,
@@ -367,8 +380,54 @@ public class PersonServiceImpl implements PersonService {
                 commentsLogged,
                 tasksHandedOff,
                 fullyCompleted,
-                getPersonTeamBreakdown(personId)
+                getPersonTeamBreakdown(personId),
+                dailyGoalTasks
         );
+    }
+
+    @Override
+    public PersonStatisticsResponse addDailyGoal(Long personId, Long taskId, Long actorId) {
+        requireSelf(actorId, personId, "You can only manage your own daily goals.");
+
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        if (task.getAssignedPerson() == null || !task.getAssignedPerson().getId().equals(personId)) {
+            throw new InvalidAssignmentException("You can only pick from your own assigned tasks.");
+        }
+        if (personDailyGoalRepository.findByPersonIdAndTaskId(personId, taskId).isPresent()) {
+            throw new InvalidAssignmentException("That task is already one of your daily goals.");
+        }
+        if (personDailyGoalRepository.countByPersonId(personId) >= 3) {
+            throw new InvalidAssignmentException("You can only focus on up to 3 tasks at a time — remove one first.");
+        }
+
+        Person person = personRepository.findById(personId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+
+        PersonDailyGoal goal = new PersonDailyGoal();
+        goal.setPerson(person);
+        goal.setTask(task);
+        personDailyGoalRepository.save(goal);
+
+        return getPersonStatistics(personId, personId);
+    }
+
+    @Override
+    public PersonStatisticsResponse removeDailyGoal(Long personId, Long taskId, Long actorId) {
+        requireSelf(actorId, personId, "You can only manage your own daily goals.");
+
+        // Removing something already gone isn't an error — same "silently fine" shape as
+        // other idempotent removal endpoints in this codebase.
+        personDailyGoalRepository.findByPersonIdAndTaskId(personId, taskId)
+                .ifPresent(personDailyGoalRepository::delete);
+
+        return getPersonStatistics(personId, personId);
+    }
+
+    private void requireSelf(Long actorId, Long personId, String message) {
+        if (!actorId.equals(personId)) {
+            throw new ForbiddenActionException(message);
+        }
     }
 
     @Override

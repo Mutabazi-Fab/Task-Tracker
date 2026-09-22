@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { NewBadge } from '../../components/ui/NewBadge'
 import { QueryBoundary } from '../../components/feedback/QueryBoundary'
 import { ROUTES } from '../../app/routes'
@@ -31,10 +32,38 @@ import styles from './TaskDetailPage.module.css'
 
 /** Thin wrapper — waits for the task, then hands it to TaskDetailBody. Every hook that
  *  needs the loaded task (in particular useDepartment, only relevant once we know
- *  assigneeType) lives in the child instead, so nothing here is called conditionally. */
+ *  assigneeType) lives in the child instead, so nothing here is called conditionally.
+ *
+ *  A 404 gets its own friendly page rather than QueryBoundary's generic red "Error: Task
+ *  not found" callout — someone can easily still be sitting on this page (or a stale link/
+ *  bookmark to it) after another Director/Super Admin deletes the task out from under them,
+ *  and "Task not found" reads like something went wrong rather than what actually happened.
+ *  Any OTHER kind of failure (network error, etc.) still falls through to QueryBoundary's
+ *  normal handling below — this isn't a blanket override of error rendering, just the one
+ *  specific, expected case. */
 export function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>()
   const query = useTaskDetail(Number(taskId))
+  const navigate = useNavigate()
+
+  if (query.isError && query.error.status === 404) {
+    return (
+      <>
+        <PageHeader breadcrumb="Throughline / Tasks" title="Task deleted" onBack={() => navigate(-1)} />
+        <Card>
+          <EmptyState
+            title="This task has been deleted"
+            description="It no longer exists — move on to other tasks."
+            action={
+              <Link to={ROUTES.tasks}>
+                <Button variant="secondary">View all tasks</Button>
+              </Link>
+            }
+          />
+        </Card>
+      </>
+    )
+  }
 
   return <QueryBoundary query={query}>{(task) => <TaskDetailBody task={task} />}</QueryBoundary>
 }

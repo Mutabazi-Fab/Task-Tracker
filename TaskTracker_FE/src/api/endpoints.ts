@@ -45,6 +45,10 @@ export const endpoints = {
     documentDownload: (id: number | string, documentId: number | string) =>
       `${BASE}/tasks/${id}/documents/${documentId}/download`,
   },
+  taskSourceEntries: {
+    list: (source: string) => `${BASE}/task-source-entries?source=${source}`,
+    create: () => `${BASE}/task-source-entries`,
+  },
   people: {
     list: () => `${BASE}/people`,
     create: () => `${BASE}/people`,
@@ -58,6 +62,8 @@ export const endpoints = {
     roleChanges: () => `${BASE}/people/role-changes`,
     accountStatusChanges: () => `${BASE}/people/account-status-changes`,
     sendPasswordReset: (id: number | string) => `${BASE}/people/${id}/send-password-reset`,
+    addDailyGoal: (id: number | string) => `${BASE}/people/${id}/daily-goals`,
+    removeDailyGoal: (id: number | string, taskId: number | string) => `${BASE}/people/${id}/daily-goals/${taskId}`,
     // No assignTeam — team membership is exclusively managed through the teams.* endpoints
     // below now, since a person can belong to multiple teams at once.
   },

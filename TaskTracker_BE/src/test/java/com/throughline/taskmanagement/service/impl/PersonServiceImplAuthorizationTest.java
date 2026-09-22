@@ -8,10 +8,12 @@ import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.InvalidAssignmentException;
 import com.throughline.taskmanagement.mapper.PersonMapper;
+import com.throughline.taskmanagement.mapper.TaskMapper;
 import com.throughline.taskmanagement.model.Department;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.repository.AccountStatusChangeRepository;
 import com.throughline.taskmanagement.repository.DepartmentRepository;
+import com.throughline.taskmanagement.repository.PersonDailyGoalRepository;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.RoleChangeRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
@@ -54,7 +56,9 @@ class PersonServiceImplAuthorizationTest {
     @Mock private RoleChangeRepository roleChangeRepository;
     @Mock private AccountStatusChangeRepository accountStatusChangeRepository;
     @Mock private DepartmentRepository departmentRepository;
+    @Mock private PersonDailyGoalRepository personDailyGoalRepository;
     @Mock private PersonMapper personMapper;
+    @Mock private TaskMapper taskMapper;
     @Mock private NotificationService notificationService;
     @Mock private MailService mailService;
     @Mock private AuthService authService;
@@ -66,7 +70,8 @@ class PersonServiceImplAuthorizationTest {
     void setUp() {
         personService = new PersonServiceImpl(personRepository, teamMemberRepository, taskRepository,
                 taskCommentRepository, roleChangeRepository, accountStatusChangeRepository, departmentRepository,
-                personMapper, notificationService, mailService, authService, passwordEncoder);
+                personDailyGoalRepository, personMapper, taskMapper, notificationService, mailService, authService,
+                passwordEncoder);
         // Only some tests exercise getPersonStatistics/getPersonTaskHistory's downstream
         // repository calls, but requireCanViewPerson runs first in all three — stub the
         // harmless empty-list ones leniently so tests that never reach them don't fail

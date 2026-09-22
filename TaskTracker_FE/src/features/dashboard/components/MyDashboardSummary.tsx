@@ -6,6 +6,7 @@ import { PersonStatsRow } from '../../people/components/PersonStatsRow'
 import { PersonNarrative } from '../../people/components/PersonNarrative'
 import { useTasks } from '../../tasks/hooks/useTasks'
 import { TaskTable } from '../../tasks/components/TaskTable'
+import { DailyGoalCard } from './DailyGoalCard'
 import styles from './MyDashboardSummary.module.css'
 
 const MY_TASKS_SIZE = 20
@@ -27,6 +28,11 @@ export function MyDashboardSummary() {
       <QueryBoundary query={statsQuery}>
         {(stats) => (
           <>
+            <DailyGoalCard
+              personId={personId}
+              dailyGoalTasks={stats.dailyGoalTasks}
+              myTasks={tasksQuery.data?.content ?? []}
+            />
             <PersonStatsRow stats={stats} />
             <PersonNarrative stats={stats} />
           </>

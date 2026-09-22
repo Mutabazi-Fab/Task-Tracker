@@ -1,5 +1,6 @@
 package com.throughline.taskmanagement.controller;
 
+import com.throughline.taskmanagement.dto.request.AddDailyGoalRequest;
 import com.throughline.taskmanagement.dto.request.ChangeRoleRequest;
 import com.throughline.taskmanagement.dto.request.CreatePersonRequest;
 import com.throughline.taskmanagement.dto.request.SendPasswordResetRequest;
@@ -135,4 +136,22 @@ public class PersonController {
     // person to a team" is no longer a single-target operation. Use
     // POST /api/v1/teams/{teamId}/members instead (TeamController), which also carries the
     // mandatory reason and enforces who's allowed to do it.
+
+    /** Self-only — enforced in PersonServiceImpl, not just id === current user client-side.
+     *  taskId must already be one of the caller's own assigned tasks, and rejects a 4th
+     *  daily goal outright rather than silently evicting the oldest. */
+    @PostMapping("/{id}/daily-goals")
+    public ResponseEntity<PersonStatisticsResponse> addDailyGoal(
+            @PathVariable Long id, @Valid @RequestBody AddDailyGoalRequest request, Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(personService.addDailyGoal(id, request.taskId(), actorId));
+    }
+
+    /** Self-only. Silently fine if the task wasn't a daily goal to begin with. */
+    @DeleteMapping("/{id}/daily-goals/{taskId}")
+    public ResponseEntity<PersonStatisticsResponse> removeDailyGoal(
+            @PathVariable Long id, @PathVariable Long taskId, Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        return ResponseEntity.ok(personService.removeDailyGoal(id, taskId, actorId));
+    }
 }

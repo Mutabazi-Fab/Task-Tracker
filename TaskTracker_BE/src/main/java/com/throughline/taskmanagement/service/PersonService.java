@@ -61,4 +61,12 @@ public interface PersonService {
      *  themselves. Fails if this person has never signed up — there's no password yet to
      *  reset. Notifies the affected person that this happened. */
     void sendPasswordReset(Long personId, SendPasswordResetRequest request);
+
+    /** Self-only — a purely personal "what I'm focused on today" pointer, up to 3 at once.
+     *  taskId must already be one of this person's own assigned tasks. Rejects a 4th with a
+     *  clear message rather than auto-evicting the oldest — the caller removes one first. */
+    PersonStatisticsResponse addDailyGoal(Long personId, Long taskId, Long actorId);
+
+    /** Self-only. Silently fine if the task wasn't a daily goal to begin with. */
+    PersonStatisticsResponse removeDailyGoal(Long personId, Long taskId, Long actorId);
 }
