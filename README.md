@@ -121,7 +121,7 @@ reassigning a task); `<<extend>>` arrows mark an optional one that only sometime
 (e.g. forwarding a deadline-extension request to the CEO only happens on a CEO-mandated
 task chain).
 
-![Throughline use case diagram](TaskTracker_FE/src/icon/Use%20case%20diagram.jpg)
+![Throughline use case diagram](TaskTracker_FE/src/icon/Use%20case%20diagram.png)
 
 ## Domain model — class diagram
 
