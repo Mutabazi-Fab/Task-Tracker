@@ -12,15 +12,10 @@ interface TeamMemberChipsProps {
   teamId: number
   teamName: string
   /** Add/remove authority: Executive/Super Admin, a Director who heads THIS team's own
-   *  department, or the current leader of THIS team. Computed once in TeamPage (see its
-   *  own doc comment). Checked server-side too; this only controls whether the buttons
-   *  show up at all. */
+   *  department, or the current leader. Checked server-side too; this only controls the buttons. */
   canManage: boolean
-  /** Reassigning who leads the team is narrower than canManage — never the current leader
-   *  themselves, only Executive/Super Admin or a Director who heads this department
-   *  (mirrors TeamServiceImpl.setTeamLeader, which has no Team-Leader-self-service path).
-   *  Previously this button used its own blanket "any Director" check here, independent of
-   *  canManage — that was the actual bug. */
+  /** Narrower than canManage — never the current leader, only Executive/Super Admin or a
+   *  Director who heads this department (mirrors TeamServiceImpl.setTeamLeader). */
   canReassignLeader: boolean
 }
 

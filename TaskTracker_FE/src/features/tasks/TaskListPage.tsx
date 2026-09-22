@@ -18,18 +18,12 @@ import styles from './TaskListPage.module.css'
 
 const PAGE_SIZE = 10
 
-/** A Member only ever sees tasks assigned directly to them — this page never shows them
- *  "all tasks" the way it does for a Director/Executive/Super Admin. assignedPersonId
- *  scopes every query on this page (list, lanes, and search) the same way; there's no
- *  client-side filtering of a wider result set, since that would still ship the wider set
- *  to them.
- *
- *  A plain Director isn't unrestricted any more either, just scoped differently: leaving
- *  assignedPersonId unset (same as before) now makes the backend fall back to their own
- *  department instead of "everything" — see TaskController.departmentScopeForViewer.
- *  Nothing needs passing from here for that; it's resolved server-side off the JWT. Only
- *  Executive/Super Admin still see literally every task. isPlainDirector below exists
- *  purely for the page's own copy (title/placeholder), so it's honest about that scope. */
+/** A Member only ever sees tasks assigned directly to them — assignedPersonId scopes every
+ *  query on this page (list, lanes, search), no client-side filtering of a wider set. A
+ *  plain Director isn't unrestricted either: leaving assignedPersonId unset makes the
+ *  backend fall back to their own department (see TaskController.departmentScopeForViewer),
+ *  resolved server-side off the JWT. Only Executive/Super Admin see everything.
+ *  isPlainDirector exists purely for the page's own copy (title/placeholder). */
 export function TaskListPage() {
   const { currentUser, isDirector, isExecutive } = useAuth()
   const [status, setStatus] = useState<TaskStatusFilterValue>('ALL')
@@ -39,9 +33,8 @@ export function TaskListPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const markCategoryRead = useMarkCategoryRead()
 
-  // Clears the Sidebar's Tasks badge — every logged-in person can get this one, a Member
-  // included (they're notified the same way a Director is when a task lands on them), so
-  // unlike Teams/Departments/Activity this runs unconditionally, not gated to isDirector.
+  // Clears the Sidebar's Tasks badge — every logged-in person can get this one (Member
+  // included), so unlike Teams/Departments/Activity this runs unconditionally.
   useEffect(() => {
     markCategoryRead.mutate(['TASK_ASSIGNED', 'SUBTASK_ASSIGNED', 'TASK_REASSIGNED', 'SUBTASK_REASSIGNED'])
   }, [])
@@ -50,15 +43,12 @@ export function TaskListPage() {
   const scopeToPersonId = isDirector ? undefined : currentUser?.id
   const statusParam = status === 'ALL' ? undefined : status
   // 'createdAt,desc' rather than 'none' — pinned tasks still float to the top either way
-  // (the backend composes DESC-pinned as a leading sort key onto whatever's requested, see
-  // TaskServiceImpl.withPinnedFirst), but 'none' left everything else in undefined database
-  // order. This makes the rest genuinely newest-created-first, so a task made today lands
-  // right after the pinned ones and ahead of yesterday's, and so on.
+  // (see TaskServiceImpl.withPinnedFirst), but this makes the rest genuinely newest-first
+  // instead of undefined database order.
   const tableQuery = useTasks({ status: statusParam, assignedPersonId: scopeToPersonId, page, size: PAGE_SIZE, sort: 'createdAt,desc' })
   const { searchQuery, debouncedQuery } = useTaskSearch(search, scopeToPersonId)
-  // Keyed off the SAME debounced value the query itself is enabled/disabled on — see
-  // useTaskSearch's doc comment for why using the raw `search` state here crashed
-  // TaskTable during the ~300ms window before the debounce catches up.
+  // Keyed off the same debounced value the query is enabled/disabled on — see
+  // useTaskSearch's doc comment for why the raw `search` state crashed TaskTable mid-debounce.
   const isSearching = debouncedQuery.length > 0
 
   return (

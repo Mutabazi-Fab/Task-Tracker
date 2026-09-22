@@ -30,9 +30,8 @@ export async function fetchTasks({ status, assignedPersonId, page, size, sort }:
   return data
 }
 
-// GET /tasks/search is a Page<TaskListResponse> now — flattened here for the same reason
-// as fetchPeople in people.api.ts (this is used for a live "as you type" results list, not
-// a paged view). assignedPersonId scopes it the same way fetchTasks does, for a Member.
+// GET /tasks/search is a Page<TaskListResponse> — flattened here, same as fetchPeople,
+// since this backs a live "as you type" results list, not a paged view.
 export async function searchTasks(q: string, assignedPersonId?: number): Promise<TaskListItem[]> {
   const { data } = await axiosClient.get<Page<TaskListItem>>(endpoints.tasks.search(), {
     params: { q, assignedPersonId, size: 50 },
@@ -50,11 +49,9 @@ export async function createSubtask(parentTaskId: number, payload: CreateSubtask
   return data
 }
 
-// No body — the actor is derived from the JWT server-side (CurrentPersonResolver), same as
-// every other mutating endpoint, and the backend independently re-checks Director/Super
-// Admin there (TaskServiceImpl.deleteTask) rather than trusting the button being hidden
-// from anyone else. Every deletion is also recorded in the task activity log — see
-// fetchTaskActivity below.
+// No body — the actor is derived from the JWT server-side, and the backend independently
+// re-checks Director/Super Admin (TaskServiceImpl.deleteTask). Also recorded in the
+// activity log — see fetchTaskActivity below.
 export async function deleteTask(id: number): Promise<void> {
   await axiosClient.delete(endpoints.tasks.remove(id))
 }

@@ -1,9 +1,6 @@
 import axios, { AxiosError } from 'axios'
 
-/**
- * Shape of every error body the backend's GlobalExceptionHandler returns.
- * fieldErrors is only present on @Valid validation failures.
- */
+/** Shape of every error body the backend's GlobalExceptionHandler returns. fieldErrors is only present on @Valid validation failures. */
 export interface ApiErrorBody {
   timestamp: string
   status: number
@@ -20,14 +17,10 @@ export interface ApiError {
   fieldErrors?: Record<string, string>
 }
 
-/** Read directly rather than through AuthContext — axiosClient is a plain module with no
- *  access to React context, and importing AuthContext here would be a circular dependency
- *  (AuthContext's login/signup calls go through this same client). */
+/** Read directly rather than through AuthContext — importing it here would be a circular dependency (its login/signup calls go through this same client). */
 export const AUTH_TOKEN_STORAGE_KEY = 'throughline-auth-token'
 
-/** Dispatched on any 401 response so AuthProvider (which owns the actual auth state) can
- *  clear itself and send the user back to /login, without axiosClient needing to import
- *  React Router or AuthContext. */
+/** Dispatched on any 401 so AuthProvider can clear itself and send the user back to /login, without this module importing React Router or AuthContext. */
 export const UNAUTHORIZED_EVENT = 'throughline:unauthorized'
 
 export const axiosClient = axios.create({

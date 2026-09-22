@@ -10,6 +10,7 @@ import { useTeams } from '../../teams/hooks/useTeams'
 import { usePeople } from '../../people/hooks/usePeople'
 import { maxAssignableDate, minAssignableDate } from '../../../lib/dateLimits'
 import { InlineSubtasksField, type InlineSubtaskRow } from '../../tasks/components/InlineSubtasksField'
+import { SourceCategoryField } from '../../tasks/components/SourceCategoryField'
 import { SourceDetailField } from '../../tasks/components/SourceDetailField'
 import type { CreateSubtaskRequest, TaskSeverity, TaskSource } from '../../../types/task.types'
 import styles from '../../tasks/components/CreateTaskForm.module.css'
@@ -21,16 +22,7 @@ const ASSIGNEE_KIND_OPTIONS: { label: string; value: AssigneeKind }[] = [
   { label: 'Individual', value: 'INDIVIDUAL' },
 ]
 
-const SOURCE_OPTIONS: { label: string; value: TaskSource }[] = [
-  { label: 'Initiative', value: 'INITIATIVE' },
-  { label: 'Auditor', value: 'AUDITOR' },
-  { label: 'Regulator', value: 'REGULATOR' },
-  { label: 'Board', value: 'BOARD' },
-]
-
-// Executive/Super Admin only — the backend rejects a non-Executive creator's attempt to
-// set severity, so a plain Director/Team Leader never sees a picker that'd just be
-// rejected.
+// Executive/Super Admin only — the backend rejects a non-Executive creator's attempt to set severity.
 const SEVERITY_OPTIONS: { label: string; value: TaskSeverity }[] = [
   { label: 'Low', value: 'LOW' },
   { label: 'Medium', value: 'MEDIUM' },
@@ -39,46 +31,28 @@ const SEVERITY_OPTIONS: { label: string; value: TaskSeverity }[] = [
 ]
 
 interface CreateSubtaskFormProps {
-  /** The ordinary leaf case: parent is TEAM-assigned (a plain top-level task, or a depth-1
-   *  Department implementation task) — assignees are scoped to that team's members, never
-   *  anyone outside it, and always individual. */
+  /** Ordinary leaf case: parent is TEAM-assigned — assignees scoped to that team's members, always individual. */
   teamId: number
   /** True only when the parent is a Department-assigned Executive task — this is its
-   *  "implementation task", team- or individual-assigned, exactly like creating a
-   *  brand-new top-level task (see CreateTaskForm), except the team picker stays scoped to
-   *  that same Department (see departmentId) rather than every team org-wide. teamId above
-   *  is unused in this mode. */
+   *  "implementation task", team- or individual-assigned like a brand-new top-level task,
+   *  except the team picker stays scoped to departmentId. teamId is unused in this mode. */
   isDepartmentImplementation?: boolean
-  /** The parent Department task's own Department id — scopes the team picker to that
-   *  Department's teams only, so e.g. a task assigned to Cybersecurity only offers
-   *  Cybersecurity's own teams, never Finance's or IT's. */
+  /** Scopes the team picker to this Department's own teams only. */
   departmentId?: number
-  /** The immediate parent task's own source/sourceLabel — when it has one (either the
-   *  CEO's own, set directly on a Department task, or whatever an implementation task
-   *  itself carries — its own, or already inherited one level up from the CEO), the new
-   *  task being created here inherits it rather than asking whoever's creating it to
-   *  re-enter it: the fields are pre-filled and locked (see sourceInherited below), so the
-   *  chain of custody stays visible without letting anyone overwrite a record set higher
-   *  up. Applies to both the implementation-task case and the ordinary leaf-subtask case —
-   *  undefined/null (the parent never had a source) falls back to the normal editable
-   *  Source picker either way. */
+  /** The immediate parent's own source/sourceLabel, when it has one — inherited and locked
+   *  here (see sourceInherited) so the chain of custody stays visible. undefined/null falls
+   *  back to the normal editable Source picker. */
   parentSource?: TaskSource | null
   parentSourceLabel?: string | null
-  /** subtasks is whatever InlineSubtasksField collected when assigneeKind is TEAM
-   *  (department-implementation case only — the ordinary leaf case has nobody left to
-   *  break the work down further into) — possibly empty. The caller (CreateSubtaskModal)
-   *  creates this implementation task first, then loops over these to create one leaf
-   *  subtask per filled row underneath it. documents is whatever files were picked under
-   *  "Supporting documents" (possibly empty), uploaded the same way once the task exists. */
+  /** subtasks is whatever InlineSubtasksField collected (department-implementation case
+   *  only, possibly empty) — the caller creates this task first, then loops over these to
+   *  create one leaf subtask per filled row underneath it. */
   onSubmit: (payload: CreateSubtaskRequest, subtasks: InlineSubtaskRow[], documents: File[]) => void
   onCancel: () => void
   submitting: boolean
 }
 
-/** createdById is always the logged-in person — the backend still checks authorization
- *  (this team's leader or a Director/Super Admin for the leaf case; that Department's
- *  head Director or an Executive/Super Admin for the implementation-task case), but
- *  there's no reason to ask when we already know who's here. */
+/** createdById is always the logged-in person — the backend still checks authorization, but there's no reason to ask when we already know who's here. */
 export function CreateSubtaskForm({
   teamId,
   isDepartmentImplementation = false,
@@ -103,9 +77,7 @@ export function CreateSubtaskForm({
   const [assignedTeamId, setAssignedTeamId] = useState('')
   const [dateAssigned, setDateAssigned] = useState('')
   const [deadline, setDeadline] = useState('')
-  // Locked once the immediate parent already carries a source — whoever's creating this
-  // task sees where it came from but can't overwrite that record here. Applies whether the
-  // parent is the CEO's own Department task or an implementation task one level down.
+  // Locked once the immediate parent already carries a source — visible but not overwritable here.
   const sourceInherited = !!parentSource
   const [source, setSource] = useState<TaskSource | ''>(parentSource ?? '')
   const [sourceLabel, setSourceLabel] = useState(parentSourceLabel ?? '')
@@ -128,13 +100,10 @@ export function CreateSubtaskForm({
     setSubtaskRows([])
   }
 
-  function handleSourceChange(next: string) {
-    const value = next as TaskSource
+  function handleSourceChange(value: string) {
     setSource(value)
-    // Zigama has exactly one regulator — don't make anyone type it. Only fills when the
-    // field is currently empty, so it never clobbers something the user already typed. Never
-    // fires when sourceInherited is true, since that Source select is disabled then.
-    if (value === 'REGULATOR' && sourceLabel.trim() === '') {
+    // Zigama has exactly one regulator — only fills when empty, so it never clobbers a typed value.
+    if (value.toLowerCase() === 'regulator' && sourceLabel.trim() === '') {
       setSourceLabel('BNR')
     }
   }
@@ -254,14 +223,11 @@ export function CreateSubtaskForm({
       />
       {isDeadlineBeforeAssignment && <ErrorMessage message="Deadline can't be before the date assigned." />}
 
-      <SelectField
-        label={sourceInherited ? 'Source (set by the CEO)' : 'Source (optional)'}
-        value={source}
-        onChange={handleSourceChange}
-        placeholder="Where this came from"
-        options={SOURCE_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
-        disabled={sourceInherited}
-      />
+      {sourceInherited ? (
+        <TextField label="Source (set by the CEO)" value={source} onChange={() => {}} disabled />
+      ) : (
+        <SourceCategoryField value={source} onChange={handleSourceChange} />
+      )}
       {source && sourceInherited && (
         <TextField
           label="Source detail (set by the CEO)"

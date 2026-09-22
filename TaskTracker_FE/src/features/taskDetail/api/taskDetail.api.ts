@@ -35,9 +35,7 @@ export async function requestDeadlineExtension(
 }
 
 /** Only meaningful on a CEO-mandated task chain — sends a request into the CEO/Super
- *  Admin's own "Requests" inbox (see PendingExtensionRequestItem, which shows this action
- *  in place of Approve for a viewer whose canApprove is false and forwardedToApprover isn't
- *  set yet). No payload — the backend resolves who's forwarding it from the JWT. */
+ *  Admin's own "Requests" inbox. No payload — the backend resolves who's forwarding it from the JWT. */
 export async function forwardDeadlineExtension(taskId: number, extensionId: number): Promise<TaskDetail> {
   const { data } = await axiosClient.put<TaskDetail>(endpoints.tasks.forwardDeadlineExtension(taskId, extensionId))
   return data
@@ -61,8 +59,7 @@ export async function extendDeadlineDirectly(taskId: number, payload: ExtendDead
 }
 
 /** The "Requests" inbox — every deadline-extension request still waiting on the caller's
- *  own decision, across every task. deciderId is resolved server-side from the JWT, same
- *  as everywhere else — nothing to pass here. */
+ *  own decision. deciderId is resolved server-side from the JWT — nothing to pass here. */
 export async function fetchPendingExtensionRequests(): Promise<PendingExtensionRequest[]> {
   const { data } = await axiosClient.get<PendingExtensionRequest[]>(endpoints.tasks.pendingDeadlineExtensions())
   return data
@@ -79,10 +76,8 @@ export async function addDiscussionComment(taskId: number, payload: AddDiscussio
   return data
 }
 
-/** Open to any authenticated person, same as a discussion comment. Content-Type is left
- *  unset (not forced to 'multipart/form-data') so axios generates the correct boundary
- *  parameter itself — hardcoding the header string here would drop that boundary and the
- *  backend would fail to parse the body. */
+/** Content-Type is left unset so axios generates the correct multipart boundary itself —
+ *  hardcoding the header string would drop it and the backend would fail to parse the body. */
 export async function addDocument(taskId: number, file: File): Promise<TaskDetail> {
   const formData = new FormData()
   formData.append('file', file)
@@ -92,9 +87,8 @@ export async function addDocument(taskId: number, file: File): Promise<TaskDetai
   return data
 }
 
-/** JWT auth here lives in the Authorization header, not a cookie (see axiosClient), which a
- *  plain `<a href>` download link would never send — so this fetches the file as a blob
- *  through the authenticated client instead, then triggers a save via a throwaway anchor. */
+/** JWT lives in the Authorization header, not a cookie, which a plain `<a href>` link would
+ *  never send — so this fetches the file as a blob through the authenticated client instead. */
 export async function downloadDocument(taskId: number, documentId: number, fileName: string): Promise<void> {
   const response = await axiosClient.get(endpoints.tasks.documentDownload(taskId, documentId), {
     responseType: 'blob',

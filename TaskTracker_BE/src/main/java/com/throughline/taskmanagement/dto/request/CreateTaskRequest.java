@@ -1,7 +1,6 @@
 package com.throughline.taskmanagement.dto.request;
 
 import com.throughline.taskmanagement.enums.TaskSeverity;
-import com.throughline.taskmanagement.enums.TaskSource;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -29,7 +28,7 @@ public record CreateTaskRequest(
     Long assignedDepartmentId,
     @NotNull LocalDate dateAssigned,
     @NotNull LocalDate deadline,
-    TaskSource source,
+    String source,
     String sourceLabel,
     TaskSeverity severity,
     @NotBlank String openingNote

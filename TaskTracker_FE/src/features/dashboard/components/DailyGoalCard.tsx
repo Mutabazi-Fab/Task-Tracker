@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../app/routePaths'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
+import { ErrorMessage } from '../../../components/ui/ErrorMessage'
 import { SelectField } from '../../../components/ui/SelectField'
 import { formatPercentage } from '../../../lib/formatPercentage'
 import { useAddDailyGoal } from '../../people/hooks/useAddDailyGoal'
@@ -18,6 +19,15 @@ interface DailyGoalCardProps {
   myTasks: TaskListItem[]
 }
 
+interface PickableTask {
+  id: number
+  taskCode: string
+  title: string
+  /** The implementation/parent task this lives under, for display only — null for a real
+   *  top-level task. */
+  parentTitle: string | null
+}
+
 /** "What I'm focused on today" — up to 3 of a Member's own assigned tasks, picked by them,
  *  shown at the top of their dashboard. Removing a goal is always a manual, explicit
  *  action — a completed task doesn't disappear on its own, it just switches to a "done"
@@ -28,7 +38,21 @@ export function DailyGoalCard({ personId, dailyGoalTasks, myTasks }: DailyGoalCa
   const removeGoal = useRemoveDailyGoal(personId)
 
   const goalTaskIds = new Set(dailyGoalTasks.map((t) => t.id))
-  const pickableTasks = myTasks.filter((t) => !goalTaskIds.has(t.id))
+
+  // The backend only accepts a task actually assigned to this person directly
+  // (PersonServiceImpl.addDailyGoal) — myTasks also includes team-assigned tasks the
+  // person merely has visibility into, which would fail that check silently. Own
+  // individually-assigned subtasks count too — flattened out of each top-level task's
+  // nested subtasks so a Member doesn't have to open "My tasks" just to focus on one.
+  const ownTopLevelTasks: PickableTask[] = myTasks
+    .filter((t) => t.assigneeType === 'INDIVIDUAL')
+    .map((t) => ({ id: t.id, taskCode: t.taskCode, title: t.title, parentTitle: null }))
+  const ownSubtasks: PickableTask[] = myTasks.flatMap((t) =>
+    t.subtasks
+      .filter((s) => s.assigneeType === 'INDIVIDUAL' && s.assigneeId === personId)
+      .map((s) => ({ id: s.id, taskCode: s.taskCode, title: s.title, parentTitle: t.title })),
+  )
+  const pickableTasks = [...ownTopLevelTasks, ...ownSubtasks].filter((t) => !goalTaskIds.has(t.id))
   const atLimit = dailyGoalTasks.length >= MAX_GOALS
 
   function handleAdd() {
@@ -43,12 +67,13 @@ export function DailyGoalCard({ personId, dailyGoalTasks, myTasks }: DailyGoalCa
       {dailyGoalTasks.length === 0 ? (
         <p className={styles.empty}>Pick up to {MAX_GOALS} tasks you want to focus on today.</p>
       ) : (
-        <div className={styles.slots}>
+        <div className={styles.panels}>
           {dailyGoalTasks.map((task) => (
-            <div key={task.id} className={styles.slot}>
+            <div key={task.id} className={styles.panel}>
               <Link to={ROUTES.taskDetail(task.id)} className={styles.taskLink}>
                 {task.taskCode} · {task.title}
               </Link>
+              {task.parentTaskTitle && <span className={styles.parentHint}>under {task.parentTaskTitle}</span>}
               {task.status === 'COMPLETED' ? (
                 <span className={styles.done}>✓ Finished</span>
               ) : (
@@ -72,6 +97,8 @@ export function DailyGoalCard({ personId, dailyGoalTasks, myTasks }: DailyGoalCa
         </div>
       )}
 
+      {removeGoal.isError && <ErrorMessage message={removeGoal.error.message} />}
+
       {atLimit ? (
         <p className={styles.limitNote}>You're focused on {MAX_GOALS} tasks — remove one to add another.</p>
       ) : (
@@ -79,14 +106,18 @@ export function DailyGoalCard({ personId, dailyGoalTasks, myTasks }: DailyGoalCa
           <SelectField
             value={pickerTaskId}
             onChange={setPickerTaskId}
-            placeholder="Pick one of your tasks"
-            options={pickableTasks.map((t) => ({ label: `${t.taskCode} · ${t.title}`, value: String(t.id) }))}
+            placeholder={pickableTasks.length === 0 ? 'No individually-assigned tasks to pick from' : 'Pick one of your tasks or subtasks'}
+            options={pickableTasks.map((t) => ({
+              label: t.parentTitle ? `${t.taskCode} · ${t.title} (under ${t.parentTitle})` : `${t.taskCode} · ${t.title}`,
+              value: String(t.id),
+            }))}
           />
           <Button type="button" variant="secondary" onClick={handleAdd} disabled={pickerTaskId === '' || addGoal.isPending}>
             {addGoal.isPending ? 'Adding…' : "Add to today's goals"}
           </Button>
         </div>
       )}
+      {addGoal.isError && <ErrorMessage message={addGoal.error.message} />}
     </Card>
   )
 }

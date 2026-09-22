@@ -26,7 +26,6 @@ import com.throughline.taskmanagement.enums.ExtensionRequestStatus;
 import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.enums.TaskActivityAction;
 import com.throughline.taskmanagement.enums.TaskSeverity;
-import com.throughline.taskmanagement.enums.TaskSource;
 import com.throughline.taskmanagement.enums.TaskStatus;
 import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.InvalidAssignmentException;
@@ -761,7 +760,7 @@ public class TaskServiceImpl implements TaskService {
     /** source/sourceLabel are open to any creator. severity is Executive-only — even a
      *  Director creating a task under a CRITICAL Department root can't set it. CRITICAL
      *  auto-pins once, at creation only; pinning stays independently editable afterward. */
-    private void applySourceAndSeverity(Task task, TaskSource source, String sourceLabel, TaskSeverity severity, Person createdBy) {
+    private void applySourceAndSeverity(Task task, String source, String sourceLabel, TaskSeverity severity, Person createdBy) {
         task.setSource(source);
         task.setSourceLabel(sourceLabel);
         if (severity != null) {

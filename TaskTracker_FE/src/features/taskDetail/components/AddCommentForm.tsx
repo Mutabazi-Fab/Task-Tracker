@@ -11,24 +11,14 @@ import styles from './AddCommentForm.module.css'
 
 interface AddCommentFormProps {
   taskId: number
-  /** The task's own current percentage — seeds the slider's starting position so dragging
-   *  starts from where things actually stand, not from 0 every time. Once this is already
-   *  100, the task is done and the form is retired entirely — see below. */
+  /** Seeds the slider's starting position. Once already 100, the form retires — see below. */
   currentPercentage: number
 }
 
-/**
- * The progress log — only rendered for an individually-tracked task (see TaskDetailPage;
- * a TEAM/DEPARTMENT task's percentage is always the rollup of its children, never
- * something set here). Every entry logs a percentage — dragging the slider is simply how
- * that percentage gets set, not an optional extra step. The Body field is where the
- * commentary goes: why the task is at that percentage. A plain question or note that isn't
- * about updating progress belongs in the separate Discussion panel below this, not here.
- *
- * Two guards around 100%: once the task is ALREADY at 100%, this form retires — there's
- * nothing left to log. Dragging to 100% for the first time asks for confirmation before
- * submitting, since marking a task done isn't something to log by accident mid-drag.
- */
+/** The progress log — only rendered for an individually-tracked task (a TEAM/DEPARTMENT
+ *  task's percentage is always a rollup, never set here). Every entry logs a percentage;
+ *  the Body field is the commentary on why. Two guards around 100%: already-100% retires
+ *  the form entirely; dragging to 100% for the first time asks for confirmation first. */
 export function AddCommentForm({ taskId, currentPercentage }: AddCommentFormProps) {
   const [percentage, setPercentage] = useState(currentPercentage)
   const [body, setBody] = useState('')

@@ -12,24 +12,15 @@ interface CreateTeamFormProps {
   onSubmit: (payload: CreateTeamRequest) => void
   onCancel: () => void
   submitting: boolean
-  /** Set when this form is opened from a specific Department's own page (see
-   *  DepartmentPage) — locks the department to that one instead of offering the full
-   *  org-wide picker (Executive/Super Admin) or falling back to the caller's own department
-   *  (a plain Director), since it's already obvious from context which department this is. */
+  /** Set when opened from a specific Department's own page — locks the department to that one instead of offering a picker. */
   fixedDepartmentId?: number
   fixedDepartmentName?: string
 }
 
-/** Director creates the team, picks its roster, and names one member as Team Leader —
- *  all in one request (leaderId must be one of memberIds).
- *
- *  A plain Director only ever heads one department, so they never get a department picker
- *  at all — it's silently their own, same as GET /tasks' department scoping. Only
- *  Executive/Super Admin (who aren't tied to a single department) get to choose, since
- *  they're the only ones actually able to stand up a team for someone else's department —
- *  enforced server-side in TeamServiceImpl.createTeam, not just hidden here. When opened
- *  from a Department's own page (fixedDepartmentId set), nobody gets a picker — it's locked
- *  to that department for every role, Executive/Super Admin included. */
+/** Director creates the team, picks its roster, and names one member as Team Leader — all
+ *  in one request (leaderId must be one of memberIds). A plain Director never gets a
+ *  department picker — it's silently their own; only Executive/Super Admin get to choose,
+ *  enforced server-side too. Opened from a Department's own page, nobody gets a picker. */
 export function CreateTeamForm({
   onSubmit,
   onCancel,

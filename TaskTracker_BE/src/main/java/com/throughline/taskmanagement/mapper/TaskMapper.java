@@ -198,6 +198,7 @@ public class TaskMapper {
                 subtask.getTaskCode(),
                 subtask.getTitle(),
                 assigneeNameOf(subtask),
+                assigneeIdOf(subtask),
                 subtask.getAssigneeType(),
                 subtask.getStatus(),
                 subtask.getProgressPercentage(),

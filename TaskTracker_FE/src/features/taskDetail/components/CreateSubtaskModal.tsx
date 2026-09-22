@@ -11,18 +11,13 @@ import type { TaskSource } from '../../../types/task.types'
 
 interface CreateSubtaskModalProps {
   parentTaskId: number
-  /** The parent's own team — meaningless (and unused) when isDepartmentImplementation is
-   *  true, since that case picks a team org-wide instead of using one fixed team's roster. */
+  /** Unused when isDepartmentImplementation is true, which picks a team org-wide instead. */
   teamId: number
   /** True only when the parent is a Department-assigned Executive task. */
   isDepartmentImplementation?: boolean
-  /** The parent's own Department id — only meaningful (and only passed) alongside
-   *  isDepartmentImplementation, so the team picker can be scoped to that Department's own
-   *  teams instead of every team org-wide. */
+  /** Only meaningful alongside isDepartmentImplementation — scopes the team picker to this Department's own teams. */
   departmentId?: number
-  /** The parent Department task's own source/sourceLabel — passed through to
-   *  CreateSubtaskForm so the implementation task can inherit and lock it. See that form's
-   *  own doc comment for the full reasoning. */
+  /** Passed through to CreateSubtaskForm so the implementation task can inherit and lock it. */
   parentSource?: TaskSource | null
   parentSourceLabel?: string | null
   open: boolean
@@ -30,12 +25,9 @@ interface CreateSubtaskModalProps {
 }
 
 /** Form shell + submit — owns the mutation(s), CreateSubtaskForm owns only the fields.
- *
- *  When this is a Team-assigned implementation task and InlineSubtasksField collected any
- *  rows, this is what turns those into real depth-2 leaf subtasks: they need the
- *  implementation task's own id (not parentTaskId, which is one level higher — the CEO's
- *  Department task), so each row's createSubtask call only fires once THIS task's own
- *  mutation resolves. */
+ *  When this is a Team-assigned implementation task with InlineSubtasksField rows, each
+ *  row's createSubtask call needs THIS task's own id (not parentTaskId, one level higher),
+ *  so it only fires once this task's own mutation resolves. */
 export function CreateSubtaskModal({
   parentTaskId,
   teamId,
@@ -66,11 +58,8 @@ export function CreateSubtaskModal({
     if (subtasks.length > 0) {
       setIsCreatingLeafSubtasks(true)
       try {
-        // Sequential, not Promise.all — task codes are assigned as MAX(sequence)+1 at
-        // request time with no locking, so firing these concurrently lets two requests read
-        // the same max and collide on the unique task_code constraint. Awaiting one at a
-        // time means each row's insert has already committed before the next one reads the
-        // max.
+        // Sequential, not Promise.all — task codes are MAX(sequence)+1 with no locking, so
+        // concurrent requests could read the same max and collide on the unique constraint.
         for (const row of subtasks) {
           await createSubtask(created.id, {
             title: row.title.trim(),
@@ -83,9 +72,7 @@ export function CreateSubtaskModal({
         }
       } catch (err) {
         // The implementation task itself is already created and safe — only the inline leaf
-        // subtasks failed. Leaving the modal open means whoever's filling it in can see what
-        // went wrong; that task can still be found afterward and given subtasks the normal
-        // way even if this is abandoned.
+        // subtasks failed. Leaving the modal open surfaces what went wrong.
         const message = err && typeof err === 'object' && 'message' in err ? String(err.message) : null
         setLeafSubtaskError(
           message
@@ -118,9 +105,8 @@ export function CreateSubtaskModal({
       }
     }
 
-    // createImplementationTask's own onSuccess already invalidated the task list/
-    // dashboard/people/teams queries for it — this covers the leaf subtasks' rollup effect
-    // and the documents list on top of that.
+    // createImplementationTask's own onSuccess already invalidated the task/dashboard/
+    // people/teams queries — this covers the leaf subtasks' rollup and documents list too.
     queryClient.invalidateQueries({ queryKey: ['tasks'] })
     if (!hadFailure) {
       onClose()

@@ -3,7 +3,6 @@ package com.throughline.taskmanagement.dto.response;
 import com.throughline.taskmanagement.enums.AssigneeType;
 import com.throughline.taskmanagement.enums.CreatedByRole;
 import com.throughline.taskmanagement.enums.TaskSeverity;
-import com.throughline.taskmanagement.enums.TaskSource;
 import com.throughline.taskmanagement.enums.TaskStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,7 +19,7 @@ public record TaskListResponse(
     LocalDate dateAssigned,
     // Null only for a task that predates this field.
     LocalDate deadline,
-    TaskSource source,
+    String source,
     String sourceLabel,
     TaskSeverity severity,
     boolean pinned,

@@ -16,19 +16,14 @@ interface RequestExtensionModalProps {
   onClose: () => void
 }
 
-/** Requested by whoever's actually doing the work (this task's Team Leader, individual
- *  assignee, or — for a Department task — its head Director), sent up the chain of
- *  command to this task's deadline decider (task.deadlineDeciderName) — always a Director-
- *  or-above, even when a Team Leader technically created this task as a leaf subtask (see
- *  TaskServiceImpl.resolveDeadlineDecider). Never moves the deadline itself — only an
- *  approval does that (see DeadlineExtensionHistoryItem's inline approve/reject). */
+/** Requested by whoever's doing the work, sent up the chain of command to this task's
+ *  deadline decider (task.deadlineDeciderName) — always a Director-or-above. Never moves
+ *  the deadline itself — only an approval does that. */
 export function RequestExtensionModal({ task, open, onClose }: RequestExtensionModalProps) {
   const [requestedDeadline, setRequestedDeadline] = useState('')
   const [justification, setJustification] = useState('')
-  // True for a brief confirmation beat after a successful send, before the modal actually
-  // closes — otherwise the only feedback that anything happened at all is the modal
-  // vanishing, which reads exactly the same whether the request went through or the whole
-  // thing silently failed to open in the first place.
+  // Brief confirmation beat after a successful send, before the modal closes — otherwise
+  // the only feedback is the modal vanishing, indistinguishable from a silent failure.
   const [justSent, setJustSent] = useState(false)
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 

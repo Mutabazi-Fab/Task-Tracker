@@ -17,12 +17,8 @@ import { AddMemberModal } from './components/AddMemberModal'
 import { MembershipHistoryPanel } from './components/MembershipHistoryPanel'
 import styles from './TeamPage.module.css'
 
-/**
- * A Director/Super Admin, or a member of THIS specific team, sees the full picture —
- * stats, roster, tasks, membership history. Anyone else (a Member looking at a team
- * they're not on) only sees the name and who leads it — the same "teams and who leads
- * them, nothing else" view the Teams list itself already gives everyone.
- */
+/** A Director/Super Admin, or a member of THIS team, sees the full picture — stats,
+ *  roster, tasks, membership history. Anyone else only sees the name and who leads it. */
 export function TeamPage() {
   const { teamId } = useParams<{ teamId: string }>()
   const id = Number(teamId)
@@ -31,11 +27,9 @@ export function TeamPage() {
   const teamQuery = useTeam(id)
   const { isDirector, isExecutive, currentUser } = useAuth()
   const navigate = useNavigate()
-  // Mirrors the backend's TeamServiceImpl.isHeadOfDepartment exactly: Executive/Super Admin
-  // may manage any team org-wide; a plain Director only the team of the department they
-  // actually head, never merely one they belong to. Always called (never skipped) with a
-  // NaN id when the team hasn't loaded yet — same pattern as SubtasksPanel's own
-  // useDepartment call — so this never breaks the rules of hooks.
+  // Mirrors TeamServiceImpl.isHeadOfDepartment: Executive/Super Admin may manage any team;
+  // a plain Director only the department they actually head. NaN id when not loaded yet
+  // keeps this hook call unconditional.
   const departmentQuery = useDepartment(teamQuery.data?.departmentId ?? NaN)
 
   const isMemberOfThisTeam = currentUser?.teams.some((t) => t.teamId === id) ?? false
@@ -43,9 +37,8 @@ export function TeamPage() {
   const headsThisTeamsDepartment = isDirector && departmentQuery.data?.headDirectorId === currentUser?.id
   // Add/remove: this team's own Leader too (mirrors requireDirectorOfTeamsDepartmentOrTeamLeader).
   const canManage = isExecutive || headsThisTeamsDepartment || isThisTeamsLeader
-  // Reassigning who leads the team is narrower — never the current leader themselves,
-  // only whoever actually has authority OVER the team (mirrors setTeamLeader's own check,
-  // which has no Team-Leader-self-service path).
+  // Reassigning the leader is narrower — only whoever has authority OVER the team, never
+  // the current leader themselves (mirrors setTeamLeader, no self-service path).
   const canReassignLeader = isExecutive || headsThisTeamsDepartment
   const canViewFull = isDirector || isMemberOfThisTeam
 

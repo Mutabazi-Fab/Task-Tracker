@@ -1,7 +1,5 @@
-// Imported from routePaths directly, NOT from '../../app/routes' — that file (routes.tsx)
-// imports AppShell, which imports this file, which would make ROUTES a circular import
-// crashing at runtime ("Cannot access 'ROUTES' before initialization"). routePaths.ts has
-// no imports of its own, so there's no cycle here.
+// Imported from routePaths directly, not '../../app/routes' — routes.tsx imports AppShell,
+// which imports this file, which would make ROUTES a circular import.
 import { ROUTES } from '../../app/routePaths'
 import { ThemeToggle } from '../../features/theme/ThemeToggle'
 import { useAuth } from '../../features/auth/useAuth'
@@ -24,15 +22,9 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { to: ROUTES.teams, label: 'Teams', icon: 'teams' },
 ]
 
-/** Shared with MobileTabBar so the two never drift out of sync. A function, not a plain
- *  constant, since the Activity item only appears for a Director or Super Admin — one
- *  merged feed covering task creation/deletion, role changes, and account activation/
- *  deactivation, all gated at that same tier (see ActivityPage). Departments is likewise
- *  Director-or-above — read access to the org chart is open to Director/Executive/Super
- *  Admin (writes stay Super-Admin-only, enforced in DepartmentAdminControls/the backend),
- *  a plain Member has no use for it since they can't act on anything there. Requests is the
- *  same tier again — a plain Member is never a deadline-extension decider (see
- *  resolveDeadlineDecider on the backend), so the inbox would always read empty for them. */
+/** Shared with MobileTabBar. A function, not a constant, since Departments/Requests/
+ *  Activity only appear for a Director or Super Admin — a plain Member has no use for any
+ *  of them (can't act on the org chart, is never a deadline-extension decider, etc). */
 export function getNavItems(isDirector: boolean): NavItem[] {
   const items = [...BASE_NAV_ITEMS]
   if (isDirector) {
@@ -43,20 +35,12 @@ export function getNavItems(isDirector: boolean): NavItem[] {
   return items
 }
 
-/** Every count > 0 shown as a small badge on the nav item itself — "something new happened
- *  here since you last looked." Tasks/Teams/Departments/Activity all ride on the
- *  notification system (see NotificationServiceImpl.notifyTaskAssigned/
- *  notifySubtaskAssigned/notifyTaskReassigned/notifySubtaskReassigned/notifyTeamCreated/
- *  notifyDepartmentCreated/notifyTaskDeleted), cleared when the corresponding page is
- *  opened (see each page's own useMarkCategoryRead call). Requests is different — its badge
- *  is simply "how many pending extension requests currently need a decision", the exact
- *  same count the Requests page itself would show; it self-clears as requests get decided,
- *  nothing to separately mark read.
- *
- *  Tasks is the one badge every logged-in person can get, Member included (a Member gets
- *  notified when a task is assigned to them the same as a Director does) — the type-counts
- *  fetch itself always runs for anyone logged in; Teams/Departments/Activity/Requests just
- *  never have a nav item to attach to for a plain Member, so their counts go unused for one. */
+/** Every count > 0 shown as a small badge on the nav item — "something new since you last
+ *  looked." Tasks/Teams/Departments/Activity ride on the notification system, cleared when
+ *  the corresponding page is opened (see each page's useMarkCategoryRead). Requests is
+ *  different — its badge is just "how many pending extension requests need a decision,"
+ *  self-clearing as requests get decided. Tasks is the one badge every logged-in person can
+ *  get, Member included; the others simply have no nav item for a plain Member to attach to. */
 function useNavBadgeCounts(hasUser: boolean, isDirector: boolean) {
   const typeCounts = useUnreadCountsByType(hasUser)
   const pendingRequests = usePendingExtensionRequests(isDirector)
@@ -107,10 +91,7 @@ export function Sidebar() {
               <span className={styles.userName} title={currentUser.fullName}>
                 {currentUser.fullName}
               </span>
-              {/* Job title, always — role/leadership now lives solely in the RoleBadge below,
-                  which carries its own distinct colour per state instead of repeating the
-                  same info in plain text here too. title= gives the full text back on hover,
-                  since both this and the name above truncate when they don't fit. */}
+              {/* Job title only — role/leadership lives in the RoleBadge below instead. */}
               <span className={styles.userRole} title={currentUser.jobTitle}>
                 {currentUser.jobTitle}
               </span>

@@ -9,13 +9,9 @@ import styles from './SearchInput.module.css'
 
 const MAX_PREVIEW_ITEMS = 5
 
-/**
- * Lives in the app header. Typing narrows a live results dropdown right underneath the
- * box (people and tasks, same data as the full /search page, capped to a handful of each)
- * — pressing Enter, or "View all results", still goes to the full page for everything the
- * dropdown doesn't have room for. Same click-outside/dropdown-panel pattern as
- * NotificationBell, so the two headers controls behave consistently.
- */
+/** Lives in the app header. Typing narrows a live results dropdown (capped to a handful
+ *  each); Enter or "View all results" goes to the full /search page. Same click-outside
+ *  pattern as NotificationBell. */
 export function SearchInput() {
   const [value, setValue] = useState('')
   const [open, setOpen] = useState(false)

@@ -10,6 +10,7 @@ import { useTeams } from '../../teams/hooks/useTeams'
 import { useDepartments } from '../../departments/hooks/useDepartments'
 import { maxAssignableDate, minAssignableDate } from '../../../lib/dateLimits'
 import { InlineSubtasksField, type InlineSubtaskRow } from './InlineSubtasksField'
+import { SourceCategoryField } from './SourceCategoryField'
 import { SourceDetailField } from './SourceDetailField'
 import type { CreateTaskRequest, TaskSeverity, TaskSource } from '../../../types/task.types'
 import styles from './CreateTaskForm.module.css'
@@ -21,20 +22,10 @@ const ASSIGNEE_KIND_OPTIONS: { label: string; value: AssigneeKind }[] = [
   { label: 'Individual', value: 'INDIVIDUAL' },
 ]
 
-// Executive/Super Admin only — appended to the options above when the caller qualifies,
-// rather than baked into the constant list, so a plain Director never sees a choice
-// that'd just be rejected server-side.
+// Executive/Super Admin only — appended to the options above when the caller qualifies, so a plain Director never sees a choice that'd be rejected server-side.
 const DEPARTMENT_OPTION: { label: string; value: AssigneeKind } = { label: 'Department', value: 'DEPARTMENT' }
 
-const SOURCE_OPTIONS: { label: string; value: TaskSource }[] = [
-  { label: 'Initiative', value: 'INITIATIVE' },
-  { label: 'Auditor', value: 'AUDITOR' },
-  { label: 'Regulator', value: 'REGULATOR' },
-  { label: 'Board', value: 'BOARD' },
-]
-
-// Executive/Super Admin only — the backend rejects a non-Executive creator's attempt to
-// set severity, so a plain Director never sees a picker that'd just be rejected.
+// Executive/Super Admin only — the backend rejects a non-Executive creator's attempt to set severity.
 const SEVERITY_OPTIONS: { label: string; value: TaskSeverity }[] = [
   { label: 'Low', value: 'LOW' },
   { label: 'Medium', value: 'MEDIUM' },
@@ -43,30 +34,17 @@ const SEVERITY_OPTIONS: { label: string; value: TaskSeverity }[] = [
 ]
 
 interface CreateTaskFormProps {
-  /** subtasks is whatever InlineSubtasksField has collected (possibly empty) — the caller
-   *  (CreateTaskModal) creates the team task first, then loops over these to create one
-   *  leaf subtask per filled row underneath it. documents is whatever files were picked
-   *  under "Supporting documents" (possibly empty) — uploaded the same way, sequentially,
-   *  once the task itself exists. */
+  /** subtasks is whatever InlineSubtasksField collected (possibly empty) — the caller creates the team task first, then loops over these to create one leaf subtask per filled row. documents is uploaded the same way once the task exists. */
   onSubmit: (payload: CreateTaskRequest, subtasks: InlineSubtaskRow[], documents: File[]) => void
   onCancel: () => void
   submitting: boolean
 }
 
-/**
- * Top-level (depth 0) tasks only — assigned to a whole team (which a Team Leader/Director
- * later breaks into person-assigned subtasks), straight to one person (which then behaves
- * like a subtask itself: its % comes directly from comments, never a rollup, and it can
- * never have subtasks of its own — see SubtasksPanel), or a whole Department (whose head
- * Director then turns it into a real team-or-individual "implementation task", one level
- * deeper, via the same "Add subtask" flow). createdById is always the logged-in
- * Director-or-above, not a picker.
- *
- * The CEO seat (role EXECUTIVE, as opposed to Super Admin, who keeps every option for
- * system-level flexibility) only ever hands work to a whole Department — never straight to
- * a team or a person, that's a Director's call once the Department has it — so she never
- * even sees the Team/Individual choice, just goes straight to picking a department.
- */
+/** Top-level (depth 0) tasks only — team, individual (behaves like a subtask itself, no
+ *  rollup, no children), or Department (Executive-only; its head Director later turns it
+ *  into a real "implementation task"). createdById is always the logged-in Director-or-
+ *  above. The CEO seat (role EXECUTIVE) only ever hands work to a whole Department, so she
+ *  never sees the Team/Individual choice at all — Super Admin keeps every option. */
 export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFormProps) {
   const { currentUser, isExecutive } = useAuth()
   const teamsQuery = useTeams()
@@ -80,10 +58,8 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
       ? [...ASSIGNEE_KIND_OPTIONS, DEPARTMENT_OPTION]
       : ASSIGNEE_KIND_OPTIONS
 
-  // A plain Director may only assign a new task to a team/person within the department
-  // they head (enforced server-side in TaskServiceImpl.createTask/
-  // requireCanAssignWithinDepartment) — scoped here too so they never see a choice that'd
-  // just be rejected. Executive/Super Admin keep the full org-wide list.
+  // A plain Director may only assign within the department they head (enforced server-side
+  // too) — scoped here so they never see a choice that'd be rejected. Executive/Super Admin keep the full list.
   const assignableTeams = isExecutive
     ? (teamsQuery.data ?? [])
     : (teamsQuery.data ?? []).filter((team) => team.departmentId === currentUser?.departmentId)
@@ -135,12 +111,11 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
     setSubtaskRows([])
   }
 
-  function handleSourceChange(next: string) {
-    const value = next as TaskSource
+  function handleSourceChange(value: string) {
     setSource(value)
     // Zigama has exactly one regulator — don't make anyone type it. Only fills when the
     // field is currently empty, so it never clobbers something the user already typed.
-    if (value === 'REGULATOR' && sourceLabel.trim() === '') {
+    if (value.toLowerCase() === 'regulator' && sourceLabel.trim() === '') {
       setSourceLabel('BNR')
     }
   }
@@ -246,13 +221,7 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
       />
       {isDeadlineBeforeAssignment && <ErrorMessage message="Deadline can't be before the date assigned." />}
 
-      <SelectField
-        label="Source (optional)"
-        value={source}
-        onChange={handleSourceChange}
-        placeholder="Where this came from"
-        options={SOURCE_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
-      />
+      <SourceCategoryField value={source} onChange={handleSourceChange} />
       {source && <SourceDetailField source={source} value={sourceLabel} onChange={setSourceLabel} label="Source detail" />}
 
       {isExecutive && (

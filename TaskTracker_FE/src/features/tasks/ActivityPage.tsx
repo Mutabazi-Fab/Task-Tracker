@@ -28,11 +28,9 @@ const FILTER_OPTIONS: { label: string; value: ActivityFilter }[] = [
 ]
 
 const PAGE_SIZE = 15
-// Every source here is fetched as one bounded batch and merged client-side, same trade-off
-// already established for the role/status logs: an org's admin-action volume is bounded
-// by headcount, not transactional volume like tasks, so "fetch up to N and page through it
-// in the browser" holds up rather than needing a real server-side merged query across three
-// tables just for this.
+// Every source is fetched as one bounded batch and merged client-side — an org's
+// admin-action volume is bounded by headcount, so this holds up without a server-side
+// merged query across four tables.
 const FETCH_SIZE = 100
 
 type Row =
@@ -41,14 +39,9 @@ type Row =
   | { id: string; kind: 'STATUS'; timestamp: string; personName: string; changeLabel: string; reason: string | null; actorName: string }
   | { id: string; kind: 'DEPARTMENT'; timestamp: string; departmentName: string; actorName: string }
 
-/**
- * Director or Super Admin only — every notable admin action in the org, in one feed: task
- * creation/deletion, role changes, account activation/deactivation, and department
- * deletion. Merges four separate audit tables client-side (see FETCH_SIZE) rather than one
- * new backend query, matching how the two people-side logs already worked before this page
- * existed. Not linked from the nav for a Member, and redirects away outright if landed on
- * directly.
- */
+/** Director or Super Admin only — every notable admin action in the org in one feed: task
+ *  creation/deletion, role changes, account (de)activation, department deletion. Merges
+ *  four audit tables client-side (see FETCH_SIZE). Not linked for a Member, and redirects away if landed on directly. */
 export function ActivityPage() {
   const { currentUser, isDirector } = useAuth()
   const [filter, setFilter] = useState<ActivityFilter>('ALL')
@@ -60,10 +53,8 @@ export function ActivityPage() {
   const departmentQuery = useDepartmentActivity(0, FETCH_SIZE)
   const markCategoryRead = useMarkCategoryRead()
 
-  // Clears the Sidebar's "new activity" badge (currently just TASK_DELETED — see
-  // NotificationServiceImpl.notifyTaskDeleted) the moment this page is opened. Runs
-  // unconditionally: this whole component only ever renders for a Director-or-above, the
-  // redirect below happens first for anyone else.
+  // Clears the Sidebar's "new activity" badge — runs unconditionally since this component
+  // only ever renders for a Director-or-above (the redirect below handles anyone else).
   useEffect(() => {
     markCategoryRead.mutate(['TASK_DELETED'])
   }, [])

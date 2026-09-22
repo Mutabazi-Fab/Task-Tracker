@@ -20,21 +20,12 @@ interface ReassignTaskModalProps {
   onClose: () => void
 }
 
-/**
- * Reassignment requires a reason and can never target the current owner. Which kind of
- * target applies is structural, not a free choice, so there's no "assignee type" picker
- * here anymore: a DEPARTMENT-assigned task (always depth 0) can only move to a different
- * DEPARTMENT — e.g. the CEO's office realizes what was handed to IT actually belongs to
- * Cybersecurity — restricted to Executive/Super Admin, since that's the same authority
- * that assigns one in the first place (see TaskDetailPage's canReassign). A team-assigned
- * task can only move to a different TEAM; an individually-assigned one can only move to a
- * different PERSON — scoped to the parent task's team for an ordinary leaf subtask, or the
- * whole org for anything "top-level-shaped": a real top-level task, or a depth-1
- * Department implementation task (see CreateTaskForm/CreateSubtaskForm — mirrors
- * TaskServiceImpl.isTopLevelShaped exactly). "Reassigned by" is always the logged-in
- * person, not a picker — the backend takes it as an explicit field, but there's no reason
- * to ask when we already know who's here.
- */
+/** Reassignment requires a reason and can never target the current owner. Which kind of
+ *  target applies is structural, not a free choice: a DEPARTMENT task can only move to a
+ *  different DEPARTMENT (Executive/Super-Admin-only, see TaskDetailPage's canReassign); a
+ *  TEAM task only to a different TEAM; an INDIVIDUAL task only to a different PERSON,
+ *  scoped to the parent's team for a leaf subtask or the whole org otherwise. "Reassigned
+ *  by" is always the logged-in person, not a picker. */
 export function ReassignTaskModal({ task, open, onClose }: ReassignTaskModalProps) {
   const isDepartmentAssigned = task.assigneeType === 'DEPARTMENT'
   const isTeamAssigned = task.assigneeType === 'TEAM'
@@ -51,11 +42,9 @@ export function ReassignTaskModal({ task, open, onClose }: ReassignTaskModalProp
   const reassign = useReassignTask(task.id)
 
   // A leaf subtask's owning team isn't on TaskDetail directly, so its parent is fetched to
-  // read that team's id off the parent's assigneeId — but ONLY when the parent is itself
-  // TEAM-assigned; a depth-1 Department implementation task's parent is DEPARTMENT-typed
-  // (no team of its own), and that case picks a new owner from the whole org instead, same
-  // as a real top-level task assigned straight to one person. NaN when not applicable
-  // keeps every query below disabled.
+  // read that team's id off assigneeId — but only when the parent is itself TEAM-assigned;
+  // a Department implementation task's parent is DEPARTMENT-typed, picking from the whole
+  // org instead. NaN when not applicable keeps every query below disabled.
   const parentQuery = useTaskDetail(hasParent ? task.parentTaskId ?? NaN : NaN)
   const isRestrictedToParentTeam = hasParent && parentQuery.data?.assigneeType !== 'DEPARTMENT'
   const parentTeamId = parentQuery.data?.assigneeId ?? NaN
@@ -137,10 +126,7 @@ export function ReassignTaskModal({ task, open, onClose }: ReassignTaskModalProp
 
         {isSameOwner && <ErrorMessage message="This task is already assigned there." />}
 
-        {/* Read-only, not a picker — the backend still takes reassignedById as an explicit
-            field, but there's no reason to ask when we already know who's logged in. Shown
-            anyway so a Director or Team Leader can see up front that this reassignment
-            will be recorded against their name in the audit trail, not submitted blind. */}
+        {/* Read-only, not a picker — shown so the caller can see it'll be recorded under their name. */}
         <div className={styles.field}>
           <span className={styles.label}>Reassigned by</span>
           <span className={styles.value}>{currentUser?.fullName}</span>

@@ -24,32 +24,20 @@ type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 export interface AuthContextValue {
   status: AuthStatus
   currentUser: Person | null
-  /** Director, Executive, or Super Admin — every "Director-only" check in the UI should
-   *  read this, not currentUser.role === 'DIRECTOR' directly, so Executive/Super Admin
-   *  never lose access to something a Director can do. */
+  /** Director, Executive, or Super Admin — use this rather than currentUser.role === 'DIRECTOR' directly. */
   isDirector: boolean
-  /** Executive or Super Admin — the CEO's tier and above: org-wide (Department-level)
-   *  task creation, task severity, and the org-wide executive dashboard. Super Admin sees
-   *  the literal same executive view, not a separate lookalike. */
+  /** Executive or Super Admin — the CEO's tier: Department-level task creation, task severity, the executive dashboard. */
   isExecutive: boolean
-  /** Super Admin only — the handful of things exclusively theirs (granting roles,
-   *  deactivating accounts, the role-change audit log, department administration). */
+  /** Super Admin only — granting roles, deactivating accounts, department administration. */
   isSuperAdmin: boolean
-  /** remember=true persists the token in localStorage (survives closing the browser);
-   *  false keeps it in sessionStorage only (gone once the tab closes) — the "Remember me"
-   *  checkbox on LoginPage. */
+  /** remember=true persists the token in localStorage; false keeps it sessionStorage-only — the "Remember me" checkbox on LoginPage. */
   login: (request: LoginRequest, remember: boolean) => Promise<void>
-  /** Returns the raw AuthResponse rather than resolving to void — checking a code doesn't
-   *  always succeed (may come back needing another attempt). On success this also logs the
-   *  person in. Used by the rare legacy account still unverified (see VerifyEmailPage) —
-   *  every Super-Admin-created account starts verified already. */
+  /** Returns AuthResponse rather than void — a code may need another attempt. On success also logs the person in. */
   verifyEmail: (request: VerifyEmailRequest) => Promise<AuthResponse>
   resendOtp: (request: ResendOtpRequest) => Promise<void>
-  /** Always resolves — see ForgotPasswordRequest. The caller always shows the same generic
-   *  "if an account exists, a code was sent" message regardless of what actually happened. */
+  /** Always resolves — the caller shows the same generic "if an account exists, a code was sent" message regardless. */
   forgotPassword: (request: ForgotPasswordRequest) => Promise<void>
-  /** Same "may still need to try again" shape as verifyEmail — a wrong/expired code
-   *  throws. On success this also logs the person in with their new password. */
+  /** Same "may need another attempt" shape as verifyEmail. On success also logs the person in with their new password. */
   resetPassword: (request: ResetPasswordRequest) => Promise<AuthResponse>
   logout: () => void
 }
@@ -87,16 +75,11 @@ function clearStoredToken() {
   }
 }
 
-/**
- * Owns the logged-in person for the whole app — every "who's doing this" field the
- * backend still takes explicitly (assignedById, changedById, authorId, ...) is filled in
- * from currentUser here rather than a picker, now that we actually know who's logged in.
- *
- * AuthResponse (from login/verify-email/reset-password) only carries {token, personId, fullName,
- * email, role, emailVerified} — not jobTitle/rank/teams — so right after any of them
- * yields a real token, this fetches the full profile from GET /auth/me before considering
- * the user "authenticated".
- */
+/** Owns the logged-in person for the whole app — every "who's doing this" field the
+ *  backend still takes explicitly is filled in from currentUser here rather than a picker.
+ *  AuthResponse only carries a slim subset of fields, so right after login/verify/reset
+ *  yields a real token, this fetches the full profile from GET /auth/me before considering
+ *  the user "authenticated". */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading')
   const [currentUser, setCurrentUser] = useState<Person | null>(null)

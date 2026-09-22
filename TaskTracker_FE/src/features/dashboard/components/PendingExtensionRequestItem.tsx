@@ -15,17 +15,12 @@ interface PendingExtensionRequestItemProps {
   request: PendingExtensionRequest
 }
 
-/** One row of the "Requests" inbox — every row here is guaranteed PENDING and already
- *  scoped to requests the viewer is actually a decider for (the backend does that
- *  filtering — see TaskServiceImpl.getPendingExtensionRequests), so unlike
- *  DeadlineExtensionHistoryItem there's no canDecide check to make here for whether to show
- *  this row at all. But "a decider" isn't always "the full decider": on a task chain that
- *  originated from the CEO's own mandate, the Director it first landed on can still reject
- *  it, but only the CEO/Super Admin can approve it — see request.canApprove, which hides
- *  the Approve action rather than showing a button that would just fail. Before the CEO
- *  has actually seen it, the Director gets a "Send to CEO for approval" action instead (see
- *  request.forwardedToApprover) — the CEO's own inbox doesn't fill up automatically the
- *  moment a request like this is made, only once a Director deliberately escalates it. */
+/** One row of the "Requests" inbox — every row is guaranteed PENDING and already scoped to
+ *  requests the viewer is a decider for, so no canDecide check here. But "a decider" isn't
+ *  always "the full decider": on a CEO-mandated chain, the Director it first landed on can
+ *  reject but not approve — see request.canApprove, which hides Approve rather than
+ *  showing a button that'd fail. Before the CEO has seen it, the Director instead gets a
+ *  "Send to CEO for approval" action (see request.forwardedToApprover). */
 export function PendingExtensionRequestItem({ request }: PendingExtensionRequestItemProps) {
   const [decisionNote, setDecisionNote] = useState('')
   const { currentUser } = useAuth()

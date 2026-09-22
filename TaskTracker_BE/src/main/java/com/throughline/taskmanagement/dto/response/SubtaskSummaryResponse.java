@@ -14,6 +14,9 @@ public record SubtaskSummaryResponse(
     String taskCode,
     String title,
     String assigneeName,
+    // Null unless assigneeType is INDIVIDUAL — lets the frontend confirm a subtask is
+    // actually assigned to the viewer (e.g. picking a daily goal) without a name match.
+    Long assigneeId,
     AssigneeType assigneeType,
     TaskStatus status,
     int progressPercentage,

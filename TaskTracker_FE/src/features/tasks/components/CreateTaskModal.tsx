@@ -13,13 +13,9 @@ interface CreateTaskModalProps {
   onClose: () => void
 }
 
-/** Form shell + submit — owns the mutation(s), CreateTaskForm owns only the fields.
- *
- *  When the new task is Team-assigned and InlineSubtasksField collected any rows, this is
- *  what actually turns those into real subtasks: the team task has to exist first (a
- *  subtask needs its parent's id), so each row's createSubtask call only fires after the
- *  parent's own mutation resolves — sequenced here, not something CreateTaskForm could do
- *  on its own since it never touches the API directly. */
+/** Form shell + submit — owns the mutation(s), CreateTaskForm owns only the fields. When
+ *  the new task is Team-assigned with InlineSubtasksField rows, each row's createSubtask
+ *  call needs the parent task's id, so it only fires after the parent's own mutation resolves. */
 export function CreateTaskModal({ open, onClose }: CreateTaskModalProps) {
   const createTask = useCreateTask()
   const queryClient = useQueryClient()
@@ -41,11 +37,8 @@ export function CreateTaskModal({ open, onClose }: CreateTaskModalProps) {
     if (subtasks.length > 0) {
       setIsCreatingSubtasks(true)
       try {
-        // Sequential, not Promise.all — task codes are assigned as MAX(sequence)+1 at
-        // request time with no locking, so firing these concurrently lets two requests read
-        // the same max and collide on the unique task_code constraint. Awaiting one at a
-        // time means each row's insert has already committed before the next one reads the
-        // max.
+        // Sequential, not Promise.all — task codes are MAX(sequence)+1 with no locking, so
+        // concurrent requests could read the same max and collide on the unique constraint.
         for (const row of subtasks) {
           await createSubtask(created.id, {
             title: row.title.trim(),
@@ -58,9 +51,7 @@ export function CreateTaskModal({ open, onClose }: CreateTaskModalProps) {
         }
       } catch (err) {
         // The team task itself is already created and safe — only the inline subtasks
-        // failed. Leaving the modal open (rather than silently losing this) means whoever's
-        // filling it in can see what went wrong; the team task can still be found afterward
-        // and given subtasks the normal way even if this is abandoned.
+        // failed. Leaving the modal open surfaces what went wrong.
         const message = err && typeof err === 'object' && 'message' in err ? String(err.message) : null
         setSubtaskError(
           message
@@ -76,8 +67,7 @@ export function CreateTaskModal({ open, onClose }: CreateTaskModalProps) {
     if (documents.length > 0) {
       setIsUploadingDocuments(true)
       try {
-        // Sequential for the same reason as subtasks above — also avoids saturating the
-        // connection pool with several large file uploads firing at once.
+        // Sequential for the same reason as subtasks above, and to avoid saturating the pool with several large uploads at once.
         for (const file of documents) {
           await addDocument(created.id, file)
         }
@@ -94,14 +84,11 @@ export function CreateTaskModal({ open, onClose }: CreateTaskModalProps) {
       }
     }
 
-    // createTask's own onSuccess already invalidated the task list/dashboard/people/teams
-    // queries for the parent — this covers the subtasks' rollup effect and the documents
-    // list on top of that.
+    // createTask's own onSuccess already invalidated the task/dashboard/people/teams
+    // queries — this covers the subtasks' rollup and documents list too.
     queryClient.invalidateQueries({ queryKey: ['tasks'] })
-    // Only auto-close on a clean run — same reasoning as the original subtask-only flow:
-    // the task itself is already safely created either way, but leaving the modal open
-    // after a partial failure means whoever's filling it in can see what went wrong instead
-    // of it silently vanishing.
+    // Only auto-close on a clean run — the task is already safely created either way, but
+    // a partial failure should stay visible rather than silently vanish.
     if (!hadFailure) {
       onClose()
     }

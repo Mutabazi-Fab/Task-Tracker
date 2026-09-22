@@ -2,9 +2,7 @@ import { useId } from 'react'
 import { useTheme } from './useTheme'
 import styles from './ThemeToggle.module.css'
 
-/** Filled, not stroke-outline — a deliberate one-off so this control stands
- * out the way a sun/moon theme switch does in most apps, rather than
- * blending into the rest of the outline icon set. */
+/** Filled, not stroke-outline — a deliberate one-off so this stands out like a sun/moon theme switch usually does, rather than blending into the outline icon set. */
 function SunIcon({ size = 16 }: { size?: number }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" aria-hidden="true">
@@ -16,13 +14,9 @@ function SunIcon({ size = 16 }: { size?: number }) {
   )
 }
 
-/**
- * Built from two overlapping circles via a mask, not a hand-tuned crescent path — the
- * previous single-path crescent had a near-tangent point where its two arcs met, which
- * rendered as a thin stray sliver ("a shadow") at small icon sizes once filled solid.
- * Two generously-sized, moderately-offset circles keep the crescent evenly thick
- * end to end with no needle point.
- */
+/** Built from two overlapping circles via a mask, not a hand-tuned crescent path — a
+ *  previous single-path crescent had a near-tangent point that rendered as a stray sliver
+ *  at small sizes. Two generously-sized, offset circles keep it evenly thick end to end. */
 function MoonIcon({ size = 16 }: { size?: number }) {
   const maskId = useId()
   return (
@@ -36,13 +30,8 @@ function MoonIcon({ size = 16 }: { size?: number }) {
   )
 }
 
-/**
- * A single small sliding switch, not two full-size buttons side by side — Field/Command
- * is one binary choice, so one control that flips is both more compact and a clearer fit
- * for what it actually is than a pair of tabs. The sliding thumb keeps the same colours
- * as before (accent-strong fill, panel-coloured icon); the theme not currently active
- * shows dimly in the track next to it, in the same muted tone used everywhere else.
- */
+/** A single small sliding switch, not two full-size buttons — Field/Command is one binary
+ *  choice, so a flip control is more compact and clearer than a pair of tabs. */
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
   const isCommand = theme === 'command'

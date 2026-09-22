@@ -10,12 +10,10 @@ import { useUnreadCount } from '../hooks/useUnreadCount'
 import type { Notification, NotificationType } from '../../../types/notification.types'
 import styles from './NotificationBell.module.css'
 
-// Every task-shaped notification carries the task's own id as relatedEntityId (see
-// NotificationServiceImpl's various notify* methods — they all pass task.getId() or
-// subtask.getId()). ROLE_CHANGED/ACCOUNT_STATUS_CHANGED/PASSWORD_RESET_REQUESTED instead
-// carry the affected person's id. TEAM_MEMBER_ADDED/REMOVED/TEAM_LEADER_CHANGED carry a
-// TeamMembershipChange record's own id, not a team id — nowhere to send someone yet, so
-// those stay non-navigable (still mark read on click, same as before).
+// Every task-shaped notification carries the task's own id as relatedEntityId.
+// ROLE_CHANGED/ACCOUNT_STATUS_CHANGED/PASSWORD_RESET_REQUESTED carry the affected person's
+// id instead. TEAM_MEMBER_ADDED/REMOVED/TEAM_LEADER_CHANGED carry a membership-change id,
+// not a team id, so those stay non-navigable (still mark read on click).
 const TASK_NOTIFICATION_TYPES = new Set<NotificationType>([
   'TASK_STALLED',
   'TASK_ASSIGNED',
@@ -39,22 +37,14 @@ function resolveNotificationRoute(notification: Notification): string | null {
   if (notification.relatedEntityId == null) return null
   if (TASK_NOTIFICATION_TYPES.has(notification.type)) return ROUTES.taskDetail(notification.relatedEntityId)
   if (PERSON_NOTIFICATION_TYPES.has(notification.type)) return ROUTES.personProfile(notification.relatedEntityId)
-  // TEAM_CREATED/DEPARTMENT_CREATED carry the new team's/department's own id — unlike
-  // TASK_DELETED (deliberately excluded here: the task it points at no longer exists by
-  // the time anyone could click it, so there's nowhere real to send them).
+  // TASK_DELETED is deliberately excluded — the task it points at no longer exists.
   if (notification.type === 'TEAM_CREATED') return ROUTES.team(notification.relatedEntityId)
   if (notification.type === 'DEPARTMENT_CREATED') return ROUTES.department(notification.relatedEntityId)
   return null
 }
 
-/**
- * Lives in AppShell's top bar, next to global search, so it's on every page — same
- * reasoning as SearchInput. Click toggles a small dropdown rather than a full page;
- * clicking a notification marks it read in place AND, when it points at something real
- * (a task, or a person for a role/account-status one), navigates straight there — no more
- * reading "Solange requested an extension on TSK-0019" and then hunting for that task by
- * hand.
- */
+/** Lives in AppShell's top bar, next to global search. Clicking a notification marks it
+ *  read in place AND, when it points at something real, navigates straight there. */
 export function NotificationBell() {
   const { currentUser } = useAuth()
   const navigate = useNavigate()

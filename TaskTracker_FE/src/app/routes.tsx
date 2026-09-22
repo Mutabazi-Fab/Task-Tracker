@@ -21,10 +21,9 @@ import { AppShell } from '../components/layout/AppShell'
 import { NotFoundPage } from './NotFoundPage'
 import { ROUTES } from './routePaths'
 
-// Re-exported so every existing `import { ROUTES } from '.../app/routes'` across the app
-// keeps working unchanged — the actual values live in routePaths.ts now (see the comment
-// there for why: this file importing AppShell, which imports Sidebar, which needs ROUTES,
-// is a circular import that crashed at runtime when ROUTES was defined here directly).
+// Re-exported so existing `import { ROUTES } from '.../app/routes'` keeps working — the
+// actual values live in routePaths.ts (this file importing AppShell → Sidebar → ROUTES
+// would otherwise be a circular import).
 export { ROUTES }
 
 /** Every logged-in route rendered inside AppShell (sidebar + top bar) and gated by
@@ -37,17 +36,9 @@ function protectedPage(page: React.ReactNode) {
   )
 }
 
-/**
- * The actual <Route> tree. Pages not built yet fall through to the "*"
- * NotFoundPage rather than a fake stub — Tasks/People/Teams/Search land
- * here as their features are built.
- *
- * /login renders outside AppShell (no sidebar, no search bar — there's no logged-in
- * identity yet to build those around) and is wrapped in PublicOnlyRoute instead, so an
- * already-logged-in person skips straight past it. There is no public /signup route — the
- * only way to get a new account is a Super Admin creating one (People → New person); this
- * app deliberately has no self-service registration.
- */
+/** The actual <Route> tree. /login renders outside AppShell (no logged-in identity yet)
+ *  and is wrapped in PublicOnlyRoute so an already-logged-in person skips past it. There's
+ *  no public /signup route — only a Super Admin can create a new account. */
 export function AppRoutes() {
   return (
     <Routes>

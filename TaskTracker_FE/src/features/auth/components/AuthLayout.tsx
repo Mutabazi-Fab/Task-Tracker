@@ -31,13 +31,9 @@ const SLIDES = [
   },
 ]
 
-/**
- * Split-screen chrome for LoginPage and the account-recovery pages (forgot/reset password,
- * verify email) — branding + rotating description on the left, the form itself on the
- * right. Rendered outside AppShell (no sidebar, no global search bar) since there's no
- * logged-in identity yet to build those around. The branding side collapses away below
- * ~900px so this doesn't break on a phone.
- */
+/** Split-screen chrome for LoginPage and the account-recovery pages — branding + rotating
+ *  description on the left, the form on the right. Rendered outside AppShell (no logged-in
+ *  identity yet). The branding side collapses away below ~900px. */
 export function AuthLayout({ title, subtitle, children, footerText, footerLinkTo, footerLinkLabel }: AuthLayoutProps) {
   const [slideIndex, setSlideIndex] = useState(0)
 

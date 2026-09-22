@@ -10,10 +10,8 @@ import type { TaskDetail } from '../../../types/task.types'
 import type { Role } from '../../../types/person.types'
 import styles from './AssignmentMetaPanel.module.css'
 
-/** Same labels as RoleBadge/PeopleListPage's ROLE_LABEL, just plain text here rather than a
- *  colored badge — "Assigned by" sits among plain value spans (date, deadline, ...), so a
- *  loud badge would stand out for the wrong reason. Answers "was this from the CEO or a
- *  Director?" without a click into the person's own profile to check their role. */
+/** Same labels as RoleBadge/PeopleListPage's ROLE_LABEL, but plain text — a loud badge
+ *  would stand out for the wrong reason among these plain value spans. */
 const ASSIGNED_BY_ROLE_LABEL: Record<Role, string> = {
   SUPER_ADMIN: 'Super Admin',
   EXECUTIVE: 'Executive',
@@ -21,18 +19,10 @@ const ASSIGNED_BY_ROLE_LABEL: Record<Role, string> = {
   MEMBER: 'Member',
 }
 
-/** Assigned to / by / date / status / reassign count — the at-a-glance ownership facts.
- *  When the task is team-assigned, task.assigneeId is that team's id, so its leader is one
- *  more fetch away — worth showing here since "who's actually accountable for this" is
- *  exactly what this panel exists to answer. The full roster below it answers the natural
- *  follow-up — "who's actually on that team" — without a click away to the Teams page;
- *  read-only here (no onMakeLeader/onRemove), same chip Teams itself uses so the leader
- *  reads the same green "Leader" tag everywhere in the app.
- *
- *  The CEO seat (role EXECUTIVE) doesn't get the roster, on this task or any team task she
- *  drills into from a Department's implementation-task list — she's meant to see the task,
- *  its progress, and be able to comment, not who's on which team. The "Team leader" fact
- *  above stays visible even for her (it's who's accountable, not team composition). */
+/** Assigned to / by / date / status / reassign count — the at-a-glance ownership facts. A
+ *  team-assigned task shows its leader (one more fetch) plus the full roster below,
+ *  read-only, same chip Teams itself uses. The CEO seat (EXECUTIVE) doesn't get the
+ *  roster on any team task — she's meant to see progress and comment, not team composition. */
 export function AssignmentMetaPanel({ task }: { task: TaskDetail }) {
   const { currentUser } = useAuth()
   const isCeo = currentUser?.role === 'EXECUTIVE'

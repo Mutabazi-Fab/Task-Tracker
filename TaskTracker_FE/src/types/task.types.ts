@@ -4,58 +4,45 @@ import type { DeadlineExtension } from './deadlineExtension.types'
 import type { TaskDocument } from './document.types'
 import type { Role } from './person.types'
 
-/** DEPARTMENT is Executive-only, and only ever at depth 0 — a whole Department's head
- *  Director then turns it into a real TEAM- or INDIVIDUAL-assigned "implementation task"
- *  (depth 1), exactly like a plain top-level task, one level deeper. */
+/** DEPARTMENT is Executive-only and only ever at depth 0 — its head Director then turns it into a real TEAM-/INDIVIDUAL-assigned "implementation task" one level deeper. */
 export type AssigneeType = 'INDIVIDUAL' | 'TEAM' | 'DEPARTMENT'
 
 /** Always derived from progressPercentage server-side — never a form field. */
 export type TaskStatus = 'PENDING' | 'ONGOING' | 'COMPLETED'
 
-/** How task lists order themselves — 'updatedAt,desc'/'createdAt,desc' are passed straight
- *  through as Spring's `sort` query param (`property,direction`), same convention already
- *  used for the audit-log fetches; 'none' means exactly that — no sort param is sent at
- *  all, so the list comes back in whatever order the database naturally returns it, the
- *  same as before sorting existed.
- *  'updatedAt,desc' is the default everywhere: updatedAt is bumped by Hibernate on every
- *  save (a progress comment, a reassignment, a subtask's rollup touching its parent), so a
- *  brand-new task — whose updatedAt equals its createdAt at the moment it's made — already
- *  sorts to the top, and a task that's actively being worked stays visible even once it's
- *  no longer the newest thing created. 'createdAt,desc' is the explicit alternative for
- *  "what did I just set up", separate from "what's actually moving". */
+/** 'updatedAt,desc' (default) surfaces actively-worked tasks, not just newly created ones; 'createdAt,desc' is "what did I just set up"; 'none' sends no sort param at all. */
 export type TaskSortValue = 'updatedAt,desc' | 'createdAt,desc' | 'none'
 
-/** Who actually originated a task — open to anyone creating it, at any depth. Paired with
- *  a free-text sourceLabel on the task itself (e.g. "Director Maj. Musoni", "GPO", "E&Y",
- *  "Board of Directors"). */
-export type TaskSource = 'INITIATIVE' | 'AUDITOR' | 'REGULATOR' | 'BOARD'
+/** Who originated a task — open text matched against TaskSourceCategory's saved list, not a fixed set of literals. Paired with a free-text sourceLabel (e.g. "GPO", "E&Y"). */
+export type TaskSource = string
 
-/** Executive/Super-Admin-only, settable at creation only, at any depth. CRITICAL sets
- *  pinned = true as a one-time default at creation — pinning itself stays a separate,
- *  independently-editable toggle afterward (see SetPinnedRequest). */
+/** Executive/Super-Admin-only, settable at creation only. CRITICAL sets pinned = true as a one-time default at creation — pinning stays independently editable afterward. */
 export type TaskSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 
-/** A saved, reusable "Source Detail" suggestion for one TaskSource category — e.g. "BNR"
- *  under REGULATOR. Source Detail itself stays free text everywhere; this is only ever a
- *  pickable suggestion, never a restriction on what can be typed. */
+/** One entry in the Source dropdown itself (e.g. "Initiative", "Regulator") — a saved, open list. Adding a new one is Executive-or-above, enforced server-side. */
+export interface TaskSourceCategory {
+  id: number
+  name: string
+}
+
+/** A saved, reusable "Source Detail" suggestion for one Source category (e.g. "BNR" under Regulator) — never a restriction on what can be typed. */
 export interface TaskSourceEntry {
   id: number
   source: TaskSource
   label: string
 }
 
-/** Who structured a subtask — the Director themself, or the Team Leader of the team
- *  owning its parent task. Null for a task that predates the hierarchy. */
+/** Who structured a subtask — the Director, or the Team Leader of the team owning its parent task. Null for a task predating the hierarchy. */
 export type CreatedByRole = 'DIRECTOR' | 'TEAM_LEADER'
 
-/** One subtask under a top-level task, as shown on the parent's detail view. assigneeType
- *  tells a depth-1 TEAM-assigned "implementation task" (which can itself be broken into
- *  further subtasks) apart from an ordinary INDIVIDUAL leaf subtask (which never can). */
+/** One subtask under a top-level task. assigneeType tells a TEAM-assigned "implementation task" apart from an ordinary INDIVIDUAL leaf subtask. */
 export interface SubtaskSummary {
   id: number
   taskCode: string
   title: string
   assigneeName: string
+  // Null unless assigneeType is INDIVIDUAL.
+  assigneeId: number | null
   assigneeType: AssigneeType
   status: TaskStatus
   progressPercentage: number
@@ -79,32 +66,23 @@ export interface TaskListItem {
   status: TaskStatus
   progressPercentage: number
   dateAssigned: string
-  // Null only for a task that predates this field.
-  deadline: string | null
-  // Both null unless this task's creator recorded where it originated.
+  deadline: string | null // null only for a task that predates this field
   source: TaskSource | null
-  sourceLabel: string | null
-  // Null unless an Executive/Super Admin set it at creation.
-  severity: TaskSeverity | null
-  // A manual, independently-editable toggle — see SetPinnedRequest.
-  pinned: boolean
+  sourceLabel: string | null // both null unless the creator recorded where it originated
+  severity: TaskSeverity | null // null unless an Executive/Super Admin set it at creation
+  pinned: boolean // manual, independently-editable toggle — see SetPinnedRequest
   assignedByName: string
   reassignmentCount: number
   lastComment: TaskComment | null
-  // Null for a top-level task (team- or individually-assigned) — set only for a real
-  // subtask. Both a subtask and a standalone individual task share assigneeType
-  // 'INDIVIDUAL' with nothing else to tell them apart, so this is what actually
-  // distinguishes "assigned to one person directly" from "a subtask of something".
+  // Distinguishes "assigned to one person directly" from "a subtask of something" — both
+  // share assigneeType 'INDIVIDUAL' with nothing else to tell them apart.
   parentTaskCode: string | null
-  // The parent task's actual title — use this for "under {title}" UI copy instead of the
-  // less legible parentTaskCode. Null wherever parentTaskCode is.
-  parentTaskTitle: string | null
-  // 0 for a real top-level task (plain or Department-assigned), 1 for a direct child, 2
-  // for a grandchild (only possible under a Department-rooted hierarchy).
-  depth: number
-  // Backs the "New" badge (see isRecentlyCreated) — compared against "now" at render time
-  // rather than a precomputed boolean, so the badge disappears on its own as time passes.
-  createdAt: string
+  parentTaskTitle: string | null // for "under {title}" UI copy; null wherever parentTaskCode is
+  depth: number // 0 top-level, 1 direct child, 2 grandchild (Department-rooted only)
+  // Empty for a leaf subtask — see DailyGoalCard, which flattens this to offer a member's
+  // own subtasks as daily-goal candidates alongside their directly-assigned top-level tasks.
+  subtasks: SubtaskSummary[]
+  createdAt: string // backs the "New" badge (see isRecentlyCreated), compared at render time
 }
 
 /** Full detail — complete comment + reassignment history, oldest first. */
@@ -116,58 +94,34 @@ export interface TaskDetail {
   assigneeName: string
   assigneeId: number | null
   assigneeType: AssigneeType
-  // The department this task actually lives in right now, regardless of assigneeType — see
-  // TaskDetailResponse's own doc comment on the backend for the derivation. Used to gate
-  // pin/reassign UI: a plain Director may only act on a task within their own department —
-  // compared against currentUser.departmentId directly (every current Director's own
-  // department membership already matches their headship, same simplifying assumption
-  // CreateTeamForm relies on) rather than a second department/headDirector fetch.
+  // The department this task lives in, regardless of assigneeType — gates pin/reassign UI
+  // (a plain Director may only act within their own department) against currentUser.departmentId.
   taskDepartmentId: number | null
-  // The team actually responsible for this task regardless of assigneeType: for a
-  // top-level task, same as assigneeId; for a subtask, its parent task's team. Used to
-  // decide whether the current viewer is this task's Team Leader (who, along with a
-  // Director/Super Admin, may reassign it) — see TaskDetailPage.
+  // The team actually responsible for this task: same as assigneeId for a top-level task,
+  // else its parent task's team. Used to decide if the viewer is this task's Team Leader.
   owningTeamId: number | null
   status: TaskStatus
   progressPercentage: number
   dateAssigned: string
-  // Null only for a task that predates this field. Extended directly by whoever set it
-  // (assignedById), or via the request/approve workflow — see deadlineExtensions below.
-  deadline: string | null
-  // Both null unless this task's creator recorded where it originated.
+  deadline: string | null // null only for a task that predates this field
   source: TaskSource | null
   sourceLabel: string | null
-  // Null unless an Executive/Super Admin set it at creation.
-  severity: TaskSeverity | null
-  // A manual, independently-editable toggle — see SetPinnedRequest. Not derived from
-  // severity; a CRITICAL task can be freely un-pinned once it's on track.
-  pinned: boolean
+  severity: TaskSeverity | null // null unless an Executive/Super Admin set it at creation
+  pinned: boolean // manual toggle, not derived from severity — see SetPinnedRequest
   assignedByName: string
   assignedById: number
-  // Whoever set this task's deadline/scope — shown next to their name (e.g. "· Director"
-  // vs "· Executive") so it's clear at a glance which tier a task actually came from.
-  assignedByRole: Role | null
-  // Who actually decides a deadline extension on this task — a Director-or-above,
-  // always, even when assignedById is a mere Team Leader (who can create a leaf subtask
-  // but has no authority over its deadline). Usually the same as assignedById/
-  // assignedByName above, but not always — gate deadline-decision UI off THIS field, not
-  // assignedById (chain of command: whoever's doing the work requests, a real Director
-  // decides).
+  assignedByRole: Role | null // shown next to their name, e.g. "· Director" vs "· Executive"
+  // Who actually decides a deadline extension — a Director-or-above, always, even when
+  // assignedById is a mere Team Leader. Gate deadline-decision UI off THIS field, not assignedById.
   deadlineDeciderName: string
   deadlineDeciderId: number
-  // null = top-level task (always team-assigned). Non-null = a subtask (always
-  // individual-assigned, can't have subtasks of its own) — see ReassignTaskModal,
-  // which uses this to decide "reassign to a team" vs "reassign to a person".
+  // null = top-level task. Non-null = a subtask — see ReassignTaskModal, which uses this
+  // to decide "reassign to a team" vs "reassign to a person".
   parentTaskId: number | null
   parentTaskCode: string | null
-  // The parent task's actual title — used for a real "back to {title}" breadcrumb link
-  // (via parentTaskId) instead of a bare code. Null wherever parentTaskId/parentTaskCode are.
-  parentTaskTitle: string | null
+  parentTaskTitle: string | null // for a "back to {title}" breadcrumb via parentTaskId
   createdByRole: CreatedByRole | null
-  // 0 for a real top-level task (plain or Department-assigned), 1 for a direct child, 2
-  // for a grandchild (only possible under a Department-rooted hierarchy). Decides whether
-  // "Add subtask" is even offered, and which form shape it uses.
-  depth: number
+  depth: number // 0 top-level, 1 direct child, 2 grandchild (Department-rooted only)
   subtasks: SubtaskSummary[]
   comments: TaskComment[]
   reassignments: TaskReassignment[]
@@ -178,11 +132,7 @@ export interface TaskDetail {
   updatedAt: string
 }
 
-/** Body for POST /tasks — a TOP-LEVEL (depth 0) task. Director-or-above. Assigned to
- *  exactly one of a team, a single individual, or (Executive/Super Admin only) a whole
- *  Department — exactly one of assignedTeamId/assignedPersonId/assignedDepartmentId must
- *  be set (the backend rejects zero or more than one). Must always carry the opening
- *  comment that explains 0%. */
+/** Body for POST /tasks — a TOP-LEVEL (depth 0) task. Director-or-above. Exactly one of assignedTeamId/assignedPersonId/assignedDepartmentId must be set (Department is Executive-only). */
 export interface CreateTaskRequest {
   title: string
   description?: string
@@ -194,26 +144,15 @@ export interface CreateTaskRequest {
   deadline: string
   source?: TaskSource
   sourceLabel?: string
-  // Executive/Super-Admin-only — the backend rejects a non-Executive creator's attempt
-  // to set this.
-  severity?: TaskSeverity
+  severity?: TaskSeverity // Executive/Super-Admin-only — rejected server-side otherwise
   openingNote: string
 }
 
-/**
- * Body for POST /tasks/{parentTaskId}/subtasks. Two shapes, depending on the parent
- * task's own assigneeType:
- *
- * Parent is TEAM-assigned (an ordinary top-level task, or a depth-1 Department
- * implementation task): the classic leaf-subtask case. createdById must be either the
- * parent task's Team Leader or a Director/Super Admin; assignedPersonId is required and
- * must be a member of the parent task's team; assignedTeamId must be omitted.
- *
- * Parent is DEPARTMENT-assigned (a depth-0 Executive task): the "implementation task"
- * case. createdById must be that department's head Director, or an Executive/Super Admin;
- * exactly one of assignedTeamId/assignedPersonId must be set, org-wide (no team-membership
- * restriction).
- */
+/** Body for POST /tasks/{parentTaskId}/subtasks. Two shapes depending on the parent's
+ *  assigneeType: TEAM-assigned parent → the classic leaf-subtask case (assignedPersonId
+ *  required, must be a team member); DEPARTMENT-assigned parent → the "implementation
+ *  task" case (exactly one of assignedTeamId/assignedPersonId, org-wide, no team-membership
+ *  restriction). */
 export interface CreateSubtaskRequest {
   title: string
   description?: string
@@ -254,19 +193,15 @@ export interface Page<T> {
 export type TaskActivityAction = 'CREATED' | 'DELETED'
 
 /** One row of GET /tasks/activity — every task/subtask created or deleted, org-wide.
- *  Director or Super Admin only. Everything here is a snapshot taken at the moment of the
- *  event, not a live lookup — a DELETED row's task no longer exists to look up, and a
- *  CREATED row should keep showing what the task looked like when it was made either way. */
+ *  Director or Super Admin only. Everything here is a snapshot at the moment of the event,
+ *  not a live lookup — a DELETED row's task no longer exists to look up. */
 export interface TaskActivity {
   id: number
   action: TaskActivityAction
   taskCode: string
   title: string
-  /** Set only when the task was a subtask. */
-  parentTaskCode: string | null
-  /** The parent task's title at the time of this event — same snapshot reasoning as
-   *  parentTaskCode above. */
-  parentTaskTitle: string | null
+  parentTaskCode: string | null // set only when the task was a subtask
+  parentTaskTitle: string | null // snapshot, same reasoning as parentTaskCode
   assigneeType: AssigneeType
   assigneeSummary: string
   performedByName: string

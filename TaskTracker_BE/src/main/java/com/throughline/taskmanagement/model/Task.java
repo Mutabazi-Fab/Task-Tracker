@@ -3,7 +3,6 @@ package com.throughline.taskmanagement.model;
 import com.throughline.taskmanagement.enums.AssigneeType;
 import com.throughline.taskmanagement.enums.CreatedByRole;
 import com.throughline.taskmanagement.enums.TaskSeverity;
-import com.throughline.taskmanagement.enums.TaskSource;
 import com.throughline.taskmanagement.enums.TaskStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -98,9 +97,11 @@ public class Task {
     private LocalDate deadline;
 
     /** Who actually originated this task, settable by whoever creates it at any depth.
-     *  Nullable — most tasks are ordinary internal work with no mandate to record. */
-    @Enumerated(EnumType.STRING)
-    private TaskSource source;
+     *  Nullable — most tasks are ordinary internal work with no mandate to record. Open
+     *  text matched against TaskSourceCategory's saved list, not a fixed enum — see
+     *  TaskSourceCategoryServiceImpl for who may add a brand new category. */
+    @Column(length = 100)
+    private String source;
 
     /** Free text alongside source (e.g. "Director Maj. Musoni", "GPO", "E&Y") — not a
      *  Person FK, since these are often external/organizational. Null unless source is set. */

@@ -9,7 +9,7 @@
      than it is tall (the badge plus "ZIGAMA CSS" underneath it), so a square crop box was
      cutting the wordmark off. This shows the whole thing instead, sized to use most of
      the sidebar's own width (220px, minus its padding) without touching the edges. */
-  width: 160px;
+  width: 112px;
   height: auto;
   border-radius: var(--radius-lg);
 }

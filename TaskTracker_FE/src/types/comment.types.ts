@@ -1,7 +1,6 @@
-/** PROGRESS is a real percentage reading, logged only via "Log progress" on an
- *  individually-tracked task, and the only kind that counts toward the trend chart.
- *  DISCUSSION is a plain Q&A message — fully open, doesn't touch percentage/status at all,
- *  and threads via parentCommentId (see TaskComment below), one level deep like Instagram. */
+/** PROGRESS is a real percentage reading, the only kind that counts toward the trend
+ *  chart. DISCUSSION is a plain Q&A message, fully open, threading one level deep via
+ *  parentCommentId. */
 export type CommentType = 'PROGRESS' | 'DISCUSSION'
 
 /** One entry in a task's comment log — either a PROGRESS reading or a DISCUSSION message.
@@ -19,20 +18,16 @@ export interface TaskComment {
   createdAt: string
 }
 
-/** Body for POST /tasks/{id}/comments — the progress log specifically, on an individually-
- *  tracked task. percentageAtComment is optional only in the sense the backend accepts an
- *  absent value as a narrative-only entry; the frontend's "Log progress" form always sends
- *  one (see AddCommentForm). */
+/** Body for POST /tasks/{id}/comments — the progress log. percentageAtComment is optional
+ *  server-side (a narrative-only entry), but the "Log progress" form always sends one. */
 export interface AddCommentRequest {
   authorId: number
   percentageAtComment?: number
   body: string
 }
 
-/** Body for POST /tasks/{id}/discussion-comments — a plain Q&A message, fully open (any
- *  authenticated person may post on any task). Never touches percentage/status.
- *  parentCommentId is omitted for a new top-level comment, or the id of the top-level
- *  comment being replied to. */
+/** Body for POST /tasks/{id}/discussion-comments — fully open, never touches percentage/
+ *  status. parentCommentId is omitted for a top-level comment, or the id being replied to. */
 export interface AddDiscussionCommentRequest {
   authorId: number
   body: string

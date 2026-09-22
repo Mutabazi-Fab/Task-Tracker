@@ -12,9 +12,7 @@ export interface Team {
   departmentId: number | null
 }
 
-/** One row of GET /teams/{id}/members — has an id/isLeader/joinedAt that plain Person
- *  never carried, since team membership is a join entity now (a person can be a member
- *  of several teams, leader on some and not others). */
+/** One row of GET /teams/{id}/members — isLeader/joinedAt that plain Person doesn't carry, since membership is a join entity (a person can lead some teams and not others). */
 export interface TeamMember {
   personId: number
   fullName: string
@@ -24,10 +22,8 @@ export interface TeamMember {
   joinedAt: string
 }
 
-/** Body for POST /teams. The Director creates the team, picks its initial roster, and
- *  designates one of those members as Team Leader all in one request — leaderId must be
- *  one of memberIds (enforced server-side). departmentId is required — every team belongs
- *  to exactly one Department. */
+/** Body for POST /teams — Director creates the team, roster, and Team Leader in one
+ *  request (leaderId must be one of memberIds). departmentId is required. */
 export interface CreateTeamRequest {
   name: string
   createdById: number

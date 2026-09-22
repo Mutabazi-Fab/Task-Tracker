@@ -1,15 +1,6 @@
-/**
- * Every route path in one place. Nothing else in the app should write a
- * literal path string — link to ROUTES.tasks, not "/tasks".
- *
- * Deliberately its own module with zero imports: routes.tsx (which defines
- * AppRoutes) imports AppShell, which imports Sidebar, which needs ROUTES —
- * if ROUTES lived in routes.tsx itself, that would be a circular import
- * (routes.tsx -> AppShell -> Sidebar -> routes.tsx) that crashes at runtime
- * with "Cannot access 'ROUTES' before initialization", since Sidebar reads
- * it at module-evaluation time (building NAV_ITEMS), before routes.tsx has
- * finished running its own top-level code.
- */
+/** Every route path in one place — link to ROUTES.tasks, not "/tasks". Deliberately its
+ *  own module with zero imports: routes.tsx imports AppShell → Sidebar → ROUTES, so if
+ *  ROUTES lived in routes.tsx itself that would be a circular import crashing at runtime. */
 export const ROUTES = {
   login: '/login',
   verifyEmail: '/verify-email',

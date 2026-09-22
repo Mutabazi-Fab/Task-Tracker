@@ -3,7 +3,6 @@ package com.throughline.taskmanagement.service.impl;
 import com.throughline.taskmanagement.dto.request.AddTaskSourceEntryRequest;
 import com.throughline.taskmanagement.dto.response.TaskSourceEntryResponse;
 import com.throughline.taskmanagement.enums.Role;
-import com.throughline.taskmanagement.enums.TaskSource;
 import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.model.Person;
@@ -27,7 +26,7 @@ public class TaskSourceEntryServiceImpl implements TaskSourceEntryService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<TaskSourceEntryResponse> getEntries(TaskSource source) {
+    public List<TaskSourceEntryResponse> getEntries(String source) {
         return taskSourceEntryRepository.findBySourceOrderByLabelAsc(source).stream()
                 .map(this::toResponse)
                 .toList();

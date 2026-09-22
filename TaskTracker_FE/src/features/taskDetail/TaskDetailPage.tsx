@@ -30,17 +30,11 @@ import { DeleteTaskModal } from './components/DeleteTaskModal'
 import type { TaskDetail } from '../../types/task.types'
 import styles from './TaskDetailPage.module.css'
 
-/** Thin wrapper — waits for the task, then hands it to TaskDetailBody. Every hook that
- *  needs the loaded task (in particular useDepartment, only relevant once we know
- *  assigneeType) lives in the child instead, so nothing here is called conditionally.
- *
- *  A 404 gets its own friendly page rather than QueryBoundary's generic red "Error: Task
- *  not found" callout — someone can easily still be sitting on this page (or a stale link/
- *  bookmark to it) after another Director/Super Admin deletes the task out from under them,
- *  and "Task not found" reads like something went wrong rather than what actually happened.
- *  Any OTHER kind of failure (network error, etc.) still falls through to QueryBoundary's
- *  normal handling below — this isn't a blanket override of error rendering, just the one
- *  specific, expected case. */
+/** Thin wrapper — waits for the task, then hands it to TaskDetailBody. Hooks that need the
+ *  loaded task live in the child so nothing here is called conditionally. A 404 gets its
+ *  own friendly page (someone may still be on a stale link after the task was deleted)
+ *  rather than QueryBoundary's generic error callout; any other failure still falls
+ *  through to QueryBoundary's normal handling. */
 export function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>()
   const query = useTaskDetail(Number(taskId))
@@ -80,40 +74,23 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
   const departmentQuery = useDepartment(isDepartmentAssigned ? (task.assigneeId ?? NaN) : NaN)
   const setPinned = useSetPinned(task.id)
 
-  // A TEAM-assigned task can always be broken down further, as long as it's not already
-  // at maximum depth (mirrors the backend's depth >= 2 rejection in
-  // TaskServiceImpl.createSubtask) — this covers both a plain top-level team task AND a
-  // depth-1 Department implementation task, the same "Add subtask" flow either way. A
-  // DEPARTMENT-assigned task (always depth 0) gets the same panel in its other new shape:
-  // creating its one implementation task. An INDIVIDUAL task (top-level or a leaf subtask)
-  // has nobody behind it to break work down further — a dead end either way, so it gets no
-  // Subtasks panel at all.
+  // A TEAM-assigned task (top-level or depth-1 implementation task) not yet at max depth,
+  // or a DEPARTMENT task (creating its one implementation task) — an INDIVIDUAL task is
+  // always a dead end, no Subtasks panel.
   const canHaveSubtasks = (task.assigneeType === 'TEAM' && task.depth < 2) || isDepartmentAssigned
-  // A plain Director's authority never crosses into a department they don't head — same
-  // simplifying comparison CreateTeamForm already relies on (every current Director's own
-  // department membership already matches their headship), reused here for pin/delete/
-  // reassign instead of a second department/headDirector fetch. Executive/Super Admin
-  // bypass this entirely, everywhere below.
+  // Same simplifying comparison CreateTeamForm relies on: a Director's own department
+  // membership already matches their headship. Executive/Super Admin bypass this everywhere below.
   const headsTasksDepartment = task.taskDepartmentId !== null && task.taskDepartmentId === currentUser?.departmentId
-  // Mirrors the backend check in TaskServiceImpl.deleteTask/requireCanDelete: Executive/
-  // Super Admin can always delete anything, but a plain Director may only delete a task
-  // they personally created (assignedById === them) AND that still lives within the
-  // department they head — not one just handed to their department (a Department task is
-  // always the Executive's own doing), and not another Director's task either. A Team
-  // Leader can't delete even their own team's tasks (unlike reassign, just below) — that
-  // floor is unconditional, not ownership-based.
+  // Mirrors TaskServiceImpl.requireCanDelete: Executive/Super Admin always; a plain
+  // Director only their own created task within the department they head. A Team Leader
+  // can never delete, unlike reassign below.
   const canDelete =
     isExecutive || (isDirector && task.assignedById === currentUser?.id && headsTasksDepartment)
-  // Mirrors the backend check in TaskServiceImpl.setPinned: a Director who heads this
-  // task's own department (or Executive/Super Admin) — a manual, independently-editable
-  // toggle, not derived from severity.
+  // Mirrors TaskServiceImpl.setPinned: a Director who heads this task's department, or Executive/Super Admin.
   const canPin = isExecutive || (isDirector && headsTasksDepartment)
-  // Mirrors the backend check in TaskServiceImpl.reassignTask: a Department-level task
-  // moves to a different Department entirely, restricted to Executive/Super Admin — the
-  // same authority that assigns one in the first place, not a Director who happens to
-  // lead some unrelated team. Everything else follows requireCanReassign: a Director who
-  // heads this task's own department, an Executive/Super Admin, or the Team Leader of the
-  // team actually responsible for this task, may reassign it.
+  // Mirrors TaskServiceImpl.reassignTask: moving a Department task to another department
+  // is Executive/Super-Admin-only; otherwise a Director who heads this department, an
+  // Executive/Super Admin, or this task's own Team Leader.
   const canReassign = isDepartmentAssigned
     ? isExecutive
     : isExecutive ||
@@ -123,22 +100,18 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
   // Mirrors TaskServiceImpl.isDeadlineOverrideTier: Executive-or-above for a Department
   // task, Director-or-above otherwise.
   const isDeadlineOverrideTier = isDepartmentAssigned ? isExecutive : isDirector
-  // Mirrors TaskServiceImpl.resolveAccountablePerson: this task's own Team Leader,
-  // individual assignee, or (a Department task) its head Director.
+  // Mirrors TaskServiceImpl.resolveAccountablePerson: this task's Team Leader, individual
+  // assignee, or (a Department task) its head Director.
   const isAccountablePerson = isDepartmentAssigned
     ? departmentQuery.data?.headDirectorId === currentUser?.id
     : task.assigneeType === 'TEAM'
       ? (currentUser?.teams.some((t) => t.teamId === task.assigneeId && t.isLeader) ?? false)
       : task.assigneeId === currentUser?.id
-  // Deciding a request, or extending directly: this task's own deadline decider — a
-  // Director-or-above, chain-of-command resolved, NOT necessarily assignedById (a Team
-  // Leader can be a leaf subtask's assignedBy but has no authority over its deadline) —
-  // or the override tier. Mirrors TaskServiceImpl.requireCanDecideDeadline/resolveDeadlineDecider.
+  // The chain-of-command deadline decider (NOT necessarily assignedById — see
+  // resolveDeadlineDecider) or the override tier.
   const canDecideDeadline = isDeadlineOverrideTier || task.deadlineDeciderId === currentUser?.id
-  // Requesting an extension: this task's own accountable person, or the override tier —
-  // but never when that's the same person who'd also decide it (an Executive on her own
-  // Department task, or a Director who's also this task's own assignedBy). Asking yourself
-  // for more time makes no sense — that's exactly what "Extend deadline" is for instead.
+  // The accountable person or override tier, but never the same person who'd also decide
+  // it — that's what "Extend deadline" is for instead.
   const canRequestExtension = (isDeadlineOverrideTier || isAccountablePerson) && !canDecideDeadline
 
   return (
@@ -183,13 +156,7 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
         }
       />
 
-      {/* Task-detail viewing has no permission check beyond being logged in — anyone who
-          can see this subtask/implementation task can already open its parent the same way,
-          they just have no way to discover it without this link (parentTaskId isn't
-          otherwise surfaced anywhere on this page). Lets a team member assigned to, say, a
-          CEO-assigned Department task's implementation task climb back up to see the whole
-          chain — the parent task itself, and (via that page's own Subtasks panel) any
-          sibling subtasks and documents attached up there. */}
+      {/* Lets a viewer climb back up the hierarchy — parentTaskId isn't otherwise surfaced anywhere on this page. */}
       {task.parentTaskId !== null && (
         <Link to={ROUTES.taskDetail(task.parentTaskId)} className={styles.parentLink}>
           ← Part of {task.parentTaskTitle ?? task.parentTaskCode}
@@ -214,15 +181,10 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
         </Card>
       )}
 
-      {/* Only an individually-tracked task ever sets its own percentage directly — a
-          TEAM/DEPARTMENT task's is always the rollup of its children (see SubtasksPanel/
-          the implementation-task flow), so it gets no "Log progress" form or progress log
-          at all. Every task, regardless of shape, still gets the Discussion panel below. */}
+      {/* Only an individually-tracked task sets its own percentage directly — a TEAM/DEPARTMENT task's is always a rollup, so it gets no "Log progress" form. */}
       {task.assigneeType === 'INDIVIDUAL' && <AddCommentForm taskId={task.id} currentPercentage={task.progressPercentage} />}
 
-      {/* Documents rides alongside Discussion as a narrow sidebar rather than its own
-          full-width panel — usually just a handful of files, not worth the same amount of
-          page real estate as a whole conversation thread. */}
+      {/* Documents rides alongside Discussion as a narrow sidebar — usually just a handful of files. */}
       <div className={styles.discussionRow}>
         <Card>
           <span className={styles.sectionHeading}>Discussion</span>

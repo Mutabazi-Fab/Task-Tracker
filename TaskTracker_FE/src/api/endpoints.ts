@@ -49,6 +49,10 @@ export const endpoints = {
     list: (source: string) => `${BASE}/task-source-entries?source=${source}`,
     create: () => `${BASE}/task-source-entries`,
   },
+  taskSourceCategories: {
+    list: () => `${BASE}/task-source-categories`,
+    create: () => `${BASE}/task-source-categories`,
+  },
   people: {
     list: () => `${BASE}/people`,
     create: () => `${BASE}/people`,

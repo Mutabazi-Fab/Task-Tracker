@@ -11,28 +11,16 @@ import { CreateSubtaskModal } from './CreateSubtaskModal'
 import type { TaskDetail } from '../../../types/task.types'
 import styles from './SubtasksPanel.module.css'
 
-/**
- * Rendered for any task that can still be broken down further: a TEAM-assigned task under
- * depth 2 (a plain top-level task, or a depth-1 Department implementation task — either
- * way, its "Add subtask" flow is the ordinary leaf case, scoped to that team's roster), or
- * a DEPARTMENT-assigned task (always depth 0 — its "Add subtask" is the new implementation-
- * task case, team-or-individual, org-wide). See TaskDetailPage's canHaveSubtasks, which
- * mirrors this exactly so the panel is never rendered when it'd have nothing to offer.
- *
- * A Department task can have more than one implementation task under it (e.g. TSK-0001 has
- * both a Digital Banking and a Mobile Banking one, two teams working different slices of
- * the same CEO mandate in parallel) — this never converts the Department task itself, it
- * only ever adds a new child underneath it.
- *
- * "Add subtask" itself is shown to a Director/Super Admin, to whoever leads the team this
- * task is assigned to (the ordinary leaf case), or — for a Department task — to that
- * Department's own head Director or Super Admin.
- *
- * The CEO seat (role EXECUTIVE) never gets this button, on a Department task or anywhere
- * else: her job is handing work to a Department and then watching progress/commenting —
- * turning that into real team-or-individual work is the Department's own Director's call,
- * not hers. Super Admin is a separate, unrestricted system-governance seat and keeps it.
- */
+/** Rendered for any task that can still be broken down further: a TEAM-assigned task under
+ *  depth 2 (leaf-subtask flow, scoped to that team's roster), or a DEPARTMENT-assigned task
+ *  (the implementation-task case, team-or-individual, org-wide) — see TaskDetailPage's
+ *  canHaveSubtasks, mirrored exactly so this is never rendered with nothing to offer. A
+ *  Department task can have more than one implementation task under it (parallel teams on
+ *  the same mandate); this only ever adds a child, never converts the Department task
+ *  itself. "Add subtask" is shown to a Director/Super Admin, the relevant Team Leader, or
+ *  (Department task) that Department's head Director. The CEO seat (EXECUTIVE) never gets
+ *  it — turning her Department task into real work is the Department's own Director's
+ *  call; Super Admin keeps it as an unrestricted system-governance seat. */
 export function SubtasksPanel({ task }: { task: TaskDetail }) {
   const { currentUser, isDirector, isExecutive } = useAuth()
   const [createOpen, setCreateOpen] = useState(false)
@@ -44,11 +32,9 @@ export function SubtasksPanel({ task }: { task: TaskDetail }) {
   const isThisTeamsLeader = currentUser?.teams.some((t) => t.teamId === task.assigneeId && t.isLeader)
   const isThisDepartmentsHead =
     isDepartmentTask && departmentQuery.data?.headDirectorId === currentUser?.id
-  // Mirrors TaskServiceImpl.createLeafSubtask: a plain Director (not Executive/Super
-  // Admin, who bypass this entirely below) must head THIS task's own department — not
-  // merely outrank a plain Member. Compared via taskDepartmentId against the viewer's own
-  // departmentId, same simplifying assumption used across this app (every current
-  // Director's own department membership already matches their headship).
+  // Mirrors TaskServiceImpl.createLeafSubtask: a plain Director must head THIS task's own
+  // department, not merely outrank a Member. Compared via taskDepartmentId against the
+  // viewer's own departmentId, same simplifying assumption used across this app.
   const isPlainDirector = isDirector && !isExecutive
   const headsThisTasksDepartment =
     isPlainDirector && task.taskDepartmentId !== null && task.taskDepartmentId === currentUser?.departmentId
@@ -96,12 +82,8 @@ export function SubtasksPanel({ task }: { task: TaskDetail }) {
           teamId={task.assigneeId ?? NaN}
           isDepartmentImplementation={isDepartmentTask}
           departmentId={isDepartmentTask ? (task.assigneeId ?? undefined) : undefined}
-          // Whatever source is already recorded on THIS task — the CEO's, if this is her
-          // Department task and the new child is its implementation task, or whatever the
-          // implementation task itself carries (its own, or already inherited from the CEO)
-          // when the new child is one more level down, a plain leaf subtask. Either way the
-          // new task inherits and locks it (see CreateSubtaskForm) rather than asking
-          // whoever's creating it to re-enter something already on record one level up.
+          // Whatever source is already recorded on THIS task — the new child inherits and
+          // locks it (see CreateSubtaskForm) rather than re-asking for something on record.
           parentSource={task.source}
           parentSourceLabel={task.sourceLabel}
           open={createOpen}

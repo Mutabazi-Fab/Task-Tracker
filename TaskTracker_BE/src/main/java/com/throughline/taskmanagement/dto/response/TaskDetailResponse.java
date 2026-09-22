@@ -4,7 +4,6 @@ import com.throughline.taskmanagement.enums.AssigneeType;
 import com.throughline.taskmanagement.enums.CreatedByRole;
 import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.enums.TaskSeverity;
-import com.throughline.taskmanagement.enums.TaskSource;
 import com.throughline.taskmanagement.enums.TaskStatus;
 
 import java.time.LocalDate;
@@ -34,7 +33,7 @@ public record TaskDetailResponse(
     // TaskService.requestDeadlineExtension/decideDeadlineExtension/extendDeadlineDirectly.
     LocalDate deadline,
     // Both null unless this task's creator chose to record where it originated.
-    TaskSource source,
+    String source,
     String sourceLabel,
     // Null unless an Executive/Super Admin set it at creation.
     TaskSeverity severity,

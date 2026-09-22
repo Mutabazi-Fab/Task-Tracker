@@ -32,13 +32,9 @@ export interface ResetPasswordRequest {
   newPassword: string
 }
 
-/**
- * What POST /auth/login, /auth/verify-email, and /auth/reset-password all return. token is
- * null when a still-unverified legacy account needs OTP verification before it can log in
- * — emailVerified tells the caller which case this is, rather than treating a null token as
- * an error. Every account a Super Admin creates now starts emailVerified=true, so this only
- * matters for accounts that predate that.
- */
+/** What POST /auth/login, /auth/verify-email, and /auth/reset-password all return. token
+ *  is null when a still-unverified legacy account needs OTP verification first —
+ *  emailVerified tells the caller which case this is, not an error. */
 export interface AuthResponse {
   token: string | null
   personId: number

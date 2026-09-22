@@ -13,13 +13,8 @@ import type {
   SetAccountActiveRequest,
 } from '../../../types/person.types'
 
-/**
- * GET /people now returns a Spring Data Page<PersonResponse>, not a bare array — a large
- * page size is passed so this keeps behaving like "the whole org" for the pickers/lists
- * that expect a flat array, same as before pagination existed on the backend. A real
- * pager (prev/next, page size control) is a separate, later concern for whichever page
- * actually needs one.
- */
+/** GET /people returns a Spring Data Page<PersonResponse> — a large page size is passed so
+ *  this keeps behaving like "the whole org" for pickers/lists that expect a flat array. */
 export async function fetchPeople(): Promise<Person[]> {
   const { data } = await axiosClient.get<Page<Person>>(endpoints.people.list(), { params: { size: 200 } })
   return data.content
@@ -86,10 +81,9 @@ export async function fetchAccountStatusChangeActivity(requesterId: number): Pro
   return data.content
 }
 
-/** Self-only, enforced server-side — taskId must already be one of the caller's own
- *  assigned tasks. Rejects a 4th daily goal rather than evicting the oldest. Returns the
- *  refreshed statistics (including the updated dailyGoalTasks list) so callers don't need a
- *  separate refetch. */
+/** Self-only, enforced server-side — taskId must be one of the caller's own assigned
+ *  tasks. Rejects a 4th daily goal rather than evicting the oldest. Returns the refreshed
+ *  statistics so callers don't need a separate refetch. */
 export async function addDailyGoal(personId: number, taskId: number): Promise<PersonStatistics> {
   const { data } = await axiosClient.post<PersonStatistics>(endpoints.people.addDailyGoal(personId), { taskId })
   return data

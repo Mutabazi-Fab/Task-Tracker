@@ -1,12 +1,10 @@
 import type { TaskListItem } from './task.types'
 
 /** Global role, ascending: MEMBER < DIRECTOR < EXECUTIVE < SUPER_ADMIN. "Team Leader" is
- *  scoped per-team instead (see TeamMember on the backend), not a value here. Null for a
- *  person created before roles existed and never migrated. Executive is the CEO's seat —
- *  everything a Director can do, plus org-wide task creation at the Department level and
- *  the executive dashboard (see useAuth's isDirector/isExecutive/isSuperAdmin). Super Admin
- *  has every Executive permission plus a few exclusively its own (role changes, account
- *  activation, department administration). */
+ *  scoped per-team instead, not a value here. Null for a legacy account never migrated.
+ *  Executive is the CEO's seat — a Director's permissions plus Department-level task
+ *  creation and the executive dashboard. Super Admin adds role changes, account
+ *  activation, department administration (see useAuth's isDirector/isExecutive/isSuperAdmin). */
 export type Role = 'DIRECTOR' | 'EXECUTIVE' | 'MEMBER' | 'SUPER_ADMIN'
 
 /** One team this person belongs to — a person can be on several at once. */
@@ -26,19 +24,14 @@ export interface Person {
   emailVerified: boolean
   active: boolean
   teams: PersonTeamMembership[]
-  /** Every person belongs to exactly one Department, independent of team membership —
-   *  null only for an account that predates this field. */
+  /** Every person belongs to exactly one Department — null only for a legacy account. */
   departmentName: string | null
   departmentId: number | null
 }
 
-/**
- * Body for POST /people (and reused for PUT /people/{id}, which ignores createdById/role/
- * departmentId/password). There is no public self-registration — createdById must resolve
- * to a Super Admin, enforced server-side; departmentId and password (at least 8 characters)
- * are both required at creation. The password set here is what the new person logs in with
- * — the Super Admin is expected to hand it to them directly.
- */
+/** Body for POST /people (reused for PUT /people/{id}, which ignores createdById/role/
+ *  departmentId/password). createdById must resolve to a Super Admin, enforced
+ *  server-side; departmentId and password (8+ chars) are required at creation. */
 export interface CreatePersonRequest {
   fullName: string
   email: string

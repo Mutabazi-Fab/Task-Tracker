@@ -15,11 +15,8 @@ import { CreatePersonModal } from './components/CreatePersonModal'
 import { MyTeammatesGrid } from './components/MyTeammatesGrid'
 import styles from './PeopleListPage.module.css'
 
-// usePeople fetches the whole org roster unpaginated (bounded by headcount, not
-// transactional volume — same reasoning as PeopleSummaryGrid), so this is a client-side
-// slice of an already-fetched array. 24 comfortably covers a small-to-mid organization
-// with zero pages at all (Pagination renders nothing when totalPages <= 1) instead of
-// splitting a barely-over-12-person roster into an almost-empty second page.
+// usePeople fetches the whole org roster unpaginated (bounded by headcount), so this is a
+// client-side slice. 24 comfortably covers a small-to-mid org with zero pages at all.
 const PAGE_SIZE = 24
 
 /** Always resolves to something — a null role (a legacy account) is treated as Member
@@ -31,11 +28,8 @@ const ROLE_LABEL: Record<string, string> = {
   MEMBER: 'Member',
 }
 
-/**
- * Director/Super Admin see the whole org roster. A Member sees only their own team's
- * roster (MyTeammatesGrid) — this page doesn't even fetch the org-wide list for them
- * (see usePeople's enabled flag), not just hide it in the UI.
- */
+/** Director/Super Admin see the whole org roster. A Member sees only their own team's
+ *  roster (MyTeammatesGrid) — this page doesn't even fetch the org-wide list for them. */
 export function PeopleListPage() {
   const { isDirector, isSuperAdmin } = useAuth()
   const query = usePeople(isDirector)
