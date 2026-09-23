@@ -2,12 +2,12 @@ import { axiosClient } from '../../../api/axiosClient'
 import { endpoints } from '../../../api/endpoints'
 import type {
   AuthResponse,
-  ForgotPasswordRequest,
+  CheckEmailResponse,
   LoginRequest,
-  ResendOtpRequest,
-  ResetPasswordRequest,
-  SignUpRequest,
-  VerifyEmailRequest,
+  PasswordResetEmailRequest,
+  PasswordResetRequestOutcome,
+  TotpConfirmRequest,
+  TotpVerifyRequest,
 } from '../../../types/auth.types'
 import type { Person } from '../../../types/person.types'
 
@@ -16,34 +16,32 @@ export async function login(request: LoginRequest): Promise<AuthResponse> {
   return data
 }
 
-/** Checks the code and, on success, logs the person in (issues a real token) in the same step. */
-export async function verifyEmail(request: VerifyEmailRequest): Promise<AuthResponse> {
-  const { data } = await axiosClient.post<AuthResponse>(endpoints.auth.verifyEmail(), request)
+/** Completes TOTP enrollment. On success the response also carries the recovery codes —
+ *  shown exactly once, never retrievable again after this call. */
+export async function confirmTotpSetup(request: TotpConfirmRequest): Promise<AuthResponse> {
+  const { data } = await axiosClient.post<AuthResponse>(endpoints.auth.totpConfirm(), request)
   return data
 }
 
-/** Completes an account a Super Admin already created and, on success, logs the person in
- *  (issues a real token) in the same step — same shape as verifyEmail. */
-export async function signUp(request: SignUpRequest): Promise<AuthResponse> {
-  const { data } = await axiosClient.post<AuthResponse>(endpoints.auth.signUp(), request)
+/** Completes a login for an already-enrolled account — code may be a live TOTP code or an
+ *  unused recovery code. */
+export async function verifyTotp(request: TotpVerifyRequest): Promise<AuthResponse> {
+  const { data } = await axiosClient.post<AuthResponse>(endpoints.auth.totpVerify(), request)
   return data
 }
 
-/** Rate-limited server-side — a resend before the cooldown elapses is rejected. */
-export async function resendOtp(request: ResendOtpRequest): Promise<void> {
-  await axiosClient.post(endpoints.auth.resendOtp(), request)
+/** Whether an account exists for this email — deliberately not silent (see
+ *  CheckEmailResponse). Rate-limited server-side (5 per email per 15 minutes); a
+ *  TooManyAttemptsException surfaces as a normal thrown ApiError. */
+export async function checkEmailForPasswordReset(request: PasswordResetEmailRequest): Promise<CheckEmailResponse> {
+  const { data } = await axiosClient.post<CheckEmailResponse>(endpoints.auth.passwordResetRequestCheck(), request)
+  return data
 }
 
-/** Always resolves regardless of whether the email is registered — see
- *  ForgotPasswordRequest. Never throws for "unknown email". */
-export async function forgotPassword(request: ForgotPasswordRequest): Promise<void> {
-  await axiosClient.post(endpoints.auth.forgotPassword(), request)
-}
-
-/** Checks the reset code and, on success, logs the person in (issues a real token) in the
- *  same step — same shape as verifyEmail. */
-export async function resetPassword(request: ResetPasswordRequest): Promise<AuthResponse> {
-  const { data } = await axiosClient.post<AuthResponse>(endpoints.auth.resetPassword(), request)
+/** Only reachable after checkEmailForPasswordReset already confirmed the account exists
+ *  and the person explicitly confirmed they want to proceed. */
+export async function createPasswordResetRequest(request: PasswordResetEmailRequest): Promise<PasswordResetRequestOutcome> {
+  const { data } = await axiosClient.post<PasswordResetRequestOutcome>(endpoints.auth.passwordResetRequestCreate(), request)
   return data
 }
 

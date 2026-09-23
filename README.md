@@ -61,15 +61,25 @@ written for someone opening this project for the first time.
   hold one on some teams/departments and not others. See
   [Roles & permissions](#roles--permissions).
 - **Auth.** JWT-based login. There is no public self-registration: only a Super Admin can
-  create a new account, but they set who someone is, not their password. A new account
-  starts passwordless and unverified; the person gets a one-time sign-up code by email and
-  chooses their own password at `/sign-up`, which also verifies them and logs them in. An
-  expired code clears itself from the form on the failed attempt so it can't be resubmitted
-  by mistake, and resending a fresh one is always one click away.
-  (A legacy email-verification-only flow still exists for any account that predates this,
-  from back when a Super Admin set the initial password directly.) Forgot your password?
-  There's a self-service reset-by-email-code flow, plus a Super-Admin-triggered version for
-  when someone's locked out and can't request it themselves.
+  create a new account, password included, and it's login-ready immediately. The whole
+  system is deliberately mail-free — no SMTP, no OTP emails, no external notification
+  service of any kind — so it keeps working with zero internet connectivity. Forgot your
+  password? "Forgot Password?" first tells you plainly whether that email even has an
+  account (rate-limited server-side against being used to scan the whole roster), and if it
+  does, asks you to confirm before creating a request a Super Admin gets notified about and
+  resolves from that person's profile page by setting a new password directly, which they
+  then hand over to you themselves.
+- **Two-factor authentication (TOTP).** Every account created from now on also requires an
+  authenticator app (Google Authenticator, Authy, etc. — RFC 6238, an open standard, not
+  tied to any one app). First login after a Super Admin creates the account shows a QR
+  code to scan and a batch of one-time recovery codes (shown exactly once); every login
+  after that needs email + password + a 6-digit code. A recovery code can stand in for the
+  code if the phone is unreachable, and consuming one re-triggers enrollment on the very
+  next login, since it assumes the original device is gone. Verification is pure local
+  computation against the stored secret — no network call, so it works fully offline just
+  like the rest of login. Accounts that already existed before this rollout are
+  unaffected: 2FA only applies going forward, to newly created accounts. A Super Admin can
+  reset someone's enrollment from their profile page for a lost/replaced phone.
 - **Visibility is role-scoped, server-side**, not just hidden in the UI. A Member only ever
   sees tasks assigned to them directly or to a team they belong to, their own teammates on
   the People page, and (for a team/department they aren't on) just its name and who leads
@@ -82,12 +92,16 @@ written for someone opening this project for the first time.
   downloaded later by anyone who can already see that task.
 - **Extensible Source categories.** A task can record where it originated (e.g.
   Initiative, Regulator, Auditor, Board) from an open, admin-extensible list, plus a free
-  "Source Detail" field with reusable, saved suggestions (e.g. "BNR" under Regulator).
+  "Source Detail" field — always typed by hand, no clickable suggestions to pick from
+  instead.
 - **In-app notifications**, always sent to the affected person, for: task/subtask
   assignment and reassignment, deadline-extension requests/approvals/rejections/forwards,
-  discussion replies, team membership changes, role changes, account (de)activation,
-  admin-triggered password resets, and new teams/departments/task-deletions (the latter
-  three back small "new activity" badges next to the relevant sidebar item).
+  discussion replies, team membership changes, role changes, account (de)activation, and
+  TOTP resets. The one exception is a password-reset request, which broadcasts to every
+  Super Admin instead (only they can resolve it), and says plainly if the account is
+  currently deactivated — that's flagged for a Super Admin specifically, never for the
+  person who submitted the request. New teams/departments/task-deletions also broadcast,
+  backing small "new activity" badges next to the relevant sidebar item.
 - **Director/Executive dashboards.** Org-wide KPIs, a progress-over-time trend line, a
   status-mix donut, a team leaderboard, a people summary, a "my initiatives" panel, and
   (for Executive/Super Admin) a department-by-department traffic-light health roll-up
@@ -365,8 +379,10 @@ terminal.
 - **Node.js** 18+ and npm
 - **PostgreSQL**, running locally (or reachable), with a database you'll create in step 1
 - **Git**, to clone the repository
-- *(Optional, needed only for real outgoing email)* a Gmail account with an **App
-  Password** generated for it (not your normal Gmail password, see step 2 below)
+
+Nothing else — there's no mail account to set up. The whole system is deliberately
+mail-free (see [Auth](#what-it-does) above), so it runs the same with or without
+internet access.
 
 ## Downloading and running it locally, step by step
 
@@ -390,10 +406,10 @@ That's the only manual schema step. Hibernate's `ddl-auto=update` creates and up
 every table automatically from the JPA entities the first time the backend boots; there
 are no migration files to run.
 
-### 2. Create your two local config files
+### 2. Create your local config file
 
-Both of these are **gitignored**: a fresh clone doesn't come with either one, on
-purpose, since together they hold every real local credential the app needs. Create both:
+This is **gitignored**: a fresh clone doesn't come with it, on purpose, since it holds
+every real local credential the app needs.
 
 `TaskTracker_BE/src/main/resources/application.properties`
 ```properties
@@ -414,35 +430,17 @@ spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 app.jwt.secret=paste_a_long_random_string_here
 app.jwt.expiration-ms=86400000
 
-# Mail (Gmail SMTP): host/port/auth flags are not secret, so they live here; the real
-# credentials (spring.mail.username/password) live in the second file below, imported
-# optionally so the app still boots without it (just without mail-sending capability).
-spring.config.import=optional:classpath:application-secrets.properties
-spring.mail.host=smtp.gmail.com
-spring.mail.port=587
-spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
-
-# Where the frontend lives, used only to build links inside invite/notification emails.
-app.frontend-url=http://localhost:5173
+# AES-256 key (32 raw bytes, Base64) encrypting every stored TOTP 2FA secret at rest.
+# Generate one with:
+#   openssl rand -base64 32
+# Losing/rotating this makes every already-enrolled account's secret unreadable, forcing
+# them all back through TOTP enrollment — generate once, keep stable.
+app.totp.encryption-key=paste_a_different_base64_key_here
 ```
 
-`TaskTracker_BE/src/main/resources/application-secrets.properties`
-```properties
-spring.mail.username=your_gmail_address@gmail.com
-spring.mail.password=your_16_character_gmail_app_password
-```
-
-A couple of things worth being precise about here:
-- Only `application-secrets.properties` (the mail credentials) is genuinely optional at
-  runtime: leave it out entirely and the app still boots fine, sending an email just
-  fails silently (logged, swallowed) instead of crashing. `application.properties`
-  itself is not optional: no datasource credentials means no database connection, which
-  means Spring fails to start.
-- **Gmail App Password**, not your real Gmail password: turn on 2-Step Verification on
-  the Google account, then generate one at
-  [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords). It's a
-  16-character code with no spaces.
+No mail configuration, no second config file — the app has no SMTP dependency at all.
+`application.properties` itself is not optional: no datasource credentials means no
+database connection, which means Spring fails to start.
 
 ### 3. Bootstrap the first Super Admin
 
@@ -491,10 +489,11 @@ exactly that port; there's no environment variable to point it elsewhere yet.
 
 Go to `http://localhost:5173/login` and sign in with the Super Admin email/password from
 step 3. From there, use the People page to create a Department, then Directors and
-ordinary Members. Creating a person no longer takes a password from you: the account
-starts out passwordless and unverified, and whoever you create gets a sign-up email (if
-mail is configured) with a one-time code; they enter it at `/sign-up` and choose their own
-password there, the same one-time step every new account goes through from now on.
+ordinary Members. Creating a person is fully offline — you set their password directly,
+and it's login-ready immediately. Their first login walks them through TOTP enrollment:
+scan the QR code shown with an authenticator app, enter the 6-digit code to confirm, and
+save the one-time batch of recovery codes shown right after — every login after that needs
+the authenticator code too.
 
 ## Configuration reference
 
@@ -512,6 +511,7 @@ Split across the two gitignored files from step 2 above.
 | `spring.jpa.show-sql` | Logs every SQL statement; handy in dev, noisy at scale |
 | `app.jwt.secret` | Signs every login token. **If this leaks, anyone who has it can forge a valid login as any user, including a Super Admin**; see the security note below |
 | `app.jwt.expiration-ms` | How long a login token stays valid, in milliseconds (currently 24 hours) |
+| `app.totp.encryption-key` | AES-256 key encrypting every stored TOTP secret at rest. **If this leaks, every already-enrolled account's 2FA secret is exposed**; losing/rotating it forces everyone back through enrollment |
 | `spring.config.import` | Pulls in `application-secrets.properties`, without failing if it's absent |
 | `spring.mail.host` / `.port` / `.properties.mail.smtp.*` | Gmail SMTP connection settings; not secret, just config |
 | `app.frontend-url` | Used only to build clickable links inside invite/notification emails |
@@ -531,7 +531,7 @@ Split across the two gitignored files from step 2 above.
 | **Director** | Full visibility over their own department; create teams and top-level tasks (team- or individually-assigned) within it; create implementation tasks under a Department task their department heads; decide/forward deadline extensions for their own tasks; their own "My Initiatives" and "Critical & CEO-assigned" dashboards |
 | **Department Head** *(per department, not a global role)* | The Director accountable for turning a Department-level task the CEO assigned into a real team-or-individual implementation task |
 | **Executive** | Everything a Director can do, org-wide, plus: create tasks assigned straight to a whole Department, set task severity, approve deadline extensions on CEO-mandated chains, create new departments, the org-wide Executive dashboard (department health roll-up, KPI tiles) |
-| **Super Admin** | A governance/system-support role, not a business one: owns the org's technical administration rather than its day-to-day work. Everything an Executive can do, plus: create new people/accounts (the only route onto the platform — there is no public self-registration), promote/demote anyone to any role, deactivate/reactivate any account, rename departments and reassign their head, view every org-wide audit log |
+| **Super Admin** | A governance/system-support role, not a business one: owns the org's technical administration rather than its day-to-day work. Everything an Executive can do, plus: create new people/accounts (the only route onto the platform — there is no public self-registration), promote/demote anyone to any role, deactivate/reactivate any account, rename departments and reassign their head, reset someone's TOTP enrollment for a lost/replaced phone, view every org-wide audit log |
 
 ## Security: what must never be committed
 
@@ -539,8 +539,8 @@ Split across the two gitignored files from step 2 above.
 - `TaskTracker_BE/src/main/resources/application-secrets.properties`: gitignored.
 - `TaskTracker_BE/seed-data/`: gitignored; contains real names/emails used during
   development.
-- Anything containing a database password, the JWT signing secret, a Gmail App Password,
-  or real personal data of any kind.
+- Anything containing a database password, the JWT signing secret, the TOTP encryption
+  key, a Gmail App Password, or real personal data of any kind.
 - **Passwords are stored in plain text in this project**: a deliberate, explicit choice
   (see the `NoOpPasswordEncoder` comment in `SecurityConfig.java`), made during development
   so a forgotten password can just be looked up and remembered instead of reset every time,
@@ -550,6 +550,12 @@ Split across the two gitignored files from step 2 above.
   hashing passwords properly before then is planned as standard practice, not optional
   hardening. Swapping back to `new BCryptPasswordEncoder()` is a one-line change in
   `SecurityConfig`, and nothing else in the auth code needs to change either way.
+- **TOTP secrets are the one exception to that plaintext choice.** Unlike a password,
+  nobody ever needs to look a TOTP secret up by eye — the app only ever reads it back to
+  compute a code — so `Person.totpSecret` is encrypted at rest (AES-256-GCM, see
+  `TotpSecretCipher`/`TotpSecretConverter`) even in this same dev-only setup. A leaked
+  secret is worse than a leaked password: it lets an attacker generate valid codes
+  silently and indefinitely, with no failed-login trail to notice.
 
 If this repository has ever been pushed to a public remote with real credentials inside
 either config file, treat those credentials as burned: rotate `app.jwt.secret` (a fresh

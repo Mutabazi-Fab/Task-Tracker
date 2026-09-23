@@ -4,6 +4,7 @@ import com.throughline.taskmanagement.dto.response.NotificationResponse;
 import com.throughline.taskmanagement.enums.NotificationType;
 import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.model.Department;
+import com.throughline.taskmanagement.model.PasswordResetRequest;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.TaskComment;
@@ -33,10 +34,20 @@ public interface NotificationService {
      *  reason is mandatory on the request. */
     void notifyAccountStatusChange(Person person, boolean active, Person changedBy, String reason);
 
-    /** Called by PersonServiceImpl right after a Super Admin sends someone a password reset
-     *  code on their behalf. Notifies the affected person — so if they didn't ask for it
-     *  themselves, they'd notice. */
-    void notifyPasswordResetRequested(Person person, Person changedBy);
+    /** Called by AuthServiceImpl right after an unauthenticated person requests a password
+     *  reset for their own account (the "Forgot Password?" flow). Broadcasts to every
+     *  Super Admin — only a Super Admin can resolve it (see PersonServiceImpl.
+     *  setPasswordDirectly / dismissPasswordResetRequest) — and, unlike the person-facing
+     *  side of this flow, does say if the account is currently deactivated: that's exactly
+     *  the kind of thing a Super Admin needs to notice (should it be reactivated? or is
+     *  this someone probing a disabled account?), whereas telling the *requester* that
+     *  would leak account-status information to someone who hasn't logged in yet. */
+    void notifyPasswordResetRequestReceived(PasswordResetRequest request);
+
+    /** Called by PersonServiceImpl right after a Super Admin resets someone's TOTP
+     *  enrollment (lost/replaced phone). Notifies the affected person, same reasoning as
+     *  notifyPasswordResetRequested — so an unrequested reset doesn't go unnoticed. */
+    void notifyTotpReset(Person person, Person changedBy);
 
     /** Called by TaskStalenessJob when a task hasn't had a real progress update in a
      *  while. Notifies whoever's actually responsible for it — the assignee for an

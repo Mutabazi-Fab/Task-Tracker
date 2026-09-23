@@ -25,6 +25,7 @@ export type IconName =
   | 'chevronLeft'
   | 'chevronRight'
   | 'file'
+  | 'copy'
 
 const PATHS: Record<IconName, string> = {
   dashboard: 'M4 4h6v7H4zM14 4h6v4h-6zM14 11h6v9h-6zM4 14h6v6H4z',
@@ -48,6 +49,7 @@ const PATHS: Record<IconName, string> = {
   chevronLeft: 'M15 5l-7 7 7 7',
   chevronRight: 'M9 5l7 7-7 7',
   file: 'M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1zM14 3.5V8h4.5M9 13h6M9 16.5h6',
+  copy: 'M9 9h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zM6 15H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v1',
 }
 
 interface IconProps {

@@ -11,9 +11,9 @@ import type { Notification, NotificationType } from '../../../types/notification
 import styles from './NotificationBell.module.css'
 
 // Every task-shaped notification carries the task's own id as relatedEntityId.
-// ROLE_CHANGED/ACCOUNT_STATUS_CHANGED/PASSWORD_RESET_REQUESTED carry the affected person's
-// id instead. TEAM_MEMBER_ADDED/REMOVED/TEAM_LEADER_CHANGED carry a membership-change id,
-// not a team id, so those stay non-navigable (still mark read on click).
+// ROLE_CHANGED/ACCOUNT_STATUS_CHANGED/PASSWORD_RESET_REQUEST_RECEIVED/TOTP_RESET carry the
+// affected person's id instead. TEAM_MEMBER_ADDED/REMOVED/TEAM_LEADER_CHANGED carry a
+// membership-change id, not a team id, so those stay non-navigable (still mark read on click).
 const TASK_NOTIFICATION_TYPES = new Set<NotificationType>([
   'TASK_STALLED',
   'TASK_ASSIGNED',
@@ -30,7 +30,8 @@ const TASK_NOTIFICATION_TYPES = new Set<NotificationType>([
 const PERSON_NOTIFICATION_TYPES = new Set<NotificationType>([
   'ROLE_CHANGED',
   'ACCOUNT_STATUS_CHANGED',
-  'PASSWORD_RESET_REQUESTED',
+  'PASSWORD_RESET_REQUEST_RECEIVED',
+  'TOTP_RESET',
 ])
 
 function resolveNotificationRoute(notification: Notification): string | null {

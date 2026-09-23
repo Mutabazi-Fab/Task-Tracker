@@ -12,7 +12,10 @@ public enum NotificationType {
     TEAM_LEADER_CHANGED,
     ROLE_CHANGED,
     ACCOUNT_STATUS_CHANGED,
-    PASSWORD_RESET_REQUESTED,
+    // Broadcast to every Super Admin — the "Forgot Password?" flow's admin-facing side
+    // (AuthServiceImpl.createPasswordResetRequest / PersonServiceImpl.setPasswordDirectly).
+    PASSWORD_RESET_REQUEST_RECEIVED,
+    TOTP_RESET,
     TASK_STALLED,
     TASK_ASSIGNED,
     SUBTASK_ASSIGNED,

@@ -37,6 +37,11 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
 
     Optional<Person> findByEmailIgnoreCase(String email);
 
+    // Looks up whoever a still-mid-login pendingAuthToken belongs to, for the TOTP
+    // setup/verify endpoints — those take the token instead of an email, since at that
+    // point the caller has already proven the password but doesn't have a real session yet.
+    Optional<Person> findByPendingAuthToken(String pendingAuthToken);
+
     // Everyone who shares at least one team with personId (that person included) — the
     // "teammates" a Member is allowed to see on the People page. Someone in zero teams
     // matches nothing here, which is the intended "individual sees no one" behavior.

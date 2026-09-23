@@ -42,7 +42,15 @@ public class Task {
     @Column(length = 2000)
     private String description;
 
-    @ManyToOne(optional = false)
+    // Every ManyToOne on this entity is explicitly LAZY: Task self-references via
+    // parentTask, and assignedTeam/assignedDepartment/assignedPerson/assignedBy all chain
+    // back into Person <-> Department, which itself cycles (Person.department ->
+    // Department.headDirector/createdBy -> Person -> Department -> ...). Left at JPA's
+    // EAGER default, a single query touching a Task (e.g. loading a TaskComment) made
+    // Hibernate fold that entire cyclic graph into one giant join — harmless while the
+    // column count stayed under Postgres's hard 1664-column-per-query limit, until
+    // Person's TOTP columns pushed it over and the query started failing outright.
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_by_id", nullable = false)
     private Person assignedBy;
 
@@ -50,24 +58,24 @@ public class Task {
     @Column(nullable = false)
     private AssigneeType assigneeType;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_person_id")
     private Person assignedPerson;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_team_id")
     private Team assignedTeam;
 
     /** Set only when assigneeType is DEPARTMENT. Null for every TEAM/INDIVIDUAL task, same
      *  XOR-enforced-in-code approach as assignedTeam/assignedPerson. */
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_department_id")
     private Department assignedDepartment;
 
     /** Null = top-level task. Non-null = a subtask. Under a DEPARTMENT-rooted hierarchy a
      *  task can go two levels deep (depth 1 implementation task, depth 2 leaf subtask);
      *  any other hierarchy stays capped at depth 1. See {@link #depth}. */
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_task_id")
     private Task parentTask;
 

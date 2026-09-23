@@ -12,10 +12,9 @@ import { DepartmentsListPage } from '../features/departments/DepartmentsListPage
 import { DepartmentPage } from '../features/departments/DepartmentPage'
 import { SearchResultsPage } from '../features/search/SearchResultsPage'
 import { LoginPage } from '../features/auth/LoginPage'
-import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
-import { SignUpPage } from '../features/auth/SignUpPage'
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
-import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
+import { TotpSetupPage } from '../features/auth/TotpSetupPage'
+import { TotpVerifyPage } from '../features/auth/TotpVerifyPage'
 import { ProtectedRoute } from '../features/auth/ProtectedRoute'
 import { PublicOnlyRoute } from '../features/auth/PublicOnlyRoute'
 import { AppShell } from '../components/layout/AppShell'
@@ -38,9 +37,9 @@ function protectedPage(page: React.ReactNode) {
 }
 
 /** The actual <Route> tree. /login renders outside AppShell (no logged-in identity yet)
- *  and is wrapped in PublicOnlyRoute so an already-logged-in person skips past it. /sign-up
- *  is not public self-registration — only a Super Admin can create the account in the first
- *  place; this just completes one that already exists, passwordless and unverified. */
+ *  and is wrapped in PublicOnlyRoute so an already-logged-in person skips past it. There's
+ *  no public /sign-up route — only a Super Admin can create a new account, password
+ *  included, so there's nothing left for the new person to complete themselves. */
 export function AppRoutes() {
   return (
     <Routes>
@@ -53,22 +52,6 @@ export function AppRoutes() {
         }
       />
       <Route
-        path={ROUTES.verifyEmail}
-        element={
-          <PublicOnlyRoute>
-            <VerifyEmailPage />
-          </PublicOnlyRoute>
-        }
-      />
-      <Route
-        path={ROUTES.signUp}
-        element={
-          <PublicOnlyRoute>
-            <SignUpPage />
-          </PublicOnlyRoute>
-        }
-      />
-      <Route
         path={ROUTES.forgotPassword}
         element={
           <PublicOnlyRoute>
@@ -77,10 +60,18 @@ export function AppRoutes() {
         }
       />
       <Route
-        path={ROUTES.resetPassword}
+        path={ROUTES.totpSetup}
         element={
           <PublicOnlyRoute>
-            <ResetPasswordPage />
+            <TotpSetupPage />
+          </PublicOnlyRoute>
+        }
+      />
+      <Route
+        path={ROUTES.totpVerify}
+        element={
+          <PublicOnlyRoute>
+            <TotpVerifyPage />
           </PublicOnlyRoute>
         }
       />

@@ -3,8 +3,10 @@ package com.throughline.taskmanagement.service.impl;
 import com.throughline.taskmanagement.dto.request.AddDailyGoalRequest;
 import com.throughline.taskmanagement.dto.request.ChangeRoleRequest;
 import com.throughline.taskmanagement.dto.request.CreatePersonRequest;
-import com.throughline.taskmanagement.dto.request.SendPasswordResetRequest;
+import com.throughline.taskmanagement.dto.request.DismissPasswordResetRequestRequest;
+import com.throughline.taskmanagement.dto.request.ResetTotpRequest;
 import com.throughline.taskmanagement.dto.request.SetAccountActiveRequest;
+import com.throughline.taskmanagement.dto.request.SetPasswordRequest;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.dto.response.PersonStatisticsResponse;
 import com.throughline.taskmanagement.dto.response.PersonTaskHistoryResponse;
@@ -23,28 +25,35 @@ import com.throughline.taskmanagement.model.AccountStatusChange;
 import com.throughline.taskmanagement.model.Department;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.PersonDailyGoal;
+import com.throughline.taskmanagement.model.PasswordResetRequest;
 import com.throughline.taskmanagement.model.RoleChange;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.Team;
 import com.throughline.taskmanagement.model.TeamMember;
+import com.throughline.taskmanagement.enums.PasswordResetRequestStatus;
 import com.throughline.taskmanagement.repository.AccountStatusChangeRepository;
 import com.throughline.taskmanagement.repository.DepartmentRepository;
+import com.throughline.taskmanagement.repository.PasswordResetRequestRepository;
 import com.throughline.taskmanagement.repository.PersonDailyGoalRepository;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.RoleChangeRepository;
 import com.throughline.taskmanagement.repository.TaskCommentRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
 import com.throughline.taskmanagement.repository.TeamMemberRepository;
-import com.throughline.taskmanagement.service.AuthService;
+import com.throughline.taskmanagement.repository.TotpRecoveryCodeRepository;
 import com.throughline.taskmanagement.service.NotificationService;
 import com.throughline.taskmanagement.service.PersonService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -62,7 +71,9 @@ public class PersonServiceImpl implements PersonService {
     private final PersonMapper personMapper;
     private final TaskMapper taskMapper;
     private final NotificationService notificationService;
-    private final AuthService authService;
+    private final PasswordEncoder passwordEncoder;
+    private final TotpRecoveryCodeRepository totpRecoveryCodeRepository;
+    private final PasswordResetRequestRepository passwordResetRequestRepository;
 
     @Override
     public PersonResponse createPerson(CreatePersonRequest request) {
@@ -87,6 +98,13 @@ public class PersonServiceImpl implements PersonService {
         Department department = departmentRepository.findById(request.departmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("departmentId not found"));
 
+        if (request.password() == null || request.password().isBlank()) {
+            throw new InvalidAssignmentException("password is required.");
+        }
+        if (request.password().length() < 8) {
+            throw new InvalidAssignmentException("Password must be at least 8 characters.");
+        }
+
         Person person = new Person();
         person.setFullName(request.fullName());
         person.setEmail(request.email());
@@ -94,20 +112,15 @@ public class PersonServiceImpl implements PersonService {
         person.setRank(request.rank());
         person.setRole(targetRole);
         person.setDepartment(department);
-        // No password yet, and not verified — the Super Admin vouches for who this person
-        // is, not for a password. AuthService.sendSignUpCode below emails them a code to
-        // set their own password (see AuthService.signUp), the same way a fresh account
-        // always has going forward.
+        person.setPassword(passwordEncoder.encode(request.password()));
+        // No code/verification step, and no mail dependency at all: creating an account
+        // works fully offline. The Super Admin hands the password to them directly.
+        // Every account created from now on requires TOTP 2FA; accounts that already
+        // existed before this rollout default to false (see Person.totpRequired) and are
+        // never retroactively forced into enrollment by this change.
+        person.setTotpRequired(true);
 
         Person saved = personRepository.save(person);
-
-        // Best-effort — a flaky mail send shouldn't block onboarding; the Super Admin can
-        // always trigger a resend later (see AuthController's resend-otp).
-        try {
-            authService.sendSignUpCode(saved);
-        } catch (Exception e) {
-            // Ignored on purpose — see comment above.
-        }
 
         return personMapper.toResponse(saved, List.of());
     }
@@ -206,19 +219,66 @@ public class PersonServiceImpl implements PersonService {
     }
 
     @Override
-    public void sendPasswordReset(Long personId, SendPasswordResetRequest request) {
+    public void setPasswordDirectly(Long personId, SetPasswordRequest request) {
         Person changedBy = personRepository.findById(request.changedById())
                 .orElseThrow(() -> new ResourceNotFoundException("changedById not found"));
-        requireSuperAdmin(changedBy, "Only a Super Admin can send someone a password reset.");
+        requireSuperAdmin(changedBy, "Only a Super Admin can set someone's password.");
 
         Person person = personRepository.findById(personId)
                 .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
-        if (person.getPassword() == null) {
-            throw new InvalidAssignmentException("This person hasn't signed up yet, so there's no password to reset.");
+
+        // Only ever the password. Deliberately no reference to totpSecret/totpEnabledAt
+        // anywhere in this method — password and TOTP are two independent Super-Admin
+        // actions (see resetTotp below), and a routine password change must never
+        // silently knock someone back into full QR re-enrollment.
+        person.setPassword(passwordEncoder.encode(request.newPassword()));
+        personRepository.save(person);
+
+        passwordResetRequestRepository.findByPersonIdAndStatus(personId, PasswordResetRequestStatus.PENDING)
+                .ifPresent(resetRequest -> {
+                    resetRequest.setStatus(PasswordResetRequestStatus.FULFILLED);
+                    resetRequest.setResolvedBy(changedBy);
+                    resetRequest.setResolvedAt(LocalDateTime.now());
+                    passwordResetRequestRepository.save(resetRequest);
+                });
+    }
+
+    @Override
+    public void dismissPasswordResetRequest(Long personId, DismissPasswordResetRequestRequest request) {
+        Person changedBy = personRepository.findById(request.changedById())
+                .orElseThrow(() -> new ResourceNotFoundException("changedById not found"));
+        requireSuperAdmin(changedBy, "Only a Super Admin can dismiss a password-reset request.");
+
+        PasswordResetRequest resetRequest = passwordResetRequestRepository
+                .findByPersonIdAndStatus(personId, PasswordResetRequestStatus.PENDING)
+                .orElseThrow(() -> new InvalidAssignmentException("This person has no pending password-reset request."));
+
+        resetRequest.setStatus(PasswordResetRequestStatus.DISMISSED);
+        resetRequest.setResolvedBy(changedBy);
+        resetRequest.setResolvedAt(LocalDateTime.now());
+        passwordResetRequestRepository.save(resetRequest);
+    }
+
+    @Override
+    public void resetTotp(Long personId, ResetTotpRequest request) {
+        Person changedBy = personRepository.findById(request.changedById())
+                .orElseThrow(() -> new ResourceNotFoundException("changedById not found"));
+        requireSuperAdmin(changedBy, "Only a Super Admin can reset someone's TOTP setup.");
+
+        Person person = personRepository.findById(personId)
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+        if (person.getTotpSecret() == null) {
+            throw new InvalidAssignmentException("This person hasn't set up TOTP yet, so there's nothing to reset.");
         }
 
-        authService.sendPasswordResetCode(person);
-        notificationService.notifyPasswordResetRequested(person, changedBy);
+        person.setTotpSecret(null);
+        person.setTotpEnabledAt(null);
+        person.setPendingAuthToken(null);
+        person.setPendingAuthTokenExpiresAt(null);
+        personRepository.save(person);
+        totpRecoveryCodeRepository.deleteByPersonId(person.getId());
+
+        notificationService.notifyTotpReset(person, changedBy);
     }
 
     private RoleChangeResponse toRoleChangeResponse(RoleChange c) {
@@ -274,7 +334,11 @@ public class PersonServiceImpl implements PersonService {
         requireCanViewPerson(viewerId, id);
         Person person = personRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
-        return personMapper.toResponse(person, teamMemberRepository.findByPersonId(id));
+        LocalDateTime pendingRequestedAt = passwordResetRequestRepository
+                .findByPersonIdAndStatus(id, PasswordResetRequestStatus.PENDING)
+                .map(PasswordResetRequest::getRequestedAt)
+                .orElse(null);
+        return personMapper.toResponse(person, teamMemberRepository.findByPersonId(id), pendingRequestedAt);
     }
 
     @Override
@@ -286,7 +350,13 @@ public class PersonServiceImpl implements PersonService {
                 ? personRepository.findAll(pageable)
                 : personRepository.findTeammatesOf(viewerId, pageable);
 
-        return people.map(p -> personMapper.toResponse(p, teamMemberRepository.findByPersonId(p.getId())));
+        Map<Long, LocalDateTime> pendingRequestedAtByPersonId = passwordResetRequestRepository
+                .findByPersonIdInAndStatus(people.map(Person::getId).toList(), PasswordResetRequestStatus.PENDING)
+                .stream()
+                .collect(Collectors.toMap(r -> r.getPerson().getId(), PasswordResetRequest::getRequestedAt));
+
+        return people.map(p -> personMapper.toResponse(p, teamMemberRepository.findByPersonId(p.getId()),
+                pendingRequestedAtByPersonId.get(p.getId())));
     }
 
     @Override

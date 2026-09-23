@@ -9,6 +9,7 @@ import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.model.Department;
 import com.throughline.taskmanagement.model.Notification;
+import com.throughline.taskmanagement.model.PasswordResetRequest;
 import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.Task;
 import com.throughline.taskmanagement.model.TaskComment;
@@ -115,14 +116,32 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void notifyPasswordResetRequested(Person person, Person changedBy) {
+    public void notifyPasswordResetRequestReceived(PasswordResetRequest request) {
+        Person person = request.getPerson();
+        // Deactivated is worth flagging inline, not just discoverable after clicking
+        // through — a Super Admin glancing at the bell should immediately wonder "does
+        // this need reactivating, or is someone probing a disabled account?" The
+        // *requester*-facing side of this flow never reveals this (see
+        // AuthServiceImpl.checkEmailForPasswordReset), only the admin-facing side does.
+        String message = person.isActive()
+                ? String.format("%s requested a new password.", person.getFullName())
+                : String.format("%s requested a new password — this account is currently deactivated.",
+                        person.getFullName());
+
+        for (Person admin : personRepository.findByRoleIn(List.of(Role.SUPER_ADMIN))) {
+            send(admin, NotificationType.PASSWORD_RESET_REQUEST_RECEIVED, message, person.getId());
+        }
+    }
+
+    @Override
+    public void notifyTotpReset(Person person, Person changedBy) {
         String message = String.format(
-                "%s sent you a password reset code — check your email to set a new password.",
+                "%s reset your two-factor authentication — you'll set it up again with a new QR code next time you log in.",
                 changedBy.getFullName());
 
         Notification notification = new Notification();
         notification.setRecipient(person);
-        notification.setType(NotificationType.PASSWORD_RESET_REQUESTED);
+        notification.setType(NotificationType.TOTP_RESET);
         notification.setMessage(message);
         notification.setRelatedEntityId(person.getId());
         notificationRepository.save(notification);

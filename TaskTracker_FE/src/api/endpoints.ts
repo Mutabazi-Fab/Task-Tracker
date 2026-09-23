@@ -11,11 +11,10 @@ export const endpoints = {
     login: () => `${BASE}/auth/login`,
     logout: () => `${BASE}/auth/logout`,
     me: () => `${BASE}/auth/me`,
-    verifyEmail: () => `${BASE}/auth/verify-email`,
-    signUp: () => `${BASE}/auth/sign-up`,
-    resendOtp: () => `${BASE}/auth/resend-otp`,
-    forgotPassword: () => `${BASE}/auth/forgot-password`,
-    resetPassword: () => `${BASE}/auth/reset-password`,
+    totpConfirm: () => `${BASE}/auth/totp/confirm`,
+    totpVerify: () => `${BASE}/auth/totp/verify`,
+    passwordResetRequestCheck: () => `${BASE}/auth/password-reset-requests/check`,
+    passwordResetRequestCreate: () => `${BASE}/auth/password-reset-requests`,
   },
   tasks: {
     list: () => `${BASE}/tasks`,
@@ -46,10 +45,6 @@ export const endpoints = {
     documentDownload: (id: number | string, documentId: number | string) =>
       `${BASE}/tasks/${id}/documents/${documentId}/download`,
   },
-  taskSourceEntries: {
-    list: (source: string) => `${BASE}/task-source-entries?source=${source}`,
-    create: () => `${BASE}/task-source-entries`,
-  },
   taskSourceCategories: {
     list: () => `${BASE}/task-source-categories`,
     create: () => `${BASE}/task-source-categories`,
@@ -66,7 +61,9 @@ export const endpoints = {
     setActive: (id: number | string) => `${BASE}/people/${id}/active`,
     roleChanges: () => `${BASE}/people/role-changes`,
     accountStatusChanges: () => `${BASE}/people/account-status-changes`,
-    sendPasswordReset: (id: number | string) => `${BASE}/people/${id}/send-password-reset`,
+    setPassword: (id: number | string) => `${BASE}/people/${id}/set-password`,
+    dismissPasswordResetRequest: (id: number | string) => `${BASE}/people/${id}/password-reset-request/dismiss`,
+    resetTotp: (id: number | string) => `${BASE}/people/${id}/reset-totp`,
     addDailyGoal: (id: number | string) => `${BASE}/people/${id}/daily-goals`,
     removeDailyGoal: (id: number | string, taskId: number | string) => `${BASE}/people/${id}/daily-goals/${taskId}`,
     // No assignTeam — team membership is exclusively managed through the teams.* endpoints

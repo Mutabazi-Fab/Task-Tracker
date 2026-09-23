@@ -2,23 +2,22 @@ import { createContext, useCallback, useEffect, useMemo, useState, type ReactNod
 import { AUTH_TOKEN_STORAGE_KEY, UNAUTHORIZED_EVENT } from '../../api/axiosClient'
 import type {
   AuthResponse,
-  ForgotPasswordRequest,
+  CheckEmailResponse,
   LoginRequest,
-  ResendOtpRequest,
-  ResetPasswordRequest,
-  SignUpRequest,
-  VerifyEmailRequest,
+  PasswordResetEmailRequest,
+  PasswordResetRequestOutcome,
+  TotpConfirmRequest,
+  TotpVerifyRequest,
 } from '../../types/auth.types'
 import type { Person } from '../../types/person.types'
 import {
+  checkEmailForPasswordReset as checkEmailForPasswordResetRequest,
+  confirmTotpSetup as confirmTotpSetupRequest,
+  createPasswordResetRequest as createPasswordResetRequestRequest,
   fetchCurrentPerson,
-  forgotPassword as forgotPasswordRequest,
   login as loginRequest,
   logout as logoutRequest,
-  resendOtp as resendOtpRequest,
-  resetPassword as resetPasswordRequest,
-  signUp as signUpRequest,
-  verifyEmail as verifyEmailRequest,
+  verifyTotp as verifyTotpRequest,
 } from './api/auth.api'
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
@@ -32,18 +31,28 @@ export interface AuthContextValue {
   isExecutive: boolean
   /** Super Admin only — granting roles, deactivating accounts, department administration. */
   isSuperAdmin: boolean
-  /** remember=true persists the token in localStorage; false keeps it sessionStorage-only — the "Remember me" checkbox on LoginPage. */
-  login: (request: LoginRequest, remember: boolean) => Promise<void>
-  /** Returns AuthResponse rather than void — a code may need another attempt. On success also logs the person in. */
-  verifyEmail: (request: VerifyEmailRequest) => Promise<AuthResponse>
-  /** Completes an account a Super Admin already created. Same "may need another attempt"
-   *  shape as verifyEmail; on success also logs the person in with the password they just chose. */
-  signUp: (request: SignUpRequest) => Promise<AuthResponse>
-  resendOtp: (request: ResendOtpRequest) => Promise<void>
-  /** Always resolves — the caller shows the same generic "if an account exists, a code was sent" message regardless. */
-  forgotPassword: (request: ForgotPasswordRequest) => Promise<void>
-  /** Same "may need another attempt" shape as verifyEmail. On success also logs the person in with their new password. */
-  resetPassword: (request: ResetPasswordRequest) => Promise<AuthResponse>
+  /** remember=true persists the token in localStorage; false keeps it sessionStorage-only —
+   *  the "Remember me" checkbox on LoginPage. Returns the full AuthResponse (rather than
+   *  void) since a TOTP-enabled account doesn't get a token immediately — the caller
+   *  branches on response.status to route to enrollment/challenge instead. remember is
+   *  carried through that detour via router state so the eventual real token still
+   *  respects the checkbox. */
+  login: (request: LoginRequest, remember: boolean) => Promise<AuthResponse>
+  /** Completes TOTP enrollment. On success, response.recoveryCodes carries the one-time
+   *  batch to show the person — also logs them in. remember carries the original login
+   *  checkbox through this detour (the page that calls this gets it via router state from
+   *  LoginPage, since this is a separate request from the original one). */
+  confirmTotpSetup: (request: TotpConfirmRequest, remember: boolean) => Promise<AuthResponse>
+  /** Completes a login for an already-enrolled account. Same remember-carries-through shape
+   *  as confirmTotpSetup above. */
+  verifyTotp: (request: TotpVerifyRequest, remember: boolean) => Promise<AuthResponse>
+  /** Whether an account exists for this email — the backend deliberately tells the truth
+   *  here (rate-limited, 5 checks per email per 15 minutes) rather than staying silent. */
+  checkEmailForPasswordReset: (request: PasswordResetEmailRequest) => Promise<CheckEmailResponse>
+  /** Creates a password-reset request for the Super Admin to see, or reports that one is
+   *  already pending. Only call this after checkEmailForPasswordReset confirmed the
+   *  account exists and the person explicitly confirmed. */
+  createPasswordResetRequest: (request: PasswordResetEmailRequest) => Promise<PasswordResetRequestOutcome>
   logout: () => void
 }
 
@@ -82,9 +91,9 @@ function clearStoredToken() {
 
 /** Owns the logged-in person for the whole app — every "who's doing this" field the
  *  backend still takes explicitly is filled in from currentUser here rather than a picker.
- *  AuthResponse only carries a slim subset of fields, so right after login/verify/reset
- *  yields a real token, this fetches the full profile from GET /auth/me before considering
- *  the user "authenticated". */
+ *  AuthResponse only carries a slim subset of fields, so right after login/TOTP yields a
+ *  real token, this fetches the full profile from GET /auth/me before considering the
+ *  user "authenticated". */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading')
   const [currentUser, setCurrentUser] = useState<Person | null>(null)
@@ -119,50 +128,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized)
   }, [])
 
-  const login = useCallback(async (request: LoginRequest, remember: boolean) => {
+  const login = useCallback(async (request: LoginRequest, remember: boolean): Promise<AuthResponse> => {
     const auth = await loginRequest(request)
-    // Login never comes back without a token — an unverified account is rejected with a
-    // distinct error instead (see LoginPage) — but guard anyway rather than assume.
+    // A TOTP-enabled account comes back with status TOTP_SETUP_REQUIRED/TOTP_REQUIRED and
+    // no token yet — LoginPage routes to enrollment/challenge in that case instead.
     if (auth.token) {
       storeToken(auth.token, remember)
       await hydrate()
     }
+    return auth
   }, [hydrate])
 
-  const verifyEmail = useCallback(async (request: VerifyEmailRequest): Promise<AuthResponse> => {
-    const auth = await verifyEmailRequest(request)
+  const confirmTotpSetup = useCallback(async (request: TotpConfirmRequest, remember: boolean): Promise<AuthResponse> => {
+    const auth = await confirmTotpSetupRequest(request)
     if (auth.token) {
-      storeToken(auth.token, true)
+      storeToken(auth.token, remember)
       await hydrate()
     }
     return auth
   }, [hydrate])
 
-  const signUp = useCallback(async (request: SignUpRequest): Promise<AuthResponse> => {
-    const auth = await signUpRequest(request)
+  const verifyTotp = useCallback(async (request: TotpVerifyRequest, remember: boolean): Promise<AuthResponse> => {
+    const auth = await verifyTotpRequest(request)
     if (auth.token) {
-      storeToken(auth.token, true)
+      storeToken(auth.token, remember)
       await hydrate()
     }
     return auth
   }, [hydrate])
 
-  const resendOtp = useCallback(async (request: ResendOtpRequest) => {
-    await resendOtpRequest(request)
+  const checkEmailForPasswordReset = useCallback(async (request: PasswordResetEmailRequest) => {
+    return checkEmailForPasswordResetRequest(request)
   }, [])
 
-  const forgotPassword = useCallback(async (request: ForgotPasswordRequest) => {
-    await forgotPasswordRequest(request)
+  const createPasswordResetRequest = useCallback(async (request: PasswordResetEmailRequest) => {
+    return createPasswordResetRequestRequest(request)
   }, [])
-
-  const resetPassword = useCallback(async (request: ResetPasswordRequest): Promise<AuthResponse> => {
-    const auth = await resetPasswordRequest(request)
-    if (auth.token) {
-      storeToken(auth.token, true)
-      await hydrate()
-    }
-    return auth
-  }, [hydrate])
 
   const logout = useCallback(() => {
     // Best-effort — JWT is stateless, so there's nothing server-side to wait on.
@@ -185,14 +186,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isExecutive: currentUser?.role === 'EXECUTIVE' || currentUser?.role === 'SUPER_ADMIN',
       isSuperAdmin: currentUser?.role === 'SUPER_ADMIN',
       login,
-      verifyEmail,
-      signUp,
-      resendOtp,
-      forgotPassword,
-      resetPassword,
+      confirmTotpSetup,
+      verifyTotp,
+      checkEmailForPasswordReset,
+      createPasswordResetRequest,
       logout,
     }),
-    [status, currentUser, login, verifyEmail, signUp, resendOtp, forgotPassword, resetPassword, logout],
+    [
+      status, currentUser, login, confirmTotpSetup, verifyTotp,
+      checkEmailForPasswordReset, createPasswordResetRequest, logout,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

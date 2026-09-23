@@ -2,8 +2,10 @@ package com.throughline.taskmanagement.service;
 
 import com.throughline.taskmanagement.dto.request.ChangeRoleRequest;
 import com.throughline.taskmanagement.dto.request.CreatePersonRequest;
-import com.throughline.taskmanagement.dto.request.SendPasswordResetRequest;
+import com.throughline.taskmanagement.dto.request.DismissPasswordResetRequestRequest;
+import com.throughline.taskmanagement.dto.request.ResetTotpRequest;
 import com.throughline.taskmanagement.dto.request.SetAccountActiveRequest;
+import com.throughline.taskmanagement.dto.request.SetPasswordRequest;
 import com.throughline.taskmanagement.dto.response.AccountStatusChangeResponse;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.dto.response.PersonStatisticsResponse;
@@ -56,9 +58,20 @@ public interface PersonService {
      *  newest first. */
     Page<AccountStatusChangeResponse> getAccountStatusChangeActivity(Long requesterId, Pageable pageable);
 
-    /** Super-Admin-only. Sends the person a password reset code (same flow as self-service
-     *  "forgot password"). Fails if this person has never signed up. */
-    void sendPasswordReset(Long personId, SendPasswordResetRequest request);
+    /** Super-Admin-only. Sets the password directly — no code, no email, entirely
+     *  offline. Never touches totpSecret/totpEnabledAt (password and TOTP stay two
+     *  independent Super-Admin actions). If this person has a PENDING PasswordResetRequest,
+     *  it's auto-marked FULFILLED as a side effect of resolving it this way. */
+    void setPasswordDirectly(Long personId, SetPasswordRequest request);
+
+    /** Super-Admin-only. Dismisses a PENDING PasswordResetRequest without changing the
+     *  person's password — for a mistaken/duplicate/already-otherwise-resolved request. */
+    void dismissPasswordResetRequest(Long personId, DismissPasswordResetRequestRequest request);
+
+    /** Super-Admin-only — for a lost/replaced phone. Clears totpSecret/totpEnabledAt and
+     *  every recovery code; the person's next login re-enters TOTP enrollment from scratch
+     *  with a fresh QR code. Fails if this person was never enrolled in the first place. */
+    void resetTotp(Long personId, ResetTotpRequest request);
 
     /** Self-only — a purely personal "what I'm focused on today" pointer, up to 3 at once.
      *  taskId must already be one of this person's own assigned tasks. Rejects a 4th with a

@@ -14,8 +14,9 @@ interface CreatePersonModalProps {
 }
 
 /** Form shell + submit — owns the mutation, CreatePersonForm owns only the fields. Stays
- *  open on success (rather than closing straight away) to actually show the confirmation —
- *  the account is created passwordless, so it's worth confirming a sign-up email went out. */
+ *  open on success (rather than closing straight away) to actually show the confirmation,
+ *  and as a reminder that the password just set is the only place it exists — there's no
+ *  sign-up step or email to fall back on, so it has to be handed to the person directly. */
 export function CreatePersonModal({ open, onClose }: CreatePersonModalProps) {
   const createPerson = useCreatePerson()
   const [created, setCreated] = useState<Person | null>(null)
@@ -35,7 +36,7 @@ export function CreatePersonModal({ open, onClose }: CreatePersonModalProps) {
       {created ? (
         <>
           <SuccessMessage
-            message={`${created.fullName} was created. A sign-up email with a one-time code has been sent to ${created.email}.`}
+            message={`${created.fullName} was created and can log in now at ${created.email} with the password you set — share it with them directly.`}
           />
           <div className={styles.actions}>
             <Button onClick={handleClose}>Done</Button>

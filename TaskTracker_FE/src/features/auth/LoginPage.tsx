@@ -6,6 +6,7 @@ import { Icon } from '../../components/ui/Icon'
 import { ROUTES } from '../../app/routes'
 import { AuthField } from './components/AuthField'
 import { AuthLayout } from './components/AuthLayout'
+import { routeAfterAuthResponse } from './routeAfterAuthResponse'
 import { useAuth } from './useAuth'
 import type { ApiError } from '../../api/axiosClient'
 import styles from './components/AuthLayout.module.css'
@@ -31,27 +32,10 @@ export function LoginPage() {
     setSubmitting(true)
     setError(null)
     try {
-      await login({ email: email.trim(), password }, remember)
-      // Always the dashboard — never location.state?.from. That state is left over from
-      // ProtectedRoute bouncing whoever was previously on this browser tab to /login when
-      // they logged out; blindly reusing it here would send the NEXT person who logs in
-      // (a different person entirely) straight to wherever the last person happened to be,
-      // rather than a clean landing page.
-      navigate(ROUTES.dashboard, { replace: true })
+      const auth = await login({ email: email.trim(), password }, remember)
+      routeAfterAuthResponse(navigate, auth, remember)
     } catch (err) {
-      const message = (err as ApiError).message
-      // Matched by text, not a structured code — the backend distinguishes this from a
-      // generic bad-credentials rejection with a specific message precisely so the
-      // frontend can route to verification instead of just showing an error.
-      if (message === 'Please verify your email before logging in.') {
-        navigate(ROUTES.verifyEmail, { state: { email: email.trim() } })
-        return
-      }
-      if (message === 'Please finish signing up before logging in.') {
-        navigate(ROUTES.signUp, { state: { email: email.trim() } })
-        return
-      }
-      setError(message)
+      setError((err as ApiError).message)
     } finally {
       setSubmitting(false)
     }
@@ -61,9 +45,6 @@ export function LoginPage() {
     <AuthLayout
       title="Welcome Back"
       subtitle="Sign in to keep tracking your team's progress"
-      footerText="First time logging in?"
-      footerLinkTo={ROUTES.signUp}
-      footerLinkLabel="Sign up"
     >
       <form className={styles.form} onSubmit={handleSubmit}>
         <AuthField

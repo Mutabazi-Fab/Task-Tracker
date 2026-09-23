@@ -60,3 +60,15 @@
   gap: var(--space-3);
   margin-top: var(--space-2);
 }
+
+/* Show/hide password toggle — used by CreatePersonForm's password field. */
+.eyeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.eyeButton:hover {
+  color: var(--ink);
+}

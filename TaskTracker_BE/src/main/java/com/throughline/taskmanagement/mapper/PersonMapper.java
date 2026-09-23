@@ -6,6 +6,7 @@ import com.throughline.taskmanagement.model.Person;
 import com.throughline.taskmanagement.model.TeamMember;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -14,9 +15,16 @@ public class PersonMapper {
     /**
      * memberships is passed in rather than looked up here — a mapper stays a pure
      * entity-to-DTO transform with no repository access; the caller (PersonServiceImpl)
-     * fetches this person's TeamMember rows and hands them over.
+     * fetches this person's TeamMember rows and hands them over. Same reasoning for the
+     * two-arg overload below defaulting pendingPasswordResetRequestedAt to null: most
+     * callers (createPerson, changeRole, setActive, updatePerson, DashboardServiceImpl,
+     * AuthServiceImpl.getCurrentPerson) don't need it on their response at all.
      */
     public PersonResponse toResponse(Person person, List<TeamMember> memberships) {
+        return toResponse(person, memberships, null);
+    }
+
+    public PersonResponse toResponse(Person person, List<TeamMember> memberships, LocalDateTime pendingPasswordResetRequestedAt) {
         if (person == null) {
             return null;
         }
@@ -34,8 +42,10 @@ public class PersonMapper {
                 person.getJobTitle(),
                 person.getRank(),
                 person.getRole(),
-                person.isEmailVerified(),
                 person.isActive(),
+                person.isTotpRequired(),
+                person.getTotpEnabledAt() != null,
+                pendingPasswordResetRequestedAt,
                 teams,
                 person.getDepartment() != null ? person.getDepartment().getName() : null,
                 person.getDepartment() != null ? person.getDepartment().getId() : null

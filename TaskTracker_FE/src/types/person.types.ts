@@ -21,8 +21,18 @@ export interface Person {
   jobTitle: string
   rank: string | null
   role: Role | null
-  emailVerified: boolean
   active: boolean
+  /** Whether this account must go through TOTP 2FA to log in — accounts created before
+   *  2FA rolled out default to false and are never retroactively forced into it. */
+  totpRequired: boolean
+  /** Whether TOTP enrollment is actually complete (a QR was scanned and confirmed), as
+   *  opposed to just required-but-still-pending. Only meaningful when totpRequired is
+   *  true — determines whether a "Reset TOTP" admin action makes sense to show at all. */
+  totpEnabled: boolean
+  /** Null unless this person has an open password-reset request awaiting a Super Admin —
+   *  set from the "Forgot Password?" flow. Drives the pending-request banner in
+   *  PersonAdminControls. */
+  pendingPasswordResetRequestedAt: string | null
   teams: PersonTeamMembership[]
   /** Every person belongs to exactly one Department — null only for a legacy account. */
   departmentName: string | null
@@ -30,9 +40,8 @@ export interface Person {
 }
 
 /** Body for POST /people (reused for PUT /people/{id}, which ignores createdById/role/
- *  departmentId). createdById must resolve to a Super Admin, enforced server-side;
- *  departmentId is required at creation. No password — the account is created
- *  passwordless and unverified, and the person sets their own password via /sign-up. */
+ *  departmentId/password). createdById must resolve to a Super Admin, enforced
+ *  server-side; departmentId and password (8+ chars) are required at creation. */
 export interface CreatePersonRequest {
   fullName: string
   email: string
@@ -41,6 +50,7 @@ export interface CreatePersonRequest {
   createdById?: number
   role?: Role
   departmentId?: number
+  password?: string
 }
 
 /** Body for PUT /people/{id}/role. Super-Admin-only; reason is mandatory (both here and
@@ -59,9 +69,26 @@ export interface SetAccountActiveRequest {
   reason: string
 }
 
-/** Body for POST /people/{id}/send-password-reset. Super-Admin-only; reason is mandatory
- *  (both here and server-side). Fails server-side if this person has never signed up. */
-export interface SendPasswordResetRequest {
+/** Body for POST /people/{id}/set-password. Super-Admin-only; reason is mandatory (both
+ *  here and server-side). Sets the password directly — no code, no email, entirely
+ *  offline — and never touches TOTP enrollment. If this person has a pending
+ *  password-reset request, it's auto-marked fulfilled. */
+export interface SetPasswordRequest {
+  changedById: number
+  newPassword: string
+  reason: string
+}
+
+/** Body for POST /people/{id}/password-reset-request/dismiss. Super-Admin-only. No
+ *  mandatory reason — dismissing is the lower-consequence action, nothing on the account
+ *  actually changes. */
+export interface DismissPasswordResetRequestRequest {
+  changedById: number
+}
+
+/** Body for POST /people/{id}/reset-totp. Super-Admin-only; reason is mandatory. Fails
+ *  server-side if this person was never enrolled in TOTP in the first place. */
+export interface ResetTotpRequest {
   changedById: number
   reason: string
 }

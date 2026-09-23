@@ -76,8 +76,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/v1/auth/login", "/api/v1/auth/logout",
-                                "/api/v1/auth/verify-email", "/api/v1/auth/sign-up", "/api/v1/auth/resend-otp",
-                                "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password"
+                                "/api/v1/auth/totp/confirm", "/api/v1/auth/totp/verify",
+                                "/api/v1/auth/password-reset-requests/check", "/api/v1/auth/password-reset-requests"
                         ).permitAll()
                         // Role/ownership rules beyond "is this a real logged-in person" live
                         // in each service method — this layer only answers "who are you".

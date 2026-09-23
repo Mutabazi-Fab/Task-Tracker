@@ -3,8 +3,10 @@ package com.throughline.taskmanagement.controller;
 import com.throughline.taskmanagement.dto.request.AddDailyGoalRequest;
 import com.throughline.taskmanagement.dto.request.ChangeRoleRequest;
 import com.throughline.taskmanagement.dto.request.CreatePersonRequest;
-import com.throughline.taskmanagement.dto.request.SendPasswordResetRequest;
+import com.throughline.taskmanagement.dto.request.DismissPasswordResetRequestRequest;
+import com.throughline.taskmanagement.dto.request.ResetTotpRequest;
 import com.throughline.taskmanagement.dto.request.SetAccountActiveRequest;
+import com.throughline.taskmanagement.dto.request.SetPasswordRequest;
 import com.throughline.taskmanagement.dto.response.AccountStatusChangeResponse;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.dto.response.PersonStatisticsResponse;
@@ -39,7 +41,7 @@ public class PersonController {
         Long actorId = currentPersonResolver.resolveId(authentication);
         CreatePersonRequest verified = new CreatePersonRequest(
                 request.fullName(), request.email(), request.jobTitle(), request.rank(), actorId, request.role(),
-                request.departmentId());
+                request.departmentId(), request.password());
         return new ResponseEntity<>(personService.createPerson(verified), HttpStatus.CREATED);
     }
 
@@ -119,15 +121,37 @@ public class PersonController {
         return ResponseEntity.ok(personService.getAccountStatusChangeActivity(requesterId, pageable));
     }
 
-    /** Super-Admin-only — sends this person a password reset code (same flow as the
-     *  self-service "forgot password"), for when they've lost access and can't request it
-     *  themselves. Fails if they've never signed up (no password yet to reset). */
-    @PostMapping("/{id}/send-password-reset")
-    public ResponseEntity<Void> sendPasswordReset(
-            @PathVariable Long id, @Valid @RequestBody SendPasswordResetRequest request, Authentication authentication) {
+    /** Super-Admin-only — sets this person's password directly, entirely offline. Reason
+     *  is mandatory. Never touches TOTP enrollment. If this person has a PENDING
+     *  PasswordResetRequest, it's auto-marked FULFILLED. */
+    @PostMapping("/{id}/set-password")
+    public ResponseEntity<Void> setPasswordDirectly(
+            @PathVariable Long id, @Valid @RequestBody SetPasswordRequest request, Authentication authentication) {
         Long actorId = currentPersonResolver.resolveId(authentication);
-        SendPasswordResetRequest verified = new SendPasswordResetRequest(actorId, request.reason());
-        personService.sendPasswordReset(id, verified);
+        SetPasswordRequest verified = new SetPasswordRequest(actorId, request.newPassword(), request.reason());
+        personService.setPasswordDirectly(id, verified);
+        return ResponseEntity.ok().build();
+    }
+
+    /** Super-Admin-only — dismisses this person's PENDING password-reset request without
+     *  changing their password (e.g. it was a mistake, or got resolved another way). */
+    @PostMapping("/{id}/password-reset-request/dismiss")
+    public ResponseEntity<Void> dismissPasswordResetRequest(
+            @PathVariable Long id, @Valid @RequestBody DismissPasswordResetRequestRequest request, Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        DismissPasswordResetRequestRequest verified = new DismissPasswordResetRequestRequest(actorId);
+        personService.dismissPasswordResetRequest(id, verified);
+        return ResponseEntity.ok().build();
+    }
+
+    /** Super-Admin-only — for a lost/replaced phone. Fails if this person was never
+     *  enrolled in TOTP in the first place. */
+    @PostMapping("/{id}/reset-totp")
+    public ResponseEntity<Void> resetTotp(
+            @PathVariable Long id, @Valid @RequestBody ResetTotpRequest request, Authentication authentication) {
+        Long actorId = currentPersonResolver.resolveId(authentication);
+        ResetTotpRequest verified = new ResetTotpRequest(actorId, request.reason());
+        personService.resetTotp(id, verified);
         return ResponseEntity.ok().build();
     }
 

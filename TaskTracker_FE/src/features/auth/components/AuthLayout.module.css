@@ -137,7 +137,7 @@
   font-weight: 600;
 }
 
-/* Show/hide password toggle — shared by every auth-form password field (login, sign-up,
+/* Show/hide password toggle — shared by every auth-form password field (login,
    reset-password) rather than redefined per page. */
 .eyeButton {
   display: flex;

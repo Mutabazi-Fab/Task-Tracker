@@ -1,12 +1,12 @@
 package com.throughline.taskmanagement.controller;
 
-import com.throughline.taskmanagement.dto.request.ForgotPasswordRequest;
 import com.throughline.taskmanagement.dto.request.LoginRequest;
-import com.throughline.taskmanagement.dto.request.ResendOtpRequest;
-import com.throughline.taskmanagement.dto.request.ResetPasswordRequest;
-import com.throughline.taskmanagement.dto.request.SignUpRequest;
-import com.throughline.taskmanagement.dto.request.VerifyEmailRequest;
+import com.throughline.taskmanagement.dto.request.PasswordResetEmailRequest;
+import com.throughline.taskmanagement.dto.request.TotpConfirmRequest;
+import com.throughline.taskmanagement.dto.request.TotpVerifyRequest;
 import com.throughline.taskmanagement.dto.response.AuthResponse;
+import com.throughline.taskmanagement.dto.response.CheckEmailResponse;
+import com.throughline.taskmanagement.dto.response.PasswordResetRequestOutcome;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
 import com.throughline.taskmanagement.service.AuthService;
 import jakarta.validation.Valid;
@@ -31,37 +31,33 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    @PostMapping("/verify-email")
-    public ResponseEntity<AuthResponse> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
-        return ResponseEntity.ok(authService.verifyEmail(request));
+    /** Not gated by the normal Bearer-token auth — pendingAuthToken (from login) is the
+     *  credential here, checked inside the service, since there's no real session yet. */
+    @PostMapping("/totp/confirm")
+    public ResponseEntity<AuthResponse> confirmTotpSetup(@Valid @RequestBody TotpConfirmRequest request) {
+        return ResponseEntity.ok(authService.confirmTotpSetup(request));
     }
 
-    /** Completes an account a Super Admin already created: sign-up code + the password the
-     *  person is choosing for themselves. Not public self-registration — the account has to
-     *  already exist, pending this step. */
-    @PostMapping("/sign-up")
-    public ResponseEntity<AuthResponse> signUp(@Valid @RequestBody SignUpRequest request) {
-        return ResponseEntity.ok(authService.signUp(request));
+    /** Same pendingAuthToken-as-credential shape as confirmTotpSetup above. */
+    @PostMapping("/totp/verify")
+    public ResponseEntity<AuthResponse> verifyTotp(@Valid @RequestBody TotpVerifyRequest request) {
+        return ResponseEntity.ok(authService.verifyTotp(request));
     }
 
-    @PostMapping("/resend-otp")
-    public ResponseEntity<Void> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
-        authService.resendOtp(request);
-        return ResponseEntity.ok().build();
+    /** Public, unauthenticated, rate-limited (5 per email per 15 minutes) — see
+     *  AuthService.checkEmailForPasswordReset for why this deliberately tells the truth
+     *  about whether the account exists, instead of the old mailed-code flow's silent
+     *  non-answer. */
+    @PostMapping("/password-reset-requests/check")
+    public ResponseEntity<CheckEmailResponse> checkEmailForPasswordReset(@Valid @RequestBody PasswordResetEmailRequest request) {
+        return ResponseEntity.ok(authService.checkEmailForPasswordReset(request));
     }
 
-    /** Always 200, regardless of whether the email is registered, already claimed, or still
-     *  cooling down — see AuthService.forgotPassword. The frontend shows the same generic
-     *  "if an account exists, a code was sent" message no matter what. */
-    @PostMapping("/forgot-password")
-    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        authService.forgotPassword(request);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/reset-password")
-    public ResponseEntity<AuthResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        return ResponseEntity.ok(authService.resetPassword(request));
+    /** Public, unauthenticated — only reachable after the frontend already called the
+     *  check endpoint above and the person explicitly confirmed they want to proceed. */
+    @PostMapping("/password-reset-requests")
+    public ResponseEntity<PasswordResetRequestOutcome> createPasswordResetRequest(@Valid @RequestBody PasswordResetEmailRequest request) {
+        return ResponseEntity.ok(authService.createPasswordResetRequest(request));
     }
 
     @PostMapping("/logout")

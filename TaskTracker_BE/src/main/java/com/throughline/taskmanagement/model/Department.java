@@ -36,13 +36,15 @@ public class Department {
     @Column(unique = true, nullable = false)
     private String name;
 
-    /** The one Director accountable for everything assigned to this department. */
-    @ManyToOne(optional = false)
+    /** The one Director accountable for everything assigned to this department.
+     *  LAZY — see Task.java's comment on assignedBy for why every ManyToOne feeding into
+     *  the Person <-> Department cycle is explicitly lazy. */
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "head_director_id", nullable = false)
     private Person headDirector;
 
     /** Always a Super Admin — enforced in DepartmentServiceImpl, not just trusted here. */
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id")
     private Person createdBy;
 

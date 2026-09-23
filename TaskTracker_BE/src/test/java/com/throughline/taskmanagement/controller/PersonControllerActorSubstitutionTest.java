@@ -2,7 +2,7 @@ package com.throughline.taskmanagement.controller;
 
 import com.throughline.taskmanagement.dto.request.ChangeRoleRequest;
 import com.throughline.taskmanagement.dto.request.CreatePersonRequest;
-import com.throughline.taskmanagement.dto.request.SendPasswordResetRequest;
+import com.throughline.taskmanagement.dto.request.SetPasswordRequest;
 import com.throughline.taskmanagement.dto.request.SetAccountActiveRequest;
 import com.throughline.taskmanagement.enums.Role;
 import com.throughline.taskmanagement.security.CurrentPersonResolver;
@@ -64,20 +64,20 @@ class PersonControllerActorSubstitutionTest {
     }
 
     @Test
-    void sendPasswordReset_ignoresASpoofedChangedById() {
-        SendPasswordResetRequest spoofed = new SendPasswordResetRequest(SPOOFED_ACTOR_ID, "helping them recover");
+    void setPasswordDirectly_ignoresASpoofedChangedById() {
+        SetPasswordRequest spoofed = new SetPasswordRequest(SPOOFED_ACTOR_ID, "newpassword123", "helping them recover");
 
-        controller.sendPasswordReset(7L, spoofed, authentication);
+        controller.setPasswordDirectly(7L, spoofed, authentication);
 
-        ArgumentCaptor<SendPasswordResetRequest> captor = ArgumentCaptor.forClass(SendPasswordResetRequest.class);
-        verify(personService).sendPasswordReset(eq(7L), captor.capture());
+        ArgumentCaptor<SetPasswordRequest> captor = ArgumentCaptor.forClass(SetPasswordRequest.class);
+        verify(personService).setPasswordDirectly(eq(7L), captor.capture());
         assertEquals(REAL_ACTOR_ID, captor.getValue().changedById());
     }
 
     @Test
     void createPerson_ignoresASpoofedCreatedById() {
         CreatePersonRequest spoofed = new CreatePersonRequest(
-                "New Person", "new@example.com", "Engineer", null, SPOOFED_ACTOR_ID, Role.SUPER_ADMIN, 1L);
+                "New Person", "new@example.com", "Engineer", null, SPOOFED_ACTOR_ID, Role.SUPER_ADMIN, 1L, "password123");
 
         controller.createPerson(spoofed, authentication);
 

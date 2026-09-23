@@ -222,7 +222,7 @@ export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFor
       {isDeadlineBeforeAssignment && <ErrorMessage message="Deadline can't be before the date assigned." />}
 
       <SourceCategoryField value={source} onChange={handleSourceChange} />
-      {source && <SourceDetailField source={source} value={sourceLabel} onChange={setSourceLabel} label="Source detail" />}
+      {source && <SourceDetailField value={sourceLabel} onChange={setSourceLabel} label="Source detail" />}
 
       {isExecutive && (
         <SelectField

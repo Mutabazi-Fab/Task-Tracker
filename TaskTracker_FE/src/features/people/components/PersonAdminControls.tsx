@@ -2,14 +2,20 @@ import { useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { ErrorMessage } from '../../../components/ui/ErrorMessage'
+import { Icon } from '../../../components/ui/Icon'
 import { SelectField } from '../../../components/ui/SelectField'
 import { TextField } from '../../../components/ui/TextField'
+import { formatDateTime } from '../../../lib/formatDate'
 import { useAuth } from '../../auth/useAuth'
 import { useChangeRole } from '../hooks/useChangeRole'
-import { useSendPasswordReset } from '../hooks/useSendPasswordReset'
+import { useDismissPasswordResetRequest } from '../hooks/useDismissPasswordResetRequest'
+import { useResetTotp } from '../hooks/useResetTotp'
+import { useSetPassword } from '../hooks/useSetPassword'
 import { useSetPersonActive } from '../hooks/useSetPersonActive'
 import type { Person, Role } from '../../../types/person.types'
 import styles from './PersonAdminControls.module.css'
+
+const MIN_PASSWORD_LENGTH = 8
 
 const ROLE_OPTIONS: { label: string; value: Role }[] = [
   { label: 'Member', value: 'MEMBER' },
@@ -29,21 +35,24 @@ export function PersonAdminControls({ person }: { person: Person }) {
   const { currentUser } = useAuth()
   const changeRole = useChangeRole(person.id)
   const setActive = useSetPersonActive(person.id)
-  const sendPasswordReset = useSendPasswordReset(person.id)
+  const setPassword = useSetPassword(person.id)
+  const dismissRequest = useDismissPasswordResetRequest(person.id)
+  const resetTotp = useResetTotp(person.id)
 
   const [newRole, setNewRole] = useState<Role>(person.role ?? 'MEMBER')
   const [roleReason, setRoleReason] = useState('')
   const [activeReason, setActiveReason] = useState('')
-  const [resetReason, setResetReason] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [passwordReason, setPasswordReason] = useState('')
+  const [totpResetReason, setTotpResetReason] = useState('')
 
   if (!currentUser) return null
 
   const canUpdateRole = newRole !== person.role && roleReason.trim() !== ''
   const canToggleActive = activeReason.trim() !== ''
-  // Whether this person has even signed up (has a password) isn't information the
-  // frontend has — the backend enforces that and this just surfaces whatever error it
-  // produces, same as everywhere else in this component.
-  const canSendReset = resetReason.trim() !== ''
+  const canSetPassword = newPassword.length >= MIN_PASSWORD_LENGTH && passwordReason.trim() !== ''
+  const canResetTotp = totpResetReason.trim() !== ''
 
   function handleRoleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -59,11 +68,24 @@ export function PersonAdminControls({ person }: { person: Person }) {
     setActive.mutate({ active: !person.active, changedById: currentUser.id, reason: activeReason.trim() })
   }
 
-  function handleSendPasswordReset() {
-    if (!currentUser || !canSendReset) return
-    sendPasswordReset.mutate(
-      { changedById: currentUser.id, reason: resetReason.trim() },
-      { onSuccess: () => setResetReason('') },
+  function handleSetPassword() {
+    if (!currentUser || !canSetPassword) return
+    setPassword.mutate(
+      { changedById: currentUser.id, newPassword, reason: passwordReason.trim() },
+      { onSuccess: () => { setNewPassword(''); setPasswordReason('') } },
+    )
+  }
+
+  function handleDismissRequest() {
+    if (!currentUser) return
+    dismissRequest.mutate({ changedById: currentUser.id })
+  }
+
+  function handleResetTotp() {
+    if (!currentUser || !canResetTotp) return
+    resetTotp.mutate(
+      { changedById: currentUser.id, reason: totpResetReason.trim() },
+      { onSuccess: () => setTotpResetReason('') },
     )
   }
 
@@ -120,26 +142,96 @@ export function PersonAdminControls({ person }: { person: Person }) {
 
         <div className={styles.section}>
           <span className={styles.sectionLabel}>Password</span>
+
+          {person.pendingPasswordResetRequestedAt && (
+            <div className={styles.pendingRequestNotice}>
+              <span>
+                Requested a new password on {formatDateTime(person.pendingPasswordResetRequestedAt)}.
+              </span>
+              <button
+                type="button"
+                className={styles.dismissButton}
+                onClick={handleDismissRequest}
+                disabled={dismissRequest.isPending}
+              >
+                {dismissRequest.isPending ? 'Dismissing…' : 'Dismiss'}
+              </button>
+            </div>
+          )}
+          {dismissRequest.isError && <ErrorMessage message={dismissRequest.error.message} />}
+
+          <TextField
+            label="New password"
+            type={showNewPassword ? 'text' : 'password'}
+            value={newPassword}
+            onChange={setNewPassword}
+            placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
+            autoComplete="new-password"
+            required
+            trailing={
+              <button
+                type="button"
+                className={styles.eyeButton}
+                onClick={() => setShowNewPassword((v) => !v)}
+                aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+              >
+                <Icon name={showNewPassword ? 'eyeOff' : 'eye'} size={16} />
+              </button>
+            }
+          />
           <div className={styles.row}>
             <TextField
               label="Reason"
-              value={resetReason}
-              onChange={setResetReason}
-              placeholder="Why this change"
+              value={passwordReason}
+              onChange={setPasswordReason}
+              placeholder="e.g. user forgot password, verified by phone"
               required
             />
             <Button
               type="button"
               variant="primary"
-              onClick={handleSendPasswordReset}
-              disabled={!canSendReset || sendPasswordReset.isPending}
+              onClick={handleSetPassword}
+              disabled={!canSetPassword || setPassword.isPending}
             >
-              {sendPasswordReset.isPending ? 'Sending…' : 'Send password reset'}
+              {setPassword.isPending ? 'Saving…' : 'Set new password'}
             </Button>
           </div>
-          {sendPasswordReset.isError && <ErrorMessage message={sendPasswordReset.error.message} />}
-          {sendPasswordReset.isSuccess && <p className={styles.resetSentNotice}>Password reset code sent.</p>}
+          {setPassword.isError && <ErrorMessage message={setPassword.error.message} />}
+          {setPassword.isSuccess && (
+            <p className={styles.resetSentNotice}>
+              Password set. Share it with {person.fullName} directly — nothing is emailed.
+            </p>
+          )}
         </div>
+
+        {person.totpEnabled && (
+          <div className={styles.section}>
+            <span className={styles.sectionLabel}>Two-factor authentication</span>
+            <div className={styles.row}>
+              <TextField
+                label="Reason"
+                value={totpResetReason}
+                onChange={setTotpResetReason}
+                placeholder="e.g. lost or replaced phone"
+                required
+              />
+              <button
+                type="button"
+                className={styles.dangerButton}
+                onClick={handleResetTotp}
+                disabled={!canResetTotp || resetTotp.isPending}
+              >
+                {resetTotp.isPending ? 'Resetting…' : 'Reset TOTP'}
+              </button>
+            </div>
+            {resetTotp.isError && <ErrorMessage message={resetTotp.error.message} />}
+            {resetTotp.isSuccess && (
+              <p className={styles.resetSentNotice}>
+                TOTP reset — they'll set up a new authenticator with a fresh QR code next time they log in.
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </Card>
   )

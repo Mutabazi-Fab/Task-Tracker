@@ -70,3 +70,45 @@
   font-size: 13px;
   color: var(--accent-strong);
 }
+
+.pendingRequestNotice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--status-ongoing-bg);
+  border-radius: var(--radius-md);
+}
+
+.dismissButton {
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.dismissButton:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.dismissButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.eyeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.eyeButton:hover {
+  color: var(--ink);
+}

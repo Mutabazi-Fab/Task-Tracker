@@ -238,7 +238,7 @@ export function CreateSubtaskForm({
         />
       )}
       {source && !sourceInherited && (
-        <SourceDetailField source={source} value={sourceLabel} onChange={setSourceLabel} label="Source detail" />
+        <SourceDetailField value={sourceLabel} onChange={setSourceLabel} label="Source detail" />
       )}
 
       {isExecutive && (

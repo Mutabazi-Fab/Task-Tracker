@@ -25,13 +25,6 @@ export interface TaskSourceCategory {
   name: string
 }
 
-/** A saved, reusable "Source Detail" suggestion for one Source category (e.g. "BNR" under Regulator) — never a restriction on what can be typed. */
-export interface TaskSourceEntry {
-  id: number
-  source: TaskSource
-  label: string
-}
-
 /** Who structured a subtask — the Director, or the Team Leader of the team owning its parent task. Null for a task predating the hierarchy. */
 export type CreatedByRole = 'DIRECTOR' | 'TEAM_LEADER'
 

@@ -1,56 +1,61 @@
 package com.throughline.taskmanagement.service.impl;
 
 import com.throughline.taskmanagement.dto.request.LoginRequest;
-import com.throughline.taskmanagement.dto.request.ForgotPasswordRequest;
-import com.throughline.taskmanagement.dto.request.ResendOtpRequest;
-import com.throughline.taskmanagement.dto.request.ResetPasswordRequest;
-import com.throughline.taskmanagement.dto.request.SignUpRequest;
-import com.throughline.taskmanagement.dto.request.VerifyEmailRequest;
+import com.throughline.taskmanagement.dto.request.PasswordResetEmailRequest;
+import com.throughline.taskmanagement.dto.request.TotpConfirmRequest;
+import com.throughline.taskmanagement.dto.request.TotpVerifyRequest;
 import com.throughline.taskmanagement.dto.response.AuthResponse;
+import com.throughline.taskmanagement.dto.response.CheckEmailResponse;
+import com.throughline.taskmanagement.dto.response.PasswordResetRequestOutcome;
 import com.throughline.taskmanagement.dto.response.PersonResponse;
-import com.throughline.taskmanagement.exception.EmailDeliveryException;
+import com.throughline.taskmanagement.enums.PasswordResetRequestStatus;
 import com.throughline.taskmanagement.exception.ForbiddenActionException;
 import com.throughline.taskmanagement.exception.InvalidAssignmentException;
 import com.throughline.taskmanagement.exception.InvalidCredentialsException;
 import com.throughline.taskmanagement.exception.ResourceNotFoundException;
 import com.throughline.taskmanagement.mapper.PersonMapper;
+import com.throughline.taskmanagement.model.PasswordResetRequest;
 import com.throughline.taskmanagement.model.Person;
+import com.throughline.taskmanagement.model.TotpRecoveryCode;
+import com.throughline.taskmanagement.repository.PasswordResetRequestRepository;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.TeamMemberRepository;
+import com.throughline.taskmanagement.repository.TotpRecoveryCodeRepository;
 import com.throughline.taskmanagement.security.JwtService;
 import com.throughline.taskmanagement.security.LoginRateLimiter;
+import com.throughline.taskmanagement.security.TotpService;
 import com.throughline.taskmanagement.service.AuthService;
-import com.throughline.taskmanagement.service.MailService;
+import com.throughline.taskmanagement.service.NotificationService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-    private static final int OTP_TTL_MINUTES = 10;
-    private static final int OTP_RESEND_COOLDOWN_SECONDS = 60;
-    private static final int RESET_CODE_TTL_MINUTES = 10;
-    private static final int RESET_CODE_RESEND_COOLDOWN_SECONDS = 60;
-    private static final SecureRandom OTP_RANDOM = new SecureRandom();
+    private static final int PENDING_AUTH_TOKEN_TTL_MINUTES = 5;
+    private static final int RECOVERY_CODE_COUNT = 10;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final PersonRepository personRepository;
     private final TeamMemberRepository teamMemberRepository;
+    private final TotpRecoveryCodeRepository totpRecoveryCodeRepository;
+    private final PasswordResetRequestRepository passwordResetRequestRepository;
     private final PersonMapper personMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final MailService mailService;
     private final LoginRateLimiter rateLimiter;
-
-    @Value("${app.frontend-url}")
-    private String frontendUrl;
+    private final TotpService totpService;
+    private final NotificationService notificationService;
 
     @Override
     public AuthResponse login(LoginRequest request) {
@@ -64,15 +69,9 @@ public class AuthServiceImpl implements AuthService {
             throw new InvalidCredentialsException("Invalid email or password.");
         }
 
-        if (person.getPassword() == null) {
-            // A Super Admin created this account but it hasn't been signed into yet — this
-            // isn't a wrong guess, so it doesn't count against the rate limit, same as the
-            // deactivated/unverified checks below. Distinct message so the frontend can
-            // route to sign-up instead of showing a generic error.
-            throw new ForbiddenActionException("Please finish signing up before logging in.");
-        }
-
-        if (!passwordEncoder.matches(request.password(), person.getPassword())) {
+        if (person.getPassword() == null || !passwordEncoder.matches(request.password(), person.getPassword())) {
+            // person.getPassword() == null covers a legacy row with no password ever set —
+            // short-circuits before matches() so that never NPEs.
             rateLimiter.recordFailure(request.email());
             throw new InvalidCredentialsException("Invalid email or password.");
         }
@@ -81,188 +80,117 @@ public class AuthServiceImpl implements AuthService {
             throw new ForbiddenActionException("This account has been deactivated.");
         }
 
-        if (!person.isEmailVerified()) {
-            // Distinct message from the generic "invalid credentials" above, so the
-            // frontend can route to "verify your email" instead of just showing an error.
-            // Doesn't auto-resend here — repeated failed login attempts shouldn't spam
-            // their inbox; they use the dedicated resend endpoint for that.
-            throw new ForbiddenActionException("Please verify your email before logging in.");
-        }
-
         rateLimiter.recordSuccess(request.email());
-        String token = jwtService.generateToken(person.getEmail());
-        return new AuthResponse(token, person.getId(), person.getFullName(), person.getEmail(), person.getRole(), true);
+        return buildLoginOutcome(person);
     }
 
     @Override
-    public AuthResponse verifyEmail(VerifyEmailRequest request) {
-        rateLimiter.checkAllowed(request.email());
+    public AuthResponse confirmTotpSetup(TotpConfirmRequest request) {
+        Person person = requirePendingAuthPerson(request.pendingAuthToken());
+        rateLimiter.checkAllowed(person.getEmail());
 
-        Person person = personRepository.findByEmailIgnoreCase(request.email())
-                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
-
-        if (person.isEmailVerified()) {
-            throw new InvalidAssignmentException("This email is already verified.");
+        if (person.getTotpEnabledAt() != null) {
+            throw new InvalidAssignmentException("This account has already completed TOTP setup.");
         }
-        if (person.getOtpCode() == null || person.getOtpExpiresAt() == null
-                || person.getOtpExpiresAt().isBefore(LocalDateTime.now())) {
-            rateLimiter.recordFailure(request.email());
-            throw new InvalidCredentialsException("This code has expired. Request a new one.");
+        if (person.getTotpSecret() == null) {
+            // Can't happen through the normal login flow (login generates the secret
+            // before ever handing out this pendingAuthToken) — only reachable if this
+            // token is stale/tampered with.
+            throw new InvalidCredentialsException("This session has expired. Please log in again.");
         }
-        if (!person.getOtpCode().equals(request.otp())) {
-            rateLimiter.recordFailure(request.email());
-            throw new InvalidCredentialsException("Incorrect verification code.");
-        }
-
-        person.setEmailVerified(true);
-        person.setOtpCode(null);
-        person.setOtpExpiresAt(null);
-        Person saved = personRepository.save(person);
-
-        rateLimiter.recordSuccess(request.email());
-        String token = jwtService.generateToken(saved.getEmail());
-        return new AuthResponse(token, saved.getId(), saved.getFullName(), saved.getEmail(), saved.getRole(), true);
-    }
-
-    @Override
-    public void resendOtp(ResendOtpRequest request) {
-        Person person = personRepository.findByEmailIgnoreCase(request.email())
-                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
-
-        if (person.isEmailVerified()) {
-            throw new InvalidAssignmentException("This email is already verified.");
+        if (!totpService.isCodeValid(person.getTotpSecret(), request.code())) {
+            rateLimiter.recordFailure(person.getEmail());
+            throw new InvalidCredentialsException("Incorrect code. Check the time on your phone and try again.");
         }
 
-        // otpExpiresAt = sentAt + OTP_TTL_MINUTES, so "sent less than COOLDOWN ago" is the
-        // same as "expiresAt is still more than (TTL - COOLDOWN) away" — no separate
-        // "last sent" column needed just for this.
-        if (person.getOtpExpiresAt() != null) {
-            LocalDateTime cooldownEndsAt = person.getOtpExpiresAt()
-                    .minusMinutes(OTP_TTL_MINUTES)
-                    .plusSeconds(OTP_RESEND_COOLDOWN_SECONDS);
-            if (cooldownEndsAt.isAfter(LocalDateTime.now())) {
-                throw new InvalidAssignmentException("Please wait before requesting another code.");
-            }
-        }
-
-        sendSignUpCode(person);
-    }
-
-    @Override
-    public AuthResponse signUp(SignUpRequest request) {
-        // Same brute-force shape as verifyEmail/resetPassword — a 6-digit code an attacker
-        // could grind through given enough attempts — so it gets the same guard.
-        rateLimiter.checkAllowed(request.email());
-
-        Person person = personRepository.findByEmailIgnoreCase(request.email())
-                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
-
-        if (person.getPassword() != null) {
-            throw new InvalidAssignmentException("This account has already signed up. Try logging in instead.");
-        }
-        if (person.getOtpCode() == null || person.getOtpExpiresAt() == null
-                || person.getOtpExpiresAt().isBefore(LocalDateTime.now())) {
-            rateLimiter.recordFailure(request.email());
-            throw new InvalidCredentialsException("This code has expired. Request a new one.");
-        }
-        if (!person.getOtpCode().equals(request.otp())) {
-            rateLimiter.recordFailure(request.email());
-            throw new InvalidCredentialsException("Incorrect sign-up code.");
-        }
-
-        rateLimiter.recordSuccess(request.email());
-        person.setPassword(passwordEncoder.encode(request.newPassword()));
-        person.setEmailVerified(true);
-        person.setOtpCode(null);
-        person.setOtpExpiresAt(null);
-        Person saved = personRepository.save(person);
-
-        String token = jwtService.generateToken(saved.getEmail());
-        return new AuthResponse(token, saved.getId(), saved.getFullName(), saved.getEmail(), saved.getRole(), true);
-    }
-
-    @Override
-    public void forgotPassword(ForgotPasswordRequest request) {
-        Person person = personRepository.findByEmailIgnoreCase(request.email()).orElse(null);
-
-        // Deliberately silent for unknown email, a never-claimed account, or the resend
-        // cooldown — same generic outcome either way, so this can't probe registered emails.
-        if (person == null || person.getPassword() == null) {
-            return;
-        }
-        if (person.getResetCodeExpiresAt() != null) {
-            LocalDateTime cooldownEndsAt = person.getResetCodeExpiresAt()
-                    .minusMinutes(RESET_CODE_TTL_MINUTES)
-                    .plusSeconds(RESET_CODE_RESEND_COOLDOWN_SECONDS);
-            if (cooldownEndsAt.isAfter(LocalDateTime.now())) {
-                return;
-            }
-        }
-
-        sendPasswordResetCode(person);
-    }
-
-    @Override
-    public AuthResponse resetPassword(ResetPasswordRequest request) {
-        // Same brute-force shape as verifyEmail — a 6-digit code an attacker could grind
-        // through given enough attempts — so it gets the same guard.
-        rateLimiter.checkAllowed(request.email());
-
-        Person person = personRepository.findByEmailIgnoreCase(request.email()).orElse(null);
-        if (person == null) {
-            rateLimiter.recordFailure(request.email());
-            throw new InvalidCredentialsException("Invalid email or code.");
-        }
-
-        if (person.getResetCode() == null || person.getResetCodeExpiresAt() == null
-                || person.getResetCodeExpiresAt().isBefore(LocalDateTime.now())) {
-            rateLimiter.recordFailure(request.email());
-            throw new InvalidCredentialsException("This code has expired. Request a new one.");
-        }
-        if (!person.getResetCode().equals(request.code())) {
-            rateLimiter.recordFailure(request.email());
-            throw new InvalidCredentialsException("Incorrect reset code.");
-        }
-
-        rateLimiter.recordSuccess(request.email());
-        person.setPassword(passwordEncoder.encode(request.newPassword()));
-        person.setResetCode(null);
-        person.setResetCodeExpiresAt(null);
-        Person saved = personRepository.save(person);
-
-        // Best-effort — the password change itself already succeeded; a flaky confirmation
-        // email shouldn't undo that or block them from logging in with it.
-        try {
-            mailService.send(
-                    saved.getEmail(),
-                    "Your Throughline password was changed",
-                    "Your password was just changed. If this wasn't you, contact your administrator immediately.");
-        } catch (Exception e) {
-            // Ignored on purpose — see comment above.
-        }
-
-        String token = jwtService.generateToken(saved.getEmail());
-        return new AuthResponse(token, saved.getId(), saved.getFullName(), saved.getEmail(), saved.getRole(), saved.isEmailVerified());
-    }
-
-    @Override
-    public void sendPasswordResetCode(Person person) {
-        String code = String.format("%06d", OTP_RANDOM.nextInt(1_000_000));
-        person.setResetCode(code);
-        person.setResetCodeExpiresAt(LocalDateTime.now().plusMinutes(RESET_CODE_TTL_MINUTES));
+        rateLimiter.recordSuccess(person.getEmail());
+        person.setTotpEnabledAt(LocalDateTime.now());
+        clearPendingAuthToken(person);
         personRepository.save(person);
 
-        try {
-            mailService.sendCode(
-                    person.getEmail(),
-                    "Reset your Throughline password",
-                    "Enter this code to reset your password. It expires in " + RESET_CODE_TTL_MINUTES + " minutes.",
-                    code,
-                    frontendUrl + "/reset-password",
-                    "Reset password");
-        } catch (Exception e) {
-            throw new EmailDeliveryException("Could not send the password reset email. Please try again.");
+        List<String> recoveryCodes = generateRecoveryCodes(person);
+        return authenticated(person, recoveryCodes);
+    }
+
+    @Override
+    public AuthResponse verifyTotp(TotpVerifyRequest request) {
+        Person person = requirePendingAuthPerson(request.pendingAuthToken());
+        rateLimiter.checkAllowed(person.getEmail());
+
+        if (person.getTotpEnabledAt() == null || person.getTotpSecret() == null) {
+            throw new InvalidCredentialsException("This session has expired. Please log in again.");
         }
+
+        if (totpService.isCodeValid(person.getTotpSecret(), request.code())) {
+            rateLimiter.recordSuccess(person.getEmail());
+            clearPendingAuthToken(person);
+            personRepository.save(person);
+            return authenticated(person, null);
+        }
+
+        // Not a valid live code — try it as a recovery code before giving up. A recovery
+        // code lets them in this once, but also assumes their original device is gone: it
+        // clears enrollment entirely, so their very next login starts fresh at setup.
+        TotpRecoveryCode matchedCode = totpRecoveryCodeRepository.findByPersonIdAndUsedAtIsNull(person.getId())
+                .stream()
+                .filter(rc -> passwordEncoder.matches(request.code(), rc.getCodeHash()))
+                .findFirst()
+                .orElse(null);
+
+        if (matchedCode == null) {
+            rateLimiter.recordFailure(person.getEmail());
+            throw new InvalidCredentialsException("Incorrect code.");
+        }
+
+        rateLimiter.recordSuccess(person.getEmail());
+        matchedCode.setUsedAt(LocalDateTime.now());
+        totpRecoveryCodeRepository.save(matchedCode);
+
+        person.setTotpSecret(null);
+        person.setTotpEnabledAt(null);
+        clearPendingAuthToken(person);
+        personRepository.save(person);
+
+        return authenticated(person, null);
+    }
+
+    @Override
+    public CheckEmailResponse checkEmailForPasswordReset(PasswordResetEmailRequest request) {
+        // Deliberately NOT silent about whether the account exists — an internal, offline
+        // tool gets more value from telling a real user their account genuinely isn't
+        // found than from the enumeration-proof non-answer a public internet-facing
+        // service would need. That tradeoff is exactly why this is rate-limited: without a
+        // guess limit, a truthful yes/no answer turns this into a roster-scanning tool.
+        rateLimiter.checkAllowed(request.email());
+
+        boolean exists = personRepository.findByEmailIgnoreCase(request.email()).isPresent();
+        if (exists) {
+            rateLimiter.recordSuccess(request.email());
+        } else {
+            rateLimiter.recordFailure(request.email());
+        }
+        return new CheckEmailResponse(exists);
+    }
+
+    @Override
+    public PasswordResetRequestOutcome createPasswordResetRequest(PasswordResetEmailRequest request) {
+        Person person = personRepository.findByEmailIgnoreCase(request.email())
+                .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+
+        boolean alreadyPending = passwordResetRequestRepository
+                .findByPersonIdAndStatus(person.getId(), PasswordResetRequestStatus.PENDING)
+                .isPresent();
+        if (alreadyPending) {
+            return new PasswordResetRequestOutcome(PasswordResetRequestOutcome.ALREADY_PENDING);
+        }
+
+        PasswordResetRequest resetRequest = new PasswordResetRequest();
+        resetRequest.setPerson(person);
+        passwordResetRequestRepository.save(resetRequest);
+
+        notificationService.notifyPasswordResetRequestReceived(resetRequest);
+
+        return new PasswordResetRequestOutcome(PasswordResetRequestOutcome.CREATED);
     }
 
     @Override
@@ -272,24 +200,80 @@ public class AuthServiceImpl implements AuthService {
         return personMapper.toResponse(person, teamMemberRepository.findByPersonId(person.getId()));
     }
 
-    @Override
-    public void sendSignUpCode(Person person) {
-        String otp = String.format("%06d", OTP_RANDOM.nextInt(1_000_000));
-        person.setOtpCode(otp);
-        person.setOtpExpiresAt(LocalDateTime.now().plusMinutes(OTP_TTL_MINUTES));
-        personRepository.save(person);
-
-        try {
-            mailService.sendCode(
-                    person.getEmail(),
-                    "Complete your Throughline sign-up",
-                    "You've been added to Throughline. Enter this code to set your password. It expires in "
-                            + OTP_TTL_MINUTES + " minutes.",
-                    otp,
-                    frontendUrl + "/sign-up",
-                    "Complete sign-up");
-        } catch (Exception e) {
-            throw new EmailDeliveryException("Could not send the sign-up email. Please try again.");
+    /** After identity + password succeeds, decides whether the login is actually done or
+     *  still needs a TOTP step, and returns the correspondingly shaped AuthResponse either
+     *  way. */
+    private AuthResponse buildLoginOutcome(Person person) {
+        if (!person.isTotpRequired()) {
+            return authenticated(person, null);
         }
+
+        if (person.getTotpEnabledAt() == null) {
+            // Not yet enrolled. Reuse an already-generated-but-unconfirmed secret rather
+            // than replacing it — a repeated login attempt mid-enrollment must show the
+            // same QR the person may have already scanned, not a new one.
+            if (person.getTotpSecret() == null) {
+                person.setTotpSecret(totpService.generateSecret());
+            }
+            String pendingToken = issuePendingAuthToken(person);
+            String qrCodeDataUri = totpService.buildQrCodeDataUri(person.getEmail(), person.getTotpSecret());
+            return new AuthResponse(null, person.getId(), person.getFullName(), person.getEmail(), person.getRole(),
+                    AuthResponse.STATUS_TOTP_SETUP_REQUIRED, pendingToken, person.getTotpSecret(), qrCodeDataUri, null);
+        }
+
+        String pendingToken = issuePendingAuthToken(person);
+        return new AuthResponse(null, person.getId(), person.getFullName(), person.getEmail(), person.getRole(),
+                AuthResponse.STATUS_TOTP_REQUIRED, pendingToken, null, null, null);
+    }
+
+    private AuthResponse authenticated(Person person, List<String> recoveryCodes) {
+        String token = jwtService.generateToken(person.getEmail());
+        return new AuthResponse(token, person.getId(), person.getFullName(), person.getEmail(), person.getRole(),
+                AuthResponse.STATUS_AUTHENTICATED, null, null, null, recoveryCodes);
+    }
+
+    private String issuePendingAuthToken(Person person) {
+        byte[] bytes = new byte[32];
+        SECURE_RANDOM.nextBytes(bytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        person.setPendingAuthToken(token);
+        person.setPendingAuthTokenExpiresAt(LocalDateTime.now().plusMinutes(PENDING_AUTH_TOKEN_TTL_MINUTES));
+        personRepository.save(person);
+        return token;
+    }
+
+    private void clearPendingAuthToken(Person person) {
+        person.setPendingAuthToken(null);
+        person.setPendingAuthTokenExpiresAt(null);
+    }
+
+    private Person requirePendingAuthPerson(String pendingAuthToken) {
+        Person person = personRepository.findByPendingAuthToken(pendingAuthToken)
+                .orElseThrow(() -> new InvalidCredentialsException("This session has expired. Please log in again."));
+        if (person.getPendingAuthTokenExpiresAt() == null
+                || person.getPendingAuthTokenExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new InvalidCredentialsException("This session has expired. Please log in again.");
+        }
+        return person;
+    }
+
+    /** Only ever called right as enrollment is confirmed — never regenerated afterward via
+     *  this path, so a person can't accidentally invalidate their existing codes just by
+     *  logging in again. A lost set is a Super Admin TOTP reset away (see
+     *  PersonServiceImpl.resetTotp), which re-enrolls from scratch including a fresh batch. */
+    private List<String> generateRecoveryCodes(Person person) {
+        totpRecoveryCodeRepository.deleteByPersonId(person.getId());
+
+        List<String> plainCodes = new ArrayList<>(RECOVERY_CODE_COUNT);
+        for (int i = 0; i < RECOVERY_CODE_COUNT; i++) {
+            String plain = String.format("%04d-%04d", SECURE_RANDOM.nextInt(10_000), SECURE_RANDOM.nextInt(10_000));
+            plainCodes.add(plain);
+
+            TotpRecoveryCode recoveryCode = new TotpRecoveryCode();
+            recoveryCode.setPerson(person);
+            recoveryCode.setCodeHash(passwordEncoder.encode(plain));
+            totpRecoveryCodeRepository.save(recoveryCode);
+        }
+        return plainCodes;
     }
 }

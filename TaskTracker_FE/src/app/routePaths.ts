@@ -3,10 +3,9 @@
  *  ROUTES lived in routes.tsx itself that would be a circular import crashing at runtime. */
 export const ROUTES = {
   login: '/login',
-  verifyEmail: '/verify-email',
-  signUp: '/sign-up',
   forgotPassword: '/forgot-password',
-  resetPassword: '/reset-password',
+  totpSetup: '/totp-setup',
+  totpVerify: '/totp-verify',
   dashboard: '/',
   tasks: '/tasks',
   taskDetail: (taskId: number | string) => `/tasks/${taskId}`,

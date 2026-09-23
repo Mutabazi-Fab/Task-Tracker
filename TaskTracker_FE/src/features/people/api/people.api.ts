@@ -5,12 +5,14 @@ import type {
   AccountStatusChangeActivity,
   ChangeRoleRequest,
   CreatePersonRequest,
+  DismissPasswordResetRequestRequest,
   Person,
   PersonStatistics,
   PersonTaskHistoryItem,
+  ResetTotpRequest,
   RoleChangeActivity,
-  SendPasswordResetRequest,
   SetAccountActiveRequest,
+  SetPasswordRequest,
 } from '../../../types/person.types'
 
 /** GET /people returns a Spring Data Page<PersonResponse> — a large page size is passed so
@@ -40,8 +42,8 @@ export async function fetchPersonTaskHistory(id: number): Promise<PersonTaskHist
 }
 
 /** Super-Admin-only, enforced server-side — there is no public self-registration. Creates
- *  the account passwordless and unverified, then sends a best-effort sign-up email with a
- *  code the person uses at /sign-up to set their own password. */
+ *  the account fully login-ready (password hashed) with no mail dependency at all, so it
+ *  works fully offline. */
 export async function createPerson(payload: CreatePersonRequest): Promise<Person> {
   const { data } = await axiosClient.post<Person>(endpoints.people.create(), payload)
   return data
@@ -67,9 +69,24 @@ export async function fetchRoleChangeActivity(requesterId: number): Promise<Role
   return data.content
 }
 
-/** Super-Admin-only, enforced server-side. Fails if this person has never signed up. */
-export async function sendPasswordReset(id: number, payload: SendPasswordResetRequest): Promise<void> {
-  await axiosClient.post(endpoints.people.sendPasswordReset(id), payload)
+/** Super-Admin-only, enforced server-side. Sets the password directly — no code, no
+ *  email — and never touches TOTP enrollment. If this person has a pending
+ *  password-reset request, it's auto-marked fulfilled. */
+export async function setPassword(id: number, payload: SetPasswordRequest): Promise<void> {
+  await axiosClient.post(endpoints.people.setPassword(id), payload)
+}
+
+/** Super-Admin-only, enforced server-side. Dismisses a pending password-reset request
+ *  without changing the person's password. */
+export async function dismissPasswordResetRequest(id: number, payload: DismissPasswordResetRequestRequest): Promise<void> {
+  await axiosClient.post(endpoints.people.dismissPasswordResetRequest(id), payload)
+}
+
+/** Super-Admin-only, enforced server-side — for a lost/replaced phone. Fails if this
+ *  person was never enrolled in TOTP. Their next login re-enters enrollment with a fresh
+ *  QR code and a fresh batch of recovery codes. */
+export async function resetTotp(id: number, payload: ResetTotpRequest): Promise<void> {
+  await axiosClient.post(endpoints.people.resetTotp(id), payload)
 }
 
 /** Super-Admin-only — every account activation/deactivation ever made, org-wide, newest
