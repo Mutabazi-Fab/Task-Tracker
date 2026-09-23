@@ -1,9 +1,8 @@
-<img width="2400" height="1792" alt="Use case_diagram" src="https://github.com/user-attachments/assets/3d5465ff-e6a7-450d-87ef-95668de212de" /># Throughline  - Task Management System
+# Throughline  - Task Management System
 
 Throughline is a task-progress tracking system built around one rule: **every percentage
 is justified by a dated comment, and every reassignment is justified by a reason.** It's
-themed around a Rwandan military/banking hierarchy (ranks, Directors, an Executive/CEO<img width="2400" height="1792" alt="Use case_diagram" src="https://github.com/user-attachments/assets/1be64a3b-91f5-4260-9afb-6176bcae327d" />
-
+themed around a Rwandan military/banking hierarchy (ranks, Directors, an Executive/CEO
 seat, Departments), but underneath that theming it's a general-purpose "who's doing what,
 how far along is it, who said so, and who signed off on it" tracker.
 
