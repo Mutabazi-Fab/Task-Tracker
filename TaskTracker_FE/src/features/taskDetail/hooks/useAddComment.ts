@@ -1,11 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { addComment } from '../api/taskDetail.api'
 
-/**
- * The ONLY mutation that changes a task's progress. A comment can move
- * org-wide numbers, so dashboard/people/teams are invalidated too, not just
- * this task.
- */
+/** The ONLY mutation that changes a task's progress. */
 export function useAddComment(taskId: number) {
   const queryClient = useQueryClient()
 

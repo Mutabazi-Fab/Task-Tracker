@@ -8,11 +8,8 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/** A reusable "Source Detail" suggestion for a given source category — e.g. "BNR" under
- *  Regulator, "E&Y" under Auditor. Source Detail itself stays free text everywhere (this
- *  never restricts what can be typed); an entry here is only ever a saved, pickable
- *  suggestion so the next person creating a task doesn't have to retype it. Who may add one
- *  is enforced in TaskSourceEntryServiceImpl (Executive-or-above), not here. */
+/** A reusable "Source Detail" suggestion for a given source category — e.g. "BNR" under Regulator,
+ *  "E&Y" under Auditor. */
 @Entity
 @Table(name = "task_source_entries")
 @Getter

@@ -19,12 +19,10 @@ public record TaskDetailResponse(
     Long assigneeId,
     AssigneeType assigneeType,
     // Department this task actually lives in, regardless of assigneeType — see
-    // TaskServiceImpl.resolveTaskDepartment. Lets the frontend gate pin/reassign/delete UI
-    // against "does the viewer head this department" without a second fetch.
+    // TaskServiceImpl.resolveTaskDepartment.
     Long taskDepartmentId,
-    // Team actually responsible for this task: same as assigneeId for a top-level
-    // TEAM-assigned task, else its parent task's team. Lets the frontend decide "is the
-    // viewer this task's team leader" without a second fetch for the parent.
+    // Team actually responsible for this task: same as assigneeId for a top-level TEAM-assigned task, else
+    // its parent task's team.
     Long owningTeamId,
     TaskStatus status,
     int progressPercentage,
@@ -44,9 +42,8 @@ public record TaskDetailResponse(
     // Shown next to assignedByName so it's clear at a glance which tier this task came
     // from (e.g. "Director" vs "Executive").
     Role assignedByRole,
-    // Who actually decides a deadline extension — a Director-or-above, always, even when
-    // assignedById is a mere Team Leader. The frontend should gate deadline-decision UI
-    // off THIS field, not assignedById. See TaskServiceImpl.resolveDeadlineDecider.
+    // Who actually decides a deadline extension — a Director-or-above, always, even when assignedById is a
+    // mere Team Leader.
     String deadlineDeciderName,
     Long deadlineDeciderId,
     Long parentTaskId,

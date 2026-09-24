@@ -18,16 +18,12 @@ const STATUS_CLASS: Record<ExtensionRequestStatus, string> = {
 interface DeadlineExtensionHistoryItemProps {
   extension: DeadlineExtension
   taskId: number
-  /** True only for whoever can decide THIS task's extensions (its setter, or the
-   *  Director/Super Admin — Executive/Super Admin for a Department task — override) —
-   *  see TaskDetailPage. Nobody else sees the inline approve/reject controls, even for a
-   *  request that's still pending. */
+  /** True only for whoever can decide THIS task's extensions (its setter, or the Director/Super Admin —
+   *  Executive/Super Admin for a Department task — override) — see TaskDetailPage. */
   canDecide: boolean
 }
 
-/** One request, and however it was (or wasn't yet) decided. A PENDING row a decider is
- *  allowed to act on gets inline approve/reject controls right here — no separate modal,
- *  since there's nothing more to pick than an optional note. */
+/** One request, and however it was (or wasn't yet) decided. */
 export function DeadlineExtensionHistoryItem({ extension, taskId, canDecide }: DeadlineExtensionHistoryItemProps) {
   const [decisionNote, setDecisionNote] = useState('')
   const { currentUser } = useAuth()

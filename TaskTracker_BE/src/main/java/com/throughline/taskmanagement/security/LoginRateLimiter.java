@@ -8,17 +8,8 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * A minimal, in-memory brute-force guard for endpoints where an attacker gets to keep
- * guessing a secret — a password at login, or a 6-digit OTP/reset code at email
- * verification. Keyed by email, not IP: this app has no reverse-proxy/IP-forwarding setup
- * to trust a client-supplied IP header from, and email-keying already stops the actual
- * threat (grinding through passwords/codes against ONE target account), even though it
- * doesn't stop someone spreading low-volume guesses thinly across many accounts. Deliberately
- * simple: single-instance, in-memory only — attempt counts reset on restart and wouldn't be
- * shared across multiple app instances behind a load balancer. Fine at this project's scale;
- * a real multi-instance deployment would need a shared store (Redis, a DB table) instead.
- */
+/** A minimal, in-memory brute-force guard for endpoints where an attacker gets to keep guessing a
+ *  secret — a password at login, or a 6-digit OTP/reset code at email verification. */
 @Component
 public class LoginRateLimiter {
 

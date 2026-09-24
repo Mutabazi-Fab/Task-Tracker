@@ -2,9 +2,8 @@ import styles from './ProgressSlider.module.css'
 
 const TICKS = [0, 25, 50, 75, 100]
 
-/** Only applied on release (see handleRelease) — snapping live while dragging used to
- *  swallow a whole band of values around each tick, making it impossible to land on
- *  anything near one. Kept small so it's a subtle correction, not a fight with the drag. */
+/** Only applied on release (see handleRelease) — snapping live while dragging used to swallow a whole
+ *  band of values around each tick, making it impossible to land on anything near one. */
 const SNAP_THRESHOLD = 2
 
 interface ProgressSliderProps {
@@ -13,10 +12,7 @@ interface ProgressSliderProps {
   disabled?: boolean
 }
 
-/** A single draggable bar from 0 to 100, with reference ticks at 0/25/50/75/100. While
- *  dragging, every value is reachable exactly; only on release does it snap to a nearby
- *  tick (see SNAP_THRESHOLD). Built on a native `<input type="range">` for free keyboard/
- *  touch/pointer support — the ticks and value bubble are purely visual overlays. */
+/** A single draggable bar from 0 to 100, with reference ticks at 0/25/50/75/100. */
 export function ProgressSlider({ value, onChange, disabled }: ProgressSliderProps) {
   function handleRelease(current: number) {
     const nearestTick = TICKS.reduce((closest, tick) => (Math.abs(tick - current) < Math.abs(closest - current) ? tick : closest));

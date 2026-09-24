@@ -122,14 +122,9 @@ public class TaskMapper {
     }
 
     /** A rollup task's (TEAM/DEPARTMENT) percentage is purely derived from its children (see
-     *  TaskServiceImpl.recalculateParentRollup), so its Trend chart is reconstructed by
-     *  replaying every descendant leaf's comment timeline and recomputing the rollup average
-     *  at each historical instant instead of only "now".
-     *
-     *  Branch is decided by assigneeType, NOT by whether the task has its own PROGRESS
-     *  comments — every task gets one opening comment at creation regardless, so that signal
-     *  used to short-circuit a rollup task straight past its real reconstruction, leaving the
-     *  chart stuck at one 0% point forever. An INDIVIDUAL task's own comments ARE its history. */
+     *  TaskServiceImpl.recalculateParentRollup), so its Trend chart is reconstructed by replaying every
+     *  descendant leaf's comment timeline and recomputing the rollup average at each historical instant
+     *  instead of only "now". */
     private List<TaskTimelineResponse> buildRollupTimeline(Task task) {
         if (task.getAssigneeType() == AssigneeType.INDIVIDUAL) {
             return task.getComments() == null ? List.of()
@@ -271,9 +266,8 @@ public class TaskMapper {
         Long assigneeId = assigneeIdOf(task);
         Person deadlineDecider = resolveDeadlineDecider(task);
 
-        // The task's own team when it's TEAM-assigned, else its parent's team if the parent
-        // is TEAM-assigned (an ordinary leaf subtask). Checking the task's OWN assigneeType
-        // first, rather than "parentTask == null", makes this correct one level deeper.
+        // The task's own team when it's TEAM-assigned, else its parent's team if the parent is TEAM-assigned
+        // (an ordinary leaf subtask).
         Long owningTeamId = task.getAssigneeType() == AssigneeType.TEAM
                 ? (task.getAssignedTeam() != null ? task.getAssignedTeam().getId() : null)
                 : (task.getParentTask() != null && task.getParentTask().getAssignedTeam() != null
@@ -283,10 +277,8 @@ public class TaskMapper {
                 task.getComments().stream().map(this::toCommentResponse).toList() : List.of();
         List<ReassignmentResponse> reassignments = task.getReassignments() != null ?
                 task.getReassignments().stream().map(this::toReassignmentResponse).toList() : List.of();
-        // DISCUSSION comments never carry a real percentage reading (see CommentType) —
-        // excluded here so the trend chart only ever plots genuine progress updates. A
-        // rollup task (TEAM/DEPARTMENT) has none of its own, so its history is reconstructed
-        // from its children instead — see buildRollupTimeline.
+        // DISCUSSION comments never carry a real percentage reading (see CommentType) — excluded here so the
+        // trend chart only ever plots genuine progress updates.
         List<TaskTimelineResponse> timeline = buildRollupTimeline(task);
         List<SubtaskSummaryResponse> subtasks = task.getSubtasks() != null ?
                 task.getSubtasks().stream().map(this::toSubtaskSummary).toList() : List.of();

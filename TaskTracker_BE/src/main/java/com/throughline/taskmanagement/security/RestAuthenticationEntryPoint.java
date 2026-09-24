@@ -13,13 +13,8 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
-/**
- * 401s raised by the security filter chain itself never reach GlobalExceptionHandler — this
- * keeps their body the same shape anyway.
- *
- * Note the import: this Spring Boot version ships Jackson 3.x, which renamed its package from
- * com.fasterxml.jackson.* to tools.jackson.* — this is NOT the classic Jackson 2 ObjectMapper.
- */
+/** 401s raised by the security filter chain itself never reach GlobalExceptionHandler — this keeps
+ *  their body the same shape anyway. */
 @Component
 @RequiredArgsConstructor
 public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {

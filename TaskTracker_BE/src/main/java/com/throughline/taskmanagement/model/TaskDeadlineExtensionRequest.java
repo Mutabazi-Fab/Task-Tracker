@@ -12,9 +12,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** Append-only, same shape as {@link TaskReassignment} — a row is never deleted or reused.
- *  A direct extension (see TaskServiceImpl.extendDeadlineDirectly) still creates one of
- *  these, self-approved, so "who moved this deadline and when" has one place to look. */
+/** Append-only, same shape as {@link TaskReassignment} — a row is never deleted or reused. */
 @Entity
 @Table(name = "task_deadline_extension_requests", indexes = {
         @Index(name = "idx_task_deadline_ext_requests_task_id", columnList = "task_id")
@@ -69,10 +67,7 @@ public class TaskDeadlineExtensionRequest {
     /** Null while PENDING. */
     private LocalDateTime decidedAt;
 
-    /** Null until explicitly forwarded — see TaskServiceImpl.forwardExtensionRequestToApprover.
-     *  Only ever set on a CEO-mandated chain (see TaskServiceImpl.isCeoMandated), where the
-     *  Director it first lands on can reject but not approve. Always null for an ordinary
-     *  Director-originated task, where decider and approver are the same person. */
+    /** Null until explicitly forwarded — see TaskServiceImpl.forwardExtensionRequestToApprover. */
     @ManyToOne
     @JoinColumn(name = "forwarded_by_id")
     private Person forwardedBy;

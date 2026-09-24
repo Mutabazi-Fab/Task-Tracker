@@ -10,18 +10,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * The org-chart tier above Team — Executive/CEO-level tasks are assigned to a Department,
- * never to a team or person directly (see Task.assignedDepartment, AssigneeType.DEPARTMENT).
- * Every Team and every Person belongs to exactly one Department (enforced in
- * TeamServiceImpl.createTeam / PersonServiceImpl.createPerson, not a DB constraint — same
- * approach this app already takes for other required-but-not-DB-enforced invariants, e.g.
- * a Task always having exactly one of assignedTeam/assignedPerson set).
- *
- * Administration (create/rename/reassign head) is Super-Admin-only — the same tier that
- * already owns org-chart governance elsewhere (role changes, account activation). A
- * Director or Executive can read this, never restructure it.
- */
+/** The org-chart tier above Team — Executive/CEO-level tasks are assigned to a Department, never to a
+ *  team or person directly (see Task.assignedDepartment, AssigneeType.DEPARTMENT). */
 @Entity
 @Table(name = "departments")
 @Getter
@@ -36,9 +26,7 @@ public class Department {
     @Column(unique = true, nullable = false)
     private String name;
 
-    /** The one Director accountable for everything assigned to this department.
-     *  LAZY — see Task.java's comment on assignedBy for why every ManyToOne feeding into
-     *  the Person <-> Department cycle is explicitly lazy. */
+    /** The one Director accountable for everything assigned to this department. */
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "head_director_id", nullable = false)
     private Person headDirector;

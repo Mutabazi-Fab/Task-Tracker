@@ -3,12 +3,7 @@ package com.throughline.taskmanagement.dto.response;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** Backs the Incident Management dashboard. Reproduces every KPI the source Excel's
- *  Dashboard sheet computed (total/open-monitoring/critical-high/overdue tiles, gross/
- *  recovery/net loss sums, regulator-notifiable count, status and severity breakdowns) plus
- *  additions the underlying data already supports but the Excel never surfaced: a category
- *  breakdown, a monthly trend, and an SLA-compliance view (closedLateCount/
- *  slaComplianceRate) using the new closed-late flag the source formulas never had. */
+/** Backs the Incident Management dashboard. */
 public record IncidentDashboardResponse(
     long totalIncidents,
     long openOrMonitoringCount,

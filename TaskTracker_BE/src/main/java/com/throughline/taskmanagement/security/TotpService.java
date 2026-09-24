@@ -15,12 +15,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.Base64;
 
-/**
- * RFC 6238 TOTP, wrapping dev.samstevens.totp — every operation here is pure local
- * computation (HMAC over the system clock), no network call, so this works identically
- * with or without internet access. Google Authenticator, Authy, Microsoft Authenticator,
- * 1Password etc. all speak this same open standard; nothing here is Google-specific.
- */
+/** RFC 6238 TOTP, wrapping dev.samstevens.totp — every operation here is pure local computation (HMAC
+ *  over the system clock), no network call, so this works identically with or without internet access. */
 @Component
 public class TotpService {
 

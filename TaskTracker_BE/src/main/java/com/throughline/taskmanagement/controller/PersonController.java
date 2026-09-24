@@ -121,9 +121,7 @@ public class PersonController {
         return ResponseEntity.ok(personService.getAccountStatusChangeActivity(requesterId, pageable));
     }
 
-    /** Super-Admin-only — sets this person's password directly, entirely offline. Reason
-     *  is mandatory. Never touches TOTP enrollment. If this person has a PENDING
-     *  PasswordResetRequest, it's auto-marked FULFILLED. */
+    /** Super-Admin-only — sets this person's password directly, entirely offline. */
     @PostMapping("/{id}/set-password")
     public ResponseEntity<Void> setPasswordDirectly(
             @PathVariable Long id, @Valid @RequestBody SetPasswordRequest request, Authentication authentication) {
@@ -155,10 +153,8 @@ public class PersonController {
         return ResponseEntity.ok().build();
     }
 
-    // No PUT /{id}/team/{teamId} — a person can belong to multiple teams now, so "assign this
-    // person to a team" is no longer a single-target operation. Use
-    // POST /api/v1/teams/{teamId}/members instead (TeamController), which also carries the
-    // mandatory reason and enforces who's allowed to do it.
+    // No PUT /{id}/team/{teamId} — a person can belong to multiple teams now, so "assign this person to a
+    // team" is no longer a single-target operation.
 
     /** Self-only — enforced in PersonServiceImpl, not just id === current user client-side.
      *  taskId must already be one of the caller's own assigned tasks, and rejects a 4th

@@ -19,10 +19,7 @@ const ASSIGNED_BY_ROLE_LABEL: Record<Role, string> = {
   MEMBER: 'Member',
 }
 
-/** Assigned to / by / date / status / reassign count — the at-a-glance ownership facts. A
- *  team-assigned task shows its leader (one more fetch) plus the full roster below,
- *  read-only, same chip Teams itself uses. The CEO seat (EXECUTIVE) doesn't get the
- *  roster on any team task — she's meant to see progress and comment, not team composition. */
+/** Assigned to / by / date / status / reassign count — the at-a-glance ownership facts. */
 export function AssignmentMetaPanel({ task }: { task: TaskDetail }) {
   const { currentUser } = useAuth()
   const isCeo = currentUser?.role === 'EXECUTIVE'

@@ -10,8 +10,6 @@ public interface TaskSourceCategoryService {
      *  the Source dropdown, same as Department's read access. Alphabetical. */
     List<TaskSourceCategoryResponse> getCategories();
 
-    /** Executive-or-above, enforced here. Idempotent: adding a name that already exists
-     *  (case-insensitive) just returns the existing category instead of erroring or
-     *  duplicating it. */
+    /** Executive-or-above, enforced here. */
     TaskSourceCategoryResponse addCategory(AddTaskSourceCategoryRequest request);
 }

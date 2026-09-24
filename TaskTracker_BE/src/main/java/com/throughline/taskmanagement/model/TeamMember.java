@@ -7,13 +7,8 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/**
- * Current membership: one row per (team, person). isLeader is scoped to
- * THIS row, not global — a person can be the leader of one team and a
- * plain member of another via a separate TeamMember row. This is current
- * state only; the permanent history of who was added/removed and why
- * lives in {@link TeamMembershipChange}, not here.
- */
+/** Current membership: one row per (team, person). isLeader is scoped to THIS row, not global — a
+ *  person can be the leader of one team and a plain member of another via a separate TeamMember row. */
 @Entity
 @Table(name = "team_members",
         uniqueConstraints = @UniqueConstraint(columnNames = {"team_id", "person_id"}),

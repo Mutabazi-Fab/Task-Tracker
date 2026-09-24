@@ -18,10 +18,8 @@ import java.util.Optional;
 
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
-    /** A Member's visible task set: assigned to them or their team, plus the ancestor chain
-     *  (parent, grandparent) so they can also see the Department/implementation task their
-     *  work was carved out of. Depth never exceeds 2, so two hops always covers it. Does NOT
-     *  expand to siblings — those are reached by navigating into the visible parent instead. */
+    /** A Member's visible task set: assigned to them or their team, plus the ancestor chain (parent,
+     *  grandparent) so they can also see the Department/implementation task their work was carved out of. */
     String VISIBLE_TO_PERSON_OR_ANCESTOR =
             "(t.assignedPerson.id = :personId "
             + "OR t.assignedTeam.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.person.id = :personId) "
@@ -59,16 +57,10 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     // created. assignedBy doubles as "creator" for top-level tasks.
     Page<Task> findByParentTaskIsNullAndAssignedById(Long assignedById, Pageable pageable);
 
-    // Director-tier department scoping for GET /tasks and /tasks/search — a plain Director
-    // only sees tasks belonging to their own department (derived per assignee type: a
-    // DEPARTMENT task's own department, a TEAM task's team's department, or an INDIVIDUAL
-    // task's assignee's department — exactly one is ever set). Every hop is an EXPLICIT
-    // LEFT JOIN, not path navigation — Hibernate compiles a bare path through a nullable
-    // to-one association as an INNER join, so with three mutually-exclusive associations
-    // ANDed together, at most one could ever match and every row would silently drop (caught
-    // by TaskRepositoryDepartmentScopingTest, a real-DB test, not by inspection).
-    // t.parentTask IS NULL keeps this to top-level tasks only — a subtask already shows up
-    // on its parent's own Subtasks panel, it doesn't need to also appear here.
+    // Director-tier department scoping for GET /tasks and /tasks/search — a plain Director only sees tasks
+    // belonging to their own department (derived per assignee type: a DEPARTMENT task's own department, a
+    // TEAM task's team's department, or an INDIVIDUAL task's assignee's department — exactly one is ever
+    // set).
     @Query("SELECT t FROM Task t "
             + "LEFT JOIN t.assignedDepartment dept "
             + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
@@ -111,20 +103,17 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             + "AND t.parentTask IS NULL")
     List<Task> findByDepartmentId(@Param("departmentId") Long departmentId);
 
-    // Backs the Executive Dashboard's task grid: not "every top-level task", but the two
-    // things worth an Executive's attention regardless of depth — anything CRITICAL, and
-    // anything an Executive/Super Admin personally assigned. Deliberately not depth-scoped:
-    // a CRITICAL subtask matters just as much as a CRITICAL Department task.
+    // Backs the Executive Dashboard's task grid: not "every top-level task", but the two things worth an
+    // Executive's attention regardless of depth — anything CRITICAL, and anything an Executive/Super Admin
+    // personally assigned.
     @Query("SELECT t FROM Task t WHERE t.severity = :severity OR t.assignedBy.role IN :executiveRoles")
     Page<Task> findBySeverityOrAssignedByRoleIn(
             @Param("severity") TaskSeverity severity,
             @Param("executiveRoles") List<Role> executiveRoles,
             Pageable pageable);
 
-    // The department-scoped equivalent of findBySeverityOrAssignedByRoleIn, for the
-    // Director Dashboard's "Critical & CEO-assigned" panel — this Director's own department,
-    // any depth, matching either filter. Same LEFT-JOIN department derivation as
-    // findByDepartmentId.
+    // The department-scoped equivalent of findBySeverityOrAssignedByRoleIn, for the Director Dashboard's
+    // "Critical & CEO-assigned" panel — this Director's own department, any depth, matching either filter.
     @Query("SELECT t FROM Task t "
             + "LEFT JOIN t.assignedDepartment dept "
             + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
@@ -198,9 +187,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     @Query("SELECT COALESCE(AVG(t.progressPercentage), 0.0) FROM Task t WHERE t.assignedTeam.id = :teamId")
     Double getAverageProgressByAssignedTeamId(@Param("teamId") Long teamId);
 
-    // A person's tasks scoped to ONE team, not blended across every team they belong to — a
-    // subtask is attributed via its parent's assignedTeam. Backs TeamStatisticsResponse.
-    // memberProgresses and a person's per-team stats breakdown.
+    // A person's tasks scoped to ONE team, not blended across every team they belong to — a subtask is
+    // attributed via its parent's assignedTeam.
     @Query("SELECT t FROM Task t WHERE t.assignedPerson.id = :personId AND t.parentTask.assignedTeam.id = :teamId")
     List<Task> findByAssignedPersonIdAndTeamId(@Param("personId") Long personId, @Param("teamId") Long teamId);
     

@@ -11,16 +11,10 @@ import { CreateSubtaskModal } from './CreateSubtaskModal'
 import type { TaskDetail } from '../../../types/task.types'
 import styles from './SubtasksPanel.module.css'
 
-/** Rendered for any task that can still be broken down further: a TEAM-assigned task under
- *  depth 2 (leaf-subtask flow, scoped to that team's roster), or a DEPARTMENT-assigned task
- *  (the implementation-task case, team-or-individual, org-wide) — see TaskDetailPage's
- *  canHaveSubtasks, mirrored exactly so this is never rendered with nothing to offer. A
- *  Department task can have more than one implementation task under it (parallel teams on
- *  the same mandate); this only ever adds a child, never converts the Department task
- *  itself. "Add subtask" is shown to a Director/Super Admin, the relevant Team Leader, or
- *  (Department task) that Department's head Director. The CEO seat (EXECUTIVE) never gets
- *  it — turning her Department task into real work is the Department's own Director's
- *  call; Super Admin keeps it as an unrestricted system-governance seat. */
+/** Rendered for any task that can still be broken down further: a TEAM-assigned task under depth 2
+ *  (leaf-subtask flow, scoped to that team's roster), or a DEPARTMENT-assigned task (the
+ *  implementation-task case, team-or-individual, org-wide) — see TaskDetailPage's canHaveSubtasks,
+ *  mirrored exactly so this is never rendered with nothing to offer. */
 export function SubtasksPanel({ task }: { task: TaskDetail }) {
   const { currentUser, isDirector, isExecutive } = useAuth()
   const [createOpen, setCreateOpen] = useState(false)
@@ -32,9 +26,8 @@ export function SubtasksPanel({ task }: { task: TaskDetail }) {
   const isThisTeamsLeader = currentUser?.teams.some((t) => t.teamId === task.assigneeId && t.isLeader)
   const isThisDepartmentsHead =
     isDepartmentTask && departmentQuery.data?.headDirectorId === currentUser?.id
-  // Mirrors TaskServiceImpl.createLeafSubtask: a plain Director must head THIS task's own
-  // department, not merely outrank a Member. Compared via taskDepartmentId against the
-  // viewer's own departmentId, same simplifying assumption used across this app.
+  // Mirrors TaskServiceImpl.createLeafSubtask: a plain Director must head THIS task's own department,
+  // not merely outrank a Member.
   const isPlainDirector = isDirector && !isExecutive
   const headsThisTasksDepartment =
     isPlainDirector && task.taskDepartmentId !== null && task.taskDepartmentId === currentUser?.departmentId

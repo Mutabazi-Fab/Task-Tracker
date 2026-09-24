@@ -4,9 +4,7 @@ import { StatusChip } from '../../../components/ui/StatusChip'
 import type { TaskDetail } from '../../../types/task.types'
 import styles from './TaskDetailHeader.module.css'
 
-/** Code, status chip, severity badge (if set), pin indicator (if pinned), title,
- *  description. The "New" badge lives up in PageHeader's title row now, not here — see
- *  TaskDetailPage. */
+/** Code, status chip, severity badge (if set), pin indicator (if pinned), title, description. */
 export function TaskDetailHeader({ task }: { task: TaskDetail }) {
   return (
     <div className={styles.wrap}>

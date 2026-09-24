@@ -15,10 +15,8 @@ interface AddCommentFormProps {
   currentPercentage: number
 }
 
-/** The progress log — only rendered for an individually-tracked task (a TEAM/DEPARTMENT
- *  task's percentage is always a rollup, never set here). Every entry logs a percentage;
- *  the Body field is the commentary on why. Two guards around 100%: already-100% retires
- *  the form entirely; dragging to 100% for the first time asks for confirmation first. */
+/** The progress log — only rendered for an individually-tracked task (a TEAM/DEPARTMENT task's
+ *  percentage is always a rollup, never set here). */
 export function AddCommentForm({ taskId, currentPercentage }: AddCommentFormProps) {
   const [percentage, setPercentage] = useState(currentPercentage)
   const [body, setBody] = useState('')

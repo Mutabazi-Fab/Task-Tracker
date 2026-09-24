@@ -13,10 +13,7 @@ interface CreatePersonModalProps {
   onClose: () => void
 }
 
-/** Form shell + submit — owns the mutation, CreatePersonForm owns only the fields. Stays
- *  open on success (rather than closing straight away) to actually show the confirmation,
- *  and as a reminder that the password just set is the only place it exists — there's no
- *  sign-up step or email to fall back on, so it has to be handed to the person directly. */
+/** Form shell + submit — owns the mutation, CreatePersonForm owns only the fields. */
 export function CreatePersonModal({ open, onClose }: CreatePersonModalProps) {
   const createPerson = useCreatePerson()
   const [created, setCreated] = useState<Person | null>(null)

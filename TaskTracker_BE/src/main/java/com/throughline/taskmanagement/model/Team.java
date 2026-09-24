@@ -26,16 +26,12 @@ public class Team {
     @Column(unique = true, nullable = false)
     private String name;
 
-    /** The Director who created this team. Nullable only for teams that existed before this field was added.
-     *  LAZY — see Task.java's comment on assignedBy for why every ManyToOne feeding into
-     *  the Person <-> Department cycle is explicitly lazy. */
+    /** The Director who created this team. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id")
     private Person createdBy;
 
-    /** Every team belongs to exactly one Department — no team exists outside the org
-     *  chart. Required in practice (TeamServiceImpl.createTeam), not a DB constraint,
-     *  same approach as Task's assignedTeam/assignedPerson XOR. */
+    /** Every team belongs to exactly one Department — no team exists outside the org chart. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     private Department department;

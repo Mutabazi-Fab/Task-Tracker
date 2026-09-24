@@ -14,10 +14,9 @@ interface ExtendDeadlineModalProps {
   onClose: () => void
 }
 
-/** A direct extension, no approval round-trip — only whoever set this task's deadline (or
- *  a Director/Super Admin override, Executive/Super Admin for a Department task) sees this
- *  button at all (see TaskDetailPage). Still logged in full in the deadline history below,
- *  self-approved, so the audit trail has no gap just because the shortcut path was used. */
+/** A direct extension, no approval round-trip — only whoever set this task's deadline (or a
+ *  Director/Super Admin override, Executive/Super Admin for a Department task) sees this button at all
+ *  (see TaskDetailPage). */
 export function ExtendDeadlineModal({ task, open, onClose }: ExtendDeadlineModalProps) {
   const [newDeadline, setNewDeadline] = useState('')
   const [reason, setReason] = useState('')

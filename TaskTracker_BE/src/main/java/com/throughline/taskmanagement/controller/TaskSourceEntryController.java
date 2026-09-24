@@ -13,10 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/** Reusable "Source Detail" suggestions per TaskSource category (e.g. "BNR" under
- *  REGULATOR) — read access open to any authenticated caller, adding a new one is
- *  Executive-or-above, enforced server-side in TaskSourceEntryServiceImpl. addedById is
- *  never accepted from the client — always the caller's own real, logged-in identity. */
+/** Reusable "Source Detail" suggestions per TaskSource category (e.g. */
 @RestController
 @RequestMapping("/api/v1/task-source-entries")
 @RequiredArgsConstructor

@@ -54,10 +54,7 @@ public class TaskComment {
     @Column(nullable = false)
     private CommentType type = CommentType.PROGRESS;
 
-    /** Set only for a DISCUSSION reply — the top-level comment it replies to. Replying to
-     *  a reply attaches to that reply's own top-level parent instead of nesting further
-     *  (see TaskServiceImpl.addDiscussionComment), the same one-level-deep flattening
-     *  Instagram uses. Always null for a PROGRESS comment. */
+    /** Set only for a DISCUSSION reply — the top-level comment it replies to. */
     @ManyToOne
     @JoinColumn(name = "parent_comment_id")
     @JsonIgnore

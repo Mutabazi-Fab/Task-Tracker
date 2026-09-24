@@ -22,9 +22,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { to: ROUTES.teams, label: 'Teams', icon: 'teams' },
 ]
 
-/** Shared with MobileTabBar. A function, not a constant, since Departments/Requests/
- *  Activity only appear for a Director or Super Admin — a plain Member has no use for any
- *  of them (can't act on the org chart, is never a deadline-extension decider, etc). */
+/** Shared with MobileTabBar. */
 export function getNavItems(isDirector: boolean): NavItem[] {
   const items = [...BASE_NAV_ITEMS]
   if (isDirector) {
@@ -36,12 +34,9 @@ export function getNavItems(isDirector: boolean): NavItem[] {
   return items
 }
 
-/** Every count > 0 shown as a small badge on the nav item — "something new since you last
- *  looked." Tasks/Teams/Departments/Activity ride on the notification system, cleared when
- *  the corresponding page is opened (see each page's useMarkCategoryRead). Requests is
- *  different — its badge is just "how many pending extension requests need a decision,"
- *  self-clearing as requests get decided. Tasks is the one badge every logged-in person can
- *  get, Member included; the others simply have no nav item for a plain Member to attach to. */
+/** Every count > 0 shown as a small badge on the nav item — "something new since you last looked."
+ *  Tasks/Teams/Departments/Activity ride on the notification system, cleared when the corresponding
+ *  page is opened (see each page's useMarkCategoryRead). */
 function useNavBadgeCounts(hasUser: boolean, isDirector: boolean) {
   const typeCounts = useUnreadCountsByType(hasUser)
   const pendingRequests = usePendingExtensionRequests(isDirector)

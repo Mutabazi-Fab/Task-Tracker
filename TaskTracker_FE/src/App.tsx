@@ -5,12 +5,7 @@ import { AppRoutes } from './app/routes'
 import { ThemeProvider } from './features/theme/ThemeProvider'
 import { AuthProvider } from './features/auth/AuthContext'
 
-/**
- * Router + QueryClientProvider + AuthProvider only — no layout or feature code of its
- * own. AppShell (sidebar + top bar) is no longer wrapped here: /login and the
- * account-recovery pages render without it, so each protected route wraps itself
- * individually (see routes.tsx).
- */
+/** Router + QueryClientProvider + AuthProvider only — no layout or feature code of its own. */
 function App() {
   return (
     <QueryClientProvider client={queryClient}>

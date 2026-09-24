@@ -14,11 +14,9 @@ export function useDecideDeadlineExtension(taskId: number) {
       // (see PendingExtensionRequestItem, which reuses this same hook) needs this task's
       // own detail/history refetched too — 'tasks' above already covers that half.
       queryClient.invalidateQueries({ queryKey: ['pendingExtensionRequests'] })
-      // An approval moves the task's own deadline, which the Executive dashboard's KPI
-      // tiles (overdue count) and department-health roll-up both derive from — a different
-      // top-level query key than 'tasks', so it needs its own invalidation or those numbers
-      // would sit stale until their own next natural refetch. Harmless to invalidate on a
-      // rejection too, which touches nothing there.
+      // An approval moves the task's own deadline, which the Executive dashboard's KPI tiles (overdue count)
+      // and department-health roll-up both derive from — a different top-level query key than 'tasks', so it
+      // needs its own invalidation or those numbers would sit stale until their own next natural refetch.
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })

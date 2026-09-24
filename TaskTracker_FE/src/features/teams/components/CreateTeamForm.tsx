@@ -17,10 +17,8 @@ interface CreateTeamFormProps {
   fixedDepartmentName?: string
 }
 
-/** Director creates the team, picks its roster, and names one member as Team Leader — all
- *  in one request (leaderId must be one of memberIds). A plain Director never gets a
- *  department picker — it's silently their own; only Executive/Super Admin get to choose,
- *  enforced server-side too. Opened from a Department's own page, nobody gets a picker. */
+/** Director creates the team, picks its roster, and names one member as Team Leader — all in one
+ *  request (leaderId must be one of memberIds). */
 export function CreateTeamForm({
   onSubmit,
   onCancel,

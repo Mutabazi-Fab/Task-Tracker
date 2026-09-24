@@ -5,15 +5,7 @@ import { MANAGEMENT_ATTENTION_RULES, MINIMUM_COMPLETION_REQUIREMENTS, SCORE_SCAL
 import { GuidanceNotesSection } from './components/GuidanceNotesSection'
 import styles from './IncidentGuidancePage.module.css'
 
-/**
- * The one place a new Director or CEO reads before ever touching an incident. The top half
- * is fixed reference material carried over verbatim from the source Excel's "Lists &
- * Guidance" sheet — the same severity bands and closure checklist the system itself
- * enforces (see IncidentMapper.computeSeverity / IncidentServiceImpl.requireClosureReadiness)
- * — kept read-only here so it can never say something different from what the app actually
- * does. The bottom half (GuidanceNotesSection) is editable: anything org-specific that
- * changes over time (who to escalate to today, onboarding notes) belongs there instead.
- */
+/** The one place a new Director or CEO reads before ever touching an incident. */
 export function IncidentGuidancePage() {
   const navigate = useNavigate()
 

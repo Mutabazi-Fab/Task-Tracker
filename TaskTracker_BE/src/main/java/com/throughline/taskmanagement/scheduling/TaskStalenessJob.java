@@ -15,18 +15,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * The one background job in this app that runs on its own, not in response to a request —
- * everything else only ever happens because a client called an endpoint. Once a day, finds
- * every task that isn't COMPLETED and hasn't had a real progress update in STALE_AFTER_DAYS,
- * and notifies whoever's actually responsible for it: the assignee for an individual
- * task/subtask, the team's Leader for a top-level team task.
- *
- * Deliberately notifies once per stale stretch, not once per day forever — see
- * Task.staleAlertSentAt and TaskRepository.findStalledCandidates. A task that goes stale,
- * gets nudged, moves again, then stalls a second time later gets a fresh notification for
- * that new stretch, not silence forever after the first one.
- */
+/** The one background job in this app that runs on its own, not in response to a request — everything
+ *  else only ever happens because a client called an endpoint. */
 @Component
 @RequiredArgsConstructor
 public class TaskStalenessJob {

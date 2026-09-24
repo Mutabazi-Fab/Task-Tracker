@@ -38,16 +38,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Covers the authorization rules on TaskServiceImpl that used to have NO server-side check
- * at all (reassignTask) or were only gated by the frontend hiding a button (deleteTask) —
- * see the security-hardening pass this project went through — plus the later department-
- * headship restriction added on top of both: a plain Director only has authority within the
- * department they actually head (Department.headDirector), never merely one they belong to,
- * and never an unrelated one just by outranking a plain Member. Private checks
- * (requireCanReassign, requireCanDelete), so they're exercised here through the public
- * methods that call them, exactly as a real request would.
- */
+/** Covers the authorization rules on TaskServiceImpl that used to have NO server-side check at all
+ *  (reassignTask) or were only gated by the frontend hiding a button (deleteTask) — see the
+ *  security-hardening pass this project went through — plus the later department- headship restriction
+ *  added on top of both: a plain Director only has authority within the department they actually head
+ *  (Department.headDirector), never merely one they belong to, and never an unrelated one just by
+ *  outranking a plain Member. */
 @ExtendWith(MockitoExtension.class)
 class TaskServiceImplAuthorizationTest {
 

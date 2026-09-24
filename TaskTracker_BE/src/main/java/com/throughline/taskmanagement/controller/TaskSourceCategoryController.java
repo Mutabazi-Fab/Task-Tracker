@@ -13,10 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/** The Source dropdown's own category list (e.g. "Initiative", "Regulator") — read access
- *  open to any authenticated caller, adding a new one is Executive-or-above, enforced
- *  server-side in TaskSourceCategoryServiceImpl. addedById is never accepted from the
- *  client — always the caller's own real, logged-in identity. */
+/** The Source dropdown's own category list (e.g. */
 @RestController
 @RequestMapping("/api/v1/task-source-categories")
 @RequiredArgsConstructor

@@ -7,12 +7,8 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/**
- * Append-only audit log of every account activation/deactivation — who was locked out or
- * restored, by whom, when, and why. Mirrors RoleChange's audit pattern exactly (never
- * updated, only ever inserted) — this used to have no persisted trail at all, just a
- * reason-less notification to the affected person that nobody else could ever look back at.
- */
+/** Append-only audit log of every account activation/deactivation — who was locked out or restored, by
+ *  whom, when, and why. */
 @Entity
 @Table(name = "account_status_changes", indexes = {
         @Index(name = "idx_account_status_changes_person_id", columnList = "person_id")

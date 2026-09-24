@@ -15,14 +15,8 @@ interface TotpVerifyState {
   remember?: boolean
 }
 
-/**
- * Reached from login/reset-password when an already-enrolled account still needs its TOTP
- * code — pendingAuthToken and the original "remember me" choice arrive via router state.
- * There's no resend here: unlike an emailed code, a TOTP code is generated locally on the
- * person's own phone every 30 seconds, so "didn't get one" isn't a real failure mode —
- * checking the phone's clock is. Falls back to login if reached without a token (a
- * refresh, a bad link), since there's nothing this page can do without one.
- */
+/** Reached from login/reset-password when an already-enrolled account still needs its TOTP code —
+ *  pendingAuthToken and the original "remember me" choice arrive via router state. */
 export function TotpVerifyPage() {
   const { verifyTotp } = useAuth()
   const navigate = useNavigate()

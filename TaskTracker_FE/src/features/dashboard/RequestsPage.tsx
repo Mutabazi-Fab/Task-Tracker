@@ -8,14 +8,8 @@ import { useAuth } from '../auth/useAuth'
 import { usePendingExtensionRequests } from '../taskDetail/hooks/usePendingExtensionRequests'
 import { PendingExtensionRequestItem } from './components/PendingExtensionRequestItem'
 
-/**
- * Its own sidebar destination rather than a section buried on the dashboard — every
- * deadline-extension request still waiting on THIS viewer's decision, across every task
- * they're the decider for. Director or Super Admin only, same tier as Activity/Departments
- * (a plain Member is never a decider — see resolveDeadlineDecider on the backend — so this
- * would always be empty for them); redirects away outright if landed on directly, same
- * pattern as ActivityPage.
- */
+/** Its own sidebar destination rather than a section buried on the dashboard — every deadline-extension
+ *  request still waiting on THIS viewer's decision, across every task they're the decider for. */
 export function RequestsPage() {
   const { isDirector } = useAuth()
   const query = usePendingExtensionRequests()

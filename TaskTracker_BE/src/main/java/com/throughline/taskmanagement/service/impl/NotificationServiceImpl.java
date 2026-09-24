@@ -320,9 +320,8 @@ public class NotificationServiceImpl implements NotificationService {
         send(approver, NotificationType.DEADLINE_EXTENSION_REQUESTED, message, task.getId());
     }
 
-    /** Mirrors TaskServiceImpl.resolveDeadlineDecider — walks up to the nearest ancestor
-     *  whose assignedBy is Director-or-above. Who may REJECT; see resolveDeadlineApprover
-     *  for who may approve, a different person on a CEO-mandated chain. */
+    /** Mirrors TaskServiceImpl.resolveDeadlineDecider — walks up to the nearest ancestor whose assignedBy
+     *  is Director-or-above. */
     private Person resolveDeadlineDecider(Task task) {
         Task current = task;
         while (current != null) {

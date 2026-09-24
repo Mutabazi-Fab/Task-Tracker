@@ -11,12 +11,8 @@ import styles from './MyDashboardSummary.module.css'
 
 const MY_TASKS_SIZE = 20
 
-/**
- * The whole dashboard for anyone who isn't a Director/Super Admin — not an addition
- * alongside the org-wide charts/leaderboard/people-summary, a replacement for them. A
- * Member sees a summary of what's assigned to them and how it's going, and nothing about
- * the rest of the org (see DashboardPage, which renders this instead of everything else).
- */
+/** The whole dashboard for anyone who isn't a Director/Super Admin — not an addition alongside the
+ *  org-wide charts/leaderboard/people-summary, a replacement for them. */
 export function MyDashboardSummary() {
   const { currentUser } = useAuth()
   const personId = currentUser?.id ?? NaN

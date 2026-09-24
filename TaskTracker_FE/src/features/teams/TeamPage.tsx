@@ -27,9 +27,8 @@ export function TeamPage() {
   const teamQuery = useTeam(id)
   const { isDirector, isExecutive, currentUser } = useAuth()
   const navigate = useNavigate()
-  // Mirrors TeamServiceImpl.isHeadOfDepartment: Executive/Super Admin may manage any team;
-  // a plain Director only the department they actually head. NaN id when not loaded yet
-  // keeps this hook call unconditional.
+  // Mirrors TeamServiceImpl.isHeadOfDepartment: Executive/Super Admin may manage any team; a plain
+  // Director only the department they actually head.
   const departmentQuery = useDepartment(teamQuery.data?.departmentId ?? NaN)
 
   const isMemberOfThisTeam = currentUser?.teams.some((t) => t.teamId === id) ?? false

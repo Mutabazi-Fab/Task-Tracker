@@ -9,9 +9,8 @@ export async function fetchSourceCategories(): Promise<TaskSourceCategory[]> {
   return data
 }
 
-/** Executive/Super Admin only, enforced server-side — addedById is re-derived from the
- *  caller's real login on the backend regardless of what's sent here. Idempotent — adding
- *  a name that already exists (case-insensitive) just returns the existing category. */
+/** Executive/Super Admin only, enforced server-side — addedById is re-derived from the caller's real
+ *  login on the backend regardless of what's sent here. */
 export async function addSourceCategory(name: string, addedById: number): Promise<TaskSourceCategory> {
   const { data } = await axiosClient.post<TaskSourceCategory>(endpoints.taskSourceCategories.create(), {
     name,

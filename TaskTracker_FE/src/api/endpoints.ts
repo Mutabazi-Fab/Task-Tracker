@@ -1,8 +1,4 @@
-/**
- * Every backend URL as one constant or path-builder function. No component,
- * hook or *.api.ts file should ever write a literal "/api/v1/..." string —
- * it imports it from here.
- */
+/** Every backend URL as one constant or path-builder function. */
 
 const BASE = '/api/v1'
 

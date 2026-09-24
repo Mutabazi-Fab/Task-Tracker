@@ -10,9 +10,7 @@ interface IncidentBreakdownChartProps {
   data: IncidentCount[]
   labelFor: (label: string) => string
   /** Per-bar colour keyed off the raw enum label (before labelFor formats it) — e.g.
-   *  statusChartColor/severityChartColor, which reuse the exact hues their badges already
-   *  use. Falls back to a rotating theme palette (paletteColor) when omitted, for charts
-   *  with no inherent per-value colour (category). */
+   *  statusChartColor/severityChartColor, which reuse the exact hues their badges already use. */
   colorFor?: (label: string) => string
 }
 

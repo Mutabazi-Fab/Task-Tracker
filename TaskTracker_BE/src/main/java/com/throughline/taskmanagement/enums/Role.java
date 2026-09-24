@@ -1,17 +1,6 @@
 package com.throughline.taskmanagement.enums;
 
-/**
- * Global role, in ascending order of authority: MEMBER < DIRECTOR < EXECUTIVE < SUPER_ADMIN.
- * "Team Leader" and "Department Head" are deliberately NOT values here — those are scoped
- * (TeamMember.isLeader, Department.headDirector), so one person can hold either on some
- * teams/departments and not others.
- *
- * EXECUTIVE sits just above DIRECTOR: everything a Director can do, plus creating a
- * top-level task assigned to a whole Department (see AssigneeType.DEPARTMENT). SUPER_ADMIN
- * has everything DIRECTOR and EXECUTIVE have, plus system/people governance (role changes,
- * account activation, department administration) — see {@link #isAtLeastDirector},
- * {@link #isAtLeastExecutive}.
- */
+/** Global role, in ascending order of authority: MEMBER < DIRECTOR < EXECUTIVE < SUPER_ADMIN. */
 public enum Role {
     DIRECTOR,
     EXECUTIVE,

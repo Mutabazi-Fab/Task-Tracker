@@ -14,10 +14,7 @@ interface TaskLanesBoardProps {
   sort: TaskSortValue
 }
 
-/** Status columns, each fetching and paginating its own tasks independently — see
- *  TaskLaneColumn. Replaced the old "fetch up to 200 tasks once, filter client-side"
- *  approach, which both silently dropped anything past the 200th task and had no way to
- *  page through a lane with more items than fit on screen. */
+/** Status columns, each fetching and paginating its own tasks independently — see TaskLaneColumn. */
 export function TaskLanesBoard({ assignedPersonId, status, sort }: TaskLanesBoardProps) {
   const lanes = status === 'ALL' ? ALL_LANES : [status]
   const isSingleLane = lanes.length === 1

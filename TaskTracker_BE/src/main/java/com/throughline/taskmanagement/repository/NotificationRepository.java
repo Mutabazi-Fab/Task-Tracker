@@ -17,10 +17,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     long countByRecipientIdAndIsReadFalse(Long recipientId);
 
-    // Backs the sidebar's per-section badges (Teams/Departments/Activity) — one query for
-    // every type's unread count at once, rather than N separate round-trips. Returns only
-    // the types that actually have at least one unread row; the service layer fills in 0
-    // for everything else so the frontend never has to special-case a missing key.
+    // Backs the sidebar's per-section badges (Teams/Departments/Activity) — one query for every type's
+    // unread count at once, rather than N separate round-trips.
     @Query("SELECT n.type, COUNT(n) FROM Notification n WHERE n.recipient.id = :recipientId AND n.isRead = false GROUP BY n.type")
     List<Object[]> countUnreadByType(@Param("recipientId") Long recipientId);
 

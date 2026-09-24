@@ -14,10 +14,8 @@ interface MakeLeaderModalProps {
   onClose: () => void
 }
 
-/** A plain yes/no confirm, not a form — no reason is collected here, since the backend
- *  already knows exactly what changed (who the leader was, who it's becoming) and logs
- *  that itself. See TeamServiceImpl.setTeamLeader / MembershipHistoryPanel for where this
- *  ends up on record. */
+/** A plain yes/no confirm, not a form — no reason is collected here, since the backend already knows
+ *  exactly what changed (who the leader was, who it's becoming) and logs that itself. */
 export function MakeLeaderModal({ teamId, teamName, personId, personName, open, onClose }: MakeLeaderModalProps) {
   const { currentUser } = useAuth()
   const setLeader = useSetTeamLeader(teamId)

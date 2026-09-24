@@ -14,9 +14,8 @@ function SunIcon({ size = 16 }: { size?: number }) {
   )
 }
 
-/** Built from two overlapping circles via a mask, not a hand-tuned crescent path — a
- *  previous single-path crescent had a near-tangent point that rendered as a stray sliver
- *  at small sizes. Two generously-sized, offset circles keep it evenly thick end to end. */
+/** Built from two overlapping circles via a mask, not a hand-tuned crescent path — a previous
+ *  single-path crescent had a near-tangent point that rendered as a stray sliver at small sizes. */
 function MoonIcon({ size = 16 }: { size?: number }) {
   const maskId = useId()
   return (

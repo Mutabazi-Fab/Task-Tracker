@@ -16,13 +16,7 @@ import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-/**
- * Progress on an individually-assigned task is the assignee's to log. Also allowed: the
- * leader of a team the assignee is on (only that team), and a Director, Executive or Super
- * Admin. Another Member — even a colleague in the same team — must be refused. Builds its own throwaway task (Vincent, Cybersecurity's
- * Director, assigns Delphine) so it doesn't depend on any particular seeded task; rolled
- * back afterwards.
- */
+/** Progress on an individually-assigned task is the assignee's to log. */
 @SpringBootTest
 @Transactional
 class TaskServiceImplProgressLoggingAuthorizationTest {

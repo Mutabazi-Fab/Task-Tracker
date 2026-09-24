@@ -23,10 +23,6 @@ export function routeAfterAuthResponse(navigate: NavigateFunction, auth: AuthRes
     navigate(ROUTES.totpVerify, { state: { pendingAuthToken: auth.pendingAuthToken, remember } })
     return
   }
-  // AUTHENTICATED — never location.state?.from. That state is left over from
-  // ProtectedRoute bouncing whoever was previously on this browser tab to /login when they
-  // logged out; blindly reusing it here would send the NEXT person who logs in (a
-  // different person entirely) straight to wherever the last person happened to be, rather
-  // than a clean landing page.
+  // AUTHENTICATED — never location.state?.from.
   navigate(ROUTES.dashboard, { replace: true })
 }

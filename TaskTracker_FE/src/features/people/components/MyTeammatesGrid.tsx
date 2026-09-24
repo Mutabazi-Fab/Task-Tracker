@@ -9,11 +9,7 @@ import { useAuth } from '../../auth/useAuth'
 import { useMyTeammates } from '../hooks/useMyTeammates'
 import styles from '../PeopleListPage.module.css'
 
-/**
- * A Member's People page — only the roster of the team(s) they belong to, not the org.
- * No team at all means nothing to show here, so that's a plain, honest empty state
- * rather than an empty grid that looks broken.
- */
+/** A Member's People page — only the roster of the team(s) they belong to, not the org. */
 export function MyTeammatesGrid() {
   const { currentUser } = useAuth()
   const teamIds = currentUser?.teams.map((t) => t.teamId) ?? []

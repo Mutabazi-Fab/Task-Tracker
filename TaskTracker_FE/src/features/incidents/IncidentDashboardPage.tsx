@@ -33,13 +33,9 @@ const CATEGORY_OPTIONS: IncidentCategory[] = [
   'COMPLIANCE_LEGAL', 'THIRD_PARTY_OUTSOURCING',
 ]
 
-/**
- * The Incident Management module's home — dashboard KPIs/breakdowns/trend up top, a
- * filterable, searchable, paginated incident list below, and a "Report incident" action
- * (Director/Executive/Super Admin only — Role.isAtLeastDirector on the backend). Reachable
- * from its own sidebar item rather than nested under Tasks, since incidents are a distinct
- * record type with their own workflow.
- */
+/** The Incident Management module's home — dashboard KPIs/breakdowns/trend up top, a filterable,
+ *  searchable, paginated incident list below, and a "Report incident" action (Director/Executive/Super
+ *  Admin only — Role.isAtLeastDirector on the backend). */
 export function IncidentDashboardPage() {
   const { isDirector } = useAuth()
   const navigate = useNavigate()

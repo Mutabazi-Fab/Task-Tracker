@@ -1,6 +1,4 @@
-/** Every route path in one place — link to ROUTES.tasks, not "/tasks". Deliberately its
- *  own module with zero imports: routes.tsx imports AppShell → Sidebar → ROUTES, so if
- *  ROUTES lived in routes.tsx itself that would be a circular import crashing at runtime. */
+/** Every route path in one place — link to ROUTES.tasks, not "/tasks". */
 export const ROUTES = {
   login: '/login',
   forgotPassword: '/forgot-password',

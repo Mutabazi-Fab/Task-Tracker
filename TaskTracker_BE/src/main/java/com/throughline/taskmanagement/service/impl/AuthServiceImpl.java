@@ -128,9 +128,7 @@ public class AuthServiceImpl implements AuthService {
             return authenticated(person, null);
         }
 
-        // Not a valid live code — try it as a recovery code before giving up. A recovery
-        // code lets them in this once, but also assumes their original device is gone: it
-        // clears enrollment entirely, so their very next login starts fresh at setup.
+        // Not a valid live code — try it as a recovery code before giving up.
         TotpRecoveryCode matchedCode = totpRecoveryCodeRepository.findByPersonIdAndUsedAtIsNull(person.getId())
                 .stream()
                 .filter(rc -> passwordEncoder.matches(request.code(), rc.getCodeHash()))
@@ -156,11 +154,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public CheckEmailResponse checkEmailForPasswordReset(PasswordResetEmailRequest request) {
-        // Deliberately NOT silent about whether the account exists — an internal, offline
-        // tool gets more value from telling a real user their account genuinely isn't
-        // found than from the enumeration-proof non-answer a public internet-facing
-        // service would need. That tradeoff is exactly why this is rate-limited: without a
-        // guess limit, a truthful yes/no answer turns this into a roster-scanning tool.
+        // Deliberately NOT silent about whether the account exists — an internal, offline tool gets more value
+        // from telling a real user their account genuinely isn't found than from the enumeration-proof
+        // non-answer a public internet-facing service would need.
         rateLimiter.checkAllowed(request.email());
 
         boolean exists = personRepository.findByEmailIgnoreCase(request.email()).isPresent();
@@ -209,9 +205,6 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (person.getTotpEnabledAt() == null) {
-            // Not yet enrolled. Reuse an already-generated-but-unconfirmed secret rather
-            // than replacing it — a repeated login attempt mid-enrollment must show the
-            // same QR the person may have already scanned, not a new one.
             if (person.getTotpSecret() == null) {
                 person.setTotpSecret(totpService.generateSecret());
             }
@@ -257,10 +250,8 @@ public class AuthServiceImpl implements AuthService {
         return person;
     }
 
-    /** Only ever called right as enrollment is confirmed — never regenerated afterward via
-     *  this path, so a person can't accidentally invalidate their existing codes just by
-     *  logging in again. A lost set is a Super Admin TOTP reset away (see
-     *  PersonServiceImpl.resetTotp), which re-enrolls from scratch including a fresh batch. */
+    /** Only ever called right as enrollment is confirmed — never regenerated afterward via this path, so a
+     *  person can't accidentally invalidate their existing codes just by logging in again. */
     private List<String> generateRecoveryCodes(Person person) {
         totpRecoveryCodeRepository.deleteByPersonId(person.getId());
 

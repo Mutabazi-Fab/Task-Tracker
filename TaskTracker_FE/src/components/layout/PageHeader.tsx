@@ -6,10 +6,9 @@ interface PageHeaderProps {
   title: string
   breadcrumb?: string
   right?: ReactNode
-  /** Present only on pages reached by drilling in from somewhere else (task detail, so
-   *  far) — renders a "← Back" control that returns to wherever the viewer actually came
-   *  from (browser history), not a fixed route. A list page reached straight from the
-   *  sidebar has nothing to go "back" to, so it omits this entirely. */
+  /** Present only on pages reached by drilling in from somewhere else (task detail, so far) — renders a
+   *  "← Back" control that returns to wherever the viewer actually came from (browser history), not a
+   *  fixed route. */
   onBack?: () => void
   /** A small pill rendered right next to the title itself — e.g. TaskDetailPage's NewBadge
    *  on a freshly-created task — for something that belongs at the very top of the page,

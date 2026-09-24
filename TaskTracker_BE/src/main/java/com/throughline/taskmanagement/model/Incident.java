@@ -21,18 +21,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * The bank's former "IT. Incident Register.xlsx" workbook, rebuilt as a first-class module
- * of this app. Every column maps to a field here except the workbook's own computed columns
- * (Inherent Score, Severity, Net Loss, Days Open, Action SLA) — see the per-field comments
- * for which of those are persisted (recomputed server-side on every write, never trusted
- * from a request) versus computed fresh at read time (see IncidentMapper) because they
- * depend on TODAY().
- *
- * Every @ManyToOne is explicitly LAZY, same reasoning as Task's own fields — see Task.java's
- * class-level comment on the eager-fetch/1664-column incident this codebase already hit
- * once.
- */
+/** The bank's former "IT. */
 @Entity
 @Table(name = "incidents", indexes = {
         @Index(name = "idx_incidents_status", columnList = "status"),
@@ -65,13 +54,10 @@ public class Incident {
     @Column(nullable = false)
     private LocalDate dateReported;
 
-    /** The name of a {@link Department} (or "Other"), stored as plain text rather than a FK or
-     *  enum: the dropdown is driven by whatever Departments currently exist, so a
-     *  department created later shows up here automatically, and an incident keeps its
-     *  original wording even if that department is later renamed or removed. Rows recorded
-     *  before this change hold the old enum constant instead (e.g. "CYBERSECURITY") —
-     *  IncidentMapper.displayBusinessUnit turns those into readable text at read time, and
-     *  IncidentRepository.search matches both spellings, so no existing row needs rewriting. */
+    /** The name of a {@link Department} (or "Other"), stored as plain text rather than a FK or enum: the
+     *  dropdown is driven by whatever Departments currently exist, so a department created later shows up
+     *  here automatically, and an incident keeps its original wording even if that department is later
+     *  renamed or removed. */
     @Column(nullable = false, length = 150)
     private String businessUnit;
 
@@ -96,14 +82,10 @@ public class Incident {
     /** 1-5, nullable — see likelihood. */
     private Integer impact;
 
-    /** = likelihood * impact. Persisted for querying/sorting, but always recomputed
-     *  server-side from likelihood/impact on every create/update — see
-     *  IncidentServiceImpl.applyDerivedRiskFields. Null exactly when likelihood or impact is null. */
+    /** = likelihood * impact. */
     private Integer inherentScore;
 
-    /** Banded from inherentScore — see IncidentSeverity. Same recompute-only-server-side
-     *  rule as inherentScore. Null exactly when inherentScore is null (shown as "Not yet
-     *  scored" in the UI instead of the source Excel's literal FALSE-when-blank bug). */
+    /** Banded from inherentScore — see IncidentSeverity. */
     @Enumerated(EnumType.STRING)
     private IncidentSeverity severity;
 
@@ -145,9 +127,7 @@ public class Incident {
     @Column(length = 2000)
     private String correctiveAction;
 
-    /** A real system user, not free text — enables notifying them directly. See
-     *  IncidentServiceImpl for the notification sent when this is set/changed. Nullable
-     *  until an owner is assigned during investigation. */
+    /** A real system user, not free text — enables notifying them directly. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "action_owner_id")
     private Person actionOwner;
@@ -164,11 +144,7 @@ public class Incident {
     @JoinColumn(name = "reported_by_id", nullable = false)
     private Person reportedBy;
 
-    /** Deliberately free text, NOT a Person FK — unlike actionOwner/reportedBy. A Director
-     *  reporting an incident often needs to name whoever in their department caused or is
-     *  associated with it, who may not be the person best placed to action the fix (that's
-     *  actionOwner) and may not even need to be identified as precisely as a system-user
-     *  lookup would require. */
+    /** Deliberately free text, NOT a Person FK — unlike actionOwner/reportedBy. */
     private String incidentOwner;
 
     @Enumerated(EnumType.STRING)

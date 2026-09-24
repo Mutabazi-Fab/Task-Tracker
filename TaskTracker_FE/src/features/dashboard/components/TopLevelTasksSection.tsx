@@ -16,10 +16,7 @@ import styles from './TopLevelTasksSection.module.css'
 const PAGE_SIZE = 12
 
 interface TopLevelTasksSectionProps {
-  /** 'mine' — top-level tasks the logged-in Director created. 'org-wide' — every
-   *  CRITICAL-severity task at any depth, plus every task an Executive/Super Admin
-   *  personally assigned (see useExecutiveTasks). Executive/Super Admin only; a plain
-   *  Director's equivalent lives in DirectorTasksPanel instead. */
+  /** 'mine' — top-level tasks the logged-in Director created. */
   scope: 'mine' | 'org-wide'
 }
 

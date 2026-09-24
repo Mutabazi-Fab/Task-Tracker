@@ -10,14 +10,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
 
-/**
- * AES-256-GCM at rest for the TOTP secret specifically — kept separate from the
- * NoOpPasswordEncoder choice documented in SecurityConfig. That choice is about a password
- * being convenient for a human to look up; nobody ever reads a TOTP secret back by eye, so
- * there's no such tradeoff here, and a leaked secret is worse than a leaked password (it
- * lets an attacker generate valid codes silently, indefinitely, with no failed-login trail).
- * Purely local computation — no network call, keeping 2FA verification fully offline.
- */
+/** AES-256-GCM at rest for the TOTP secret specifically — kept separate from the NoOpPasswordEncoder
+ *  choice documented in SecurityConfig. */
 @Component
 public class TotpSecretCipher {
 

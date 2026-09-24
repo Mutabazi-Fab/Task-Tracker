@@ -16,13 +16,9 @@ interface DiscussionPanelProps {
   comments: TaskComment[]
 }
 
-/**
- * A plain Q&A thread, fully separate from the progress log — anyone who can see this task
- * (no restriction to CEO/Director or any other pair) can ask a question or leave a note
- * here without it touching percentage or status at all. Top-level messages show first,
- * oldest first; each can be replied to, with replies indented underneath — the same shape
- * Instagram uses, and unrelated to "Log progress" above it.
- */
+/** A plain Q&A thread, fully separate from the progress log — anyone who can see this task (no
+ *  restriction to CEO/Director or any other pair) can ask a question or leave a note here without it
+ *  touching percentage or status at all. */
 export function DiscussionPanel({ taskId, comments }: DiscussionPanelProps) {
   const [body, setBody] = useState('')
 

@@ -18,12 +18,8 @@ import styles from './TaskListPage.module.css'
 
 const PAGE_SIZE = 10
 
-/** A Member only ever sees tasks assigned directly to them — assignedPersonId scopes every
- *  query on this page (list, lanes, search), no client-side filtering of a wider set. A
- *  plain Director isn't unrestricted either: leaving assignedPersonId unset makes the
- *  backend fall back to their own department (see TaskController.departmentScopeForViewer),
- *  resolved server-side off the JWT. Only Executive/Super Admin see everything.
- *  isPlainDirector exists purely for the page's own copy (title/placeholder). */
+/** A Member only ever sees tasks assigned directly to them — assignedPersonId scopes every query on
+ *  this page (list, lanes, search), no client-side filtering of a wider set. */
 export function TaskListPage() {
   const { currentUser, isDirector, isExecutive } = useAuth()
   const [status, setStatus] = useState<TaskStatusFilterValue>('ALL')

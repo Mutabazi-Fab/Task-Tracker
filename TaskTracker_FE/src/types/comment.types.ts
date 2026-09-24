@@ -1,6 +1,4 @@
-/** PROGRESS is a real percentage reading, the only kind that counts toward the trend
- *  chart. DISCUSSION is a plain Q&A message, fully open, threading one level deep via
- *  parentCommentId. */
+/** PROGRESS is a real percentage reading, the only kind that counts toward the trend chart. */
 export type CommentType = 'PROGRESS' | 'DISCUSSION'
 
 /** One entry in a task's comment log — either a PROGRESS reading or a DISCUSSION message.

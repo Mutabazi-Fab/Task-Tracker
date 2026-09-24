@@ -20,12 +20,7 @@ interface ReassignTaskModalProps {
   onClose: () => void
 }
 
-/** Reassignment requires a reason and can never target the current owner. Which kind of
- *  target applies is structural, not a free choice: a DEPARTMENT task can only move to a
- *  different DEPARTMENT (Executive/Super-Admin-only, see TaskDetailPage's canReassign); a
- *  TEAM task only to a different TEAM; an INDIVIDUAL task only to a different PERSON,
- *  scoped to the parent's team for a leaf subtask or the whole org otherwise. "Reassigned
- *  by" is always the logged-in person, not a picker. */
+/** Reassignment requires a reason and can never target the current owner. */
 export function ReassignTaskModal({ task, open, onClose }: ReassignTaskModalProps) {
   const isDepartmentAssigned = task.assigneeType === 'DEPARTMENT'
   const isTeamAssigned = task.assigneeType === 'TEAM'
@@ -41,10 +36,9 @@ export function ReassignTaskModal({ task, open, onClose }: ReassignTaskModalProp
   const departmentsQuery = useDepartments(isDepartmentAssigned)
   const reassign = useReassignTask(task.id)
 
-  // A leaf subtask's owning team isn't on TaskDetail directly, so its parent is fetched to
-  // read that team's id off assigneeId — but only when the parent is itself TEAM-assigned;
-  // a Department implementation task's parent is DEPARTMENT-typed, picking from the whole
-  // org instead. NaN when not applicable keeps every query below disabled.
+  // A leaf subtask's owning team isn't on TaskDetail directly, so its parent is fetched to read that
+  // team's id off assigneeId — but only when the parent is itself TEAM-assigned; a Department
+  // implementation task's parent is DEPARTMENT-typed, picking from the whole org instead.
   const parentQuery = useTaskDetail(hasParent ? task.parentTaskId ?? NaN : NaN)
   const isRestrictedToParentTeam = hasParent && parentQuery.data?.assigneeType !== 'DEPARTMENT'
   const parentTeamId = parentQuery.data?.assigneeId ?? NaN

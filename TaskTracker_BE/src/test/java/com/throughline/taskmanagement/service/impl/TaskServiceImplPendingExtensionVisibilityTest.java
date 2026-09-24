@@ -17,19 +17,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Runs against the real database inside a transaction that is rolled back. A Super Admin's
- * blanket override authority (requireCanDecideDeadline/isDeadlineOverrideTier already let
- * them decide ANY task's extension) was real but invisible: resolveDeadlineDecider never
- * resolves to a Super Admin (they don't create tasks in the normal flow), so
- * getPendingExtensionRequests's old per-decider filter always read empty for them. This
- * proves the fix — a Super Admin sees every pending request org-wide, while an unrelated
- * Director still only sees the ones actually theirs to decide.
- *
- * Builds its own throwaway request (Vincent, Cybersecurity's Director, assigns Delphine an
- * individual task and she asks for more time) instead of relying on a particular seeded
- * task code, so it holds no matter how the org was seeded.
- */
+/** Runs against the real database inside a transaction that is rolled back. */
 @SpringBootTest
 @Transactional
 class TaskServiceImplPendingExtensionVisibilityTest {

@@ -1,13 +1,6 @@
-/* A single row, always — flex-wrap: nowrap rather than CSS Grid's auto-fit, which was
-   liable to drop items onto a second row once any one value got wide (exactly what
-   happened trying to fit "Fabiola Ikirezi (Executive)"). Every item sizes to its own
-   content by default (flex-basis: auto, no grow) rather than an equal 1fr share — "0"
-   (Reassignments) or a status chip don't need nearly as much room as a name-plus-role, so
-   they no longer get squeezed to the same width as everything else. .itemWide (Assigned
-   to/Assigned by specifically) gets flex-grow instead, so whatever row space the compact
-   items don't need goes to the two that actually want it. min-width: 0 is what lets an item
-   shrink below its content's natural size at all if the row ever does get tight; .value's
-   text-overflow: ellipsis then truncates gracefully instead of wrapping or overflowing. */
+/* A single row, always — flex-wrap: nowrap rather than CSS Grid's auto-fit, which was liable to drop
+ *  items onto a second row once any one value got wide (exactly what happened trying to fit "Fabiola
+ *  Ikirezi (Executive)"). */
 .grid {
   display: flex;
   flex-wrap: nowrap;
@@ -40,9 +33,8 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--ink);
-  /* "Fabiola Ikirezi (Executive)" and the like stay on one line — truncates with an
-     ellipsis instead of wrapping the role onto its own line if a column ever gets too
-     narrow. The full text is still available on hover via the title attribute. */
+  /* "Fabiola Ikirezi (Executive)" and the like stay on one line — truncates with an ellipsis instead of
+   *  wrapping the role onto its own line if a column ever gets too narrow. */
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;

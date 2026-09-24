@@ -23,23 +23,9 @@ import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Runs against the real seeded database, wrapped in @Transactional so everything it writes
- * (the throwaway task, its opening comment and extension request, the DELETED activity row)
- * rolls back at the end instead of polluting the shared dev database.
- *
- * All three of task_comments/task_reassignments/task_deadline_extension_requests have a
- * task_id foreign key with NO ACTION on delete at the database level (confirmed via
- * pg_constraint) — nothing cascades automatically in Postgres itself. Everything relies on
- * Hibernate's cascade = ALL / orphanRemoval = true on Task's own collection mappings
- * (comments/reassignments/deadlineExtensionRequests/subtasks) actually working correctly
- * when TaskServiceImpl.deleteTask calls taskRepository.delete(task) — including for a lazily
- * loaded collection like deadlineExtensionRequests, which findWithDetailsById doesn't
- * eagerly fetch. This proves that actually holds, rather than trusting the annotations by
- * inspection. TaskActivity is the deliberate exception — it holds no FK to Task at all (a
- * pure taskCode/title snapshot, see TaskActivity's own doc comment), so its DELETED row for
- * this task must survive the same delete untouched.
- */
+/** Runs against the real seeded database, wrapped in @Transactional so everything it writes (the
+ *  throwaway task, its opening comment and extension request, the DELETED activity row) rolls back at
+ *  the end instead of polluting the shared dev database. */
 @SpringBootTest
 @Transactional
 class TaskServiceImplDeleteCascadeTest {

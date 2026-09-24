@@ -42,9 +42,8 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
     // point the caller has already proven the password but doesn't have a real session yet.
     Optional<Person> findByPendingAuthToken(String pendingAuthToken);
 
-    // Everyone who shares at least one team with personId (that person included) — the
-    // "teammates" a Member is allowed to see on the People page. Someone in zero teams
-    // matches nothing here, which is the intended "individual sees no one" behavior.
+    // Everyone who shares at least one team with personId (that person included) — the "teammates" a
+    // Member is allowed to see on the People page.
     @Query("SELECT DISTINCT tm.person FROM TeamMember tm WHERE tm.team.id IN " +
             "(SELECT tm2.team.id FROM TeamMember tm2 WHERE tm2.person.id = :personId)")
     Page<Person> findTeammatesOf(@Param("personId") Long personId, Pageable pageable);

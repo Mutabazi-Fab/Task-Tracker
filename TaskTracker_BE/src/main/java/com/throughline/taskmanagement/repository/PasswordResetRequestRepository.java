@@ -9,9 +9,7 @@ import java.util.Optional;
 
 public interface PasswordResetRequestRepository extends JpaRepository<PasswordResetRequest, Long> {
 
-    /** At most one row can match this at a time by construction — see PasswordResetRequest's
-     *  class comment. Used both to reject a duplicate submission and to find the row a
-     *  Super Admin is resolving (fulfilling or dismissing). */
+    /** At most one row can match this at a time by construction — see PasswordResetRequest's class comment. */
     Optional<PasswordResetRequest> findByPersonIdAndStatus(Long personId, PasswordResetRequestStatus status);
 
     /** Batch form of the above — backs PersonServiceImpl.getAllPeople's "show a pending

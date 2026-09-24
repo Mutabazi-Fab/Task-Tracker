@@ -9,16 +9,11 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
-/**
- * A free-text guidance entry a Director/Executive/Super Admin can add on top of the fixed
- * reference material carried over from the source Excel's "Lists & Guidance" sheet (the
- * severity table, the likelihood/impact scale, and the minimum-completion checklist — see
- * IncidentGuidanceServiceImpl.getReference, which is hardcoded and NOT editable, since it's
- * the same text the app's own closure-enforcement logic is built from). This entity is for
- * everything ELSE an organization wants new incident reporters to know — onboarding notes
- * for a new Director/CEO, internal escalation contacts, anything the fixed sheet content
- * doesn't cover — and can be added, edited, or removed as people and policy change.
- */
+/** A free-text guidance entry a Director/Executive/Super Admin can add on top of the fixed reference
+ *  material carried over from the source Excel's "Lists & Guidance" sheet (the severity table, the
+ *  likelihood/impact scale, and the minimum-completion checklist — see
+ *  IncidentGuidanceServiceImpl.getReference, which is hardcoded and NOT editable, since it's the same
+ *  text the app's own closure-enforcement logic is built from). */
 @Entity
 @Table(name = "incident_guidance_notes")
 @Getter

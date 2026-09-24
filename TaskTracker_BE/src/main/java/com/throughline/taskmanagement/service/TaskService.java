@@ -38,10 +38,8 @@ public interface TaskService {
      *  absent. */
     Page<TaskListResponse> getAllTasks(TaskStatus status, Long assignedPersonId, Long departmentId, Pageable pageable);
     TaskDetailResponse addProgressComment(Long taskId, AddCommentRequest request);
-    /** A plain Q&A message, fully open — any authenticated person may post on any task,
-     *  same as the progress log always has been. Never touches percentage/status.
-     *  parentCommentId (in the request) threads it under a top-level comment, one level
-     *  deep, same as Instagram. */
+    /** A plain Q&A message, fully open — any authenticated person may post on any task, same as the
+     *  progress log always has been. */
     TaskDetailResponse addDiscussionComment(Long taskId, AddDiscussionCommentRequest request);
     TaskDetailResponse reassignTask(Long taskId, ReassignTaskRequest request);
     Page<TaskTimelineResponse> getTaskProgressTimeline(Long taskId, Pageable pageable);
@@ -60,21 +58,18 @@ public interface TaskService {
      *  are Super-Admin-only). requesterId is the caller's real, JWT-resolved identity. */
     Page<TaskActivityResponse> getTaskActivity(Long requesterId, Pageable pageable);
 
-    /** Requester must be this task's own accountable person (Team Leader/individual
-     *  assignee/Department head Director) or a Director-or-above override (Executive-or-
-     *  above for a Department task) — enforced here. Leaves the task's deadline unchanged
-     *  until a decision is made. */
+    /** Requester must be this task's own accountable person (Team Leader/individual assignee/Department
+     *  head Director) or a Director-or-above override (Executive-or- above for a Department task) —
+     *  enforced here. */
     TaskDetailResponse requestDeadlineExtension(Long taskId, RequestDeadlineExtensionRequest request);
 
-    /** Decider must be this task's own setter (assignedBy) or the same override tier as
-     *  requesting — enforced here. Approving moves the task's deadline; rejecting leaves
-     *  it untouched. Fails if the request is already decided or belongs to a different task. */
+    /** Decider must be this task's own setter (assignedBy) or the same override tier as requesting —
+     *  enforced here. */
     TaskDetailResponse decideDeadlineExtension(Long taskId, Long extensionRequestId, DecideDeadlineExtensionRequest request);
 
-    /** Only meaningful on a CEO-mandated chain (see TaskServiceImpl.isCeoMandated) — the
-     *  Director a request lands on can reject it but can't approve it, so this sends it
-     *  into the true approver's (CEO/Super Admin's) "Requests" inbox. Fails if already
-     *  forwarded, already decided, or the task doesn't need CEO approval. */
+    /** Only meaningful on a CEO-mandated chain (see TaskServiceImpl.isCeoMandated) — the Director a request
+     *  lands on can reject it but can't approve it, so this sends it into the true approver's (CEO/Super
+     *  Admin's) "Requests" inbox. */
     TaskDetailResponse forwardExtensionRequestToApprover(Long taskId, Long extensionRequestId, Long forwardedById);
 
     /** Same authority as deciding a request — moves the deadline immediately, no approval
@@ -86,27 +81,21 @@ public interface TaskService {
      *  getTaskReassignments. */
     Page<DeadlineExtensionResponse> getDeadlineHistory(Long taskId, Pageable pageable);
 
-    /** Every still-PENDING deadline-extension request org-wide where deciderId is the one
-     *  who'd decide it (see TaskServiceImpl.resolveDeadlineDecider) — the "Requests" inbox.
-     *  Newest first. */
+    /** Every still-PENDING deadline-extension request org-wide where deciderId is the one who'd decide it
+     *  (see TaskServiceImpl.resolveDeadlineDecider) — the "Requests" inbox. */
     List<PendingExtensionRequestResponse> getPendingExtensionRequests(Long deciderId);
 
-    /** Director-or-above only, enforced here. A manual, independently-editable toggle —
-     *  not derived from severity, so any task can be pinned/unpinned regardless of its
-     *  severity classification. */
+    /** Director-or-above only, enforced here. */
     TaskDetailResponse setPinned(Long taskId, SetPinnedRequest request);
 
-    /** Any authenticated person, same as addDiscussionComment — no restriction beyond
-     *  existing, since task-detail viewing itself has none either (see getTaskById). Rejects
-     *  an oversized file or one outside the allow-listed content types. */
+    /** Any authenticated person, same as addDiscussionComment — no restriction beyond existing, since
+     *  task-detail viewing itself has none either (see getTaskById). */
     TaskDetailResponse addDocument(Long taskId, String fileName, String contentType, byte[] content, Long uploadedById);
 
     /** Open read, same as getTaskReassignments/getDeadlineHistory — whoever can see the task
      *  can download anything attached to it. Fails if the document doesn't belong to taskId. */
     DocumentDownload getDocumentContent(Long taskId, Long documentId);
 
-    /** Only the person who uploaded it, or a Director/Executive/Super Admin — enforced
-     *  here. Adding a document has no restriction beyond authentication (see addDocument);
-     *  removing one is the one document action that needs some standing over the task. */
+    /** Only the person who uploaded it, or a Director/Executive/Super Admin — enforced here. */
     TaskDetailResponse deleteDocument(Long taskId, Long documentId, Long actorId);
 }

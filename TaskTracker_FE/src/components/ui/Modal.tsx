@@ -6,9 +6,7 @@ interface ModalProps {
   onClose: () => void
   title?: string
   children: ReactNode
-  /** 'md' (default, 480px) fits most forms. 'lg' (720px) is for forms with many fields at
-   *  once — e.g. CreateIncidentModal/EditIncidentModal — so the fields aren't cramped into a
-   *  narrow column. */
+  /** 'md' (default, 480px) fits most forms. */
   size?: 'md' | 'lg'
 }
 

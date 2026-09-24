@@ -3,9 +3,7 @@ import { formatDateTime } from '../../../lib/formatDate'
 import type { TaskComment } from '../../../types/comment.types'
 import styles from './DiscussionCommentItem.module.css'
 
-/** ONE discussion message — author, time, body. No percentage badge (unlike
- *  CommentTimelineItem) since a discussion message never carries a real progress
- *  reading. Immutable — no edit/delete affordance. */
+/** ONE discussion message — author, time, body. */
 export function DiscussionCommentItem({ comment }: { comment: TaskComment }) {
   return (
     <div className={styles.item}>

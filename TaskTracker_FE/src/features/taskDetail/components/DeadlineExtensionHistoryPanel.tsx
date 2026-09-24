@@ -9,8 +9,7 @@ interface DeadlineExtensionHistoryPanelProps {
 }
 
 /** The deadline audit trail — oldest first, as the backend returns it (mirrors
- *  ReassignmentHistoryPanel). A pending row this viewer can decide gets inline
- *  approve/reject controls (see DeadlineExtensionHistoryItem). */
+ *  ReassignmentHistoryPanel). */
 export function DeadlineExtensionHistoryPanel({ taskId, extensions, canDecide }: DeadlineExtensionHistoryPanelProps) {
   if (extensions.length === 0) {
     return <EmptyState title="No extension requests" description="This task's deadline has never been changed." />

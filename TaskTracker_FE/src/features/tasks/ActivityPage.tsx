@@ -40,8 +40,7 @@ type Row =
   | { id: string; kind: 'DEPARTMENT'; timestamp: string; departmentName: string; actorName: string }
 
 /** Director or Super Admin only — every notable admin action in the org in one feed: task
- *  creation/deletion, role changes, account (de)activation, department deletion. Merges
- *  four audit tables client-side (see FETCH_SIZE). Not linked for a Member, and redirects away if landed on directly. */
+ *  creation/deletion, role changes, account (de)activation, department deletion. */
 export function ActivityPage() {
   const { currentUser, isDirector } = useAuth()
   const [filter, setFilter] = useState<ActivityFilter>('ALL')

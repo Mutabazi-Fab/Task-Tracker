@@ -27,11 +27,8 @@ public interface DepartmentService {
     /** Super-Admin-only. newHeadDirectorId must already hold the DIRECTOR role or above. */
     DepartmentResponse changeDepartmentHead(Long id, ChangeDepartmentHeadRequest request);
 
-    /** Executive-or-above, same tier as createDepartment — the CEO who can stand a
-     *  department up can take one down too, not just Super Admin. Fails if the department
-     *  still has any team or any person directly assigned to it (both are required,
-     *  non-nullable associations) — those have to be moved or removed first, rather than
-     *  this silently cascading away a whole department's teams and people. */
+    /** Executive-or-above, same tier as createDepartment — the CEO who can stand a department up can take
+     *  one down too, not just Super Admin. */
     void deleteDepartment(Long id, Long actorId);
 
     /** Director or Super Admin only — every department deletion, org-wide. Same visibility

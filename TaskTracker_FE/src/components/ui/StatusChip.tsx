@@ -8,11 +8,7 @@ const CHIP_CLASS: Record<ReturnType<typeof statusColorKey>, string> = {
   pending: styles.pending,
 }
 
-/**
- * PENDING / ONGOING / COMPLETED badge. Status is derived from percentage —
- * a task at 0% reads PENDING in the pending (red) colour on purpose: it
- * means stalled and needs a reason on record.
- */
+/** PENDING / ONGOING / COMPLETED badge. */
 export function StatusChip({ status }: { status: TaskStatus }) {
   return <span className={[styles.chip, CHIP_CLASS[statusColorKey(status)]].join(' ')}>{status}</span>
 }

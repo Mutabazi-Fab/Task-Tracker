@@ -141,11 +141,7 @@ export interface CreateTaskRequest {
   openingNote: string
 }
 
-/** Body for POST /tasks/{parentTaskId}/subtasks. Two shapes depending on the parent's
- *  assigneeType: TEAM-assigned parent → the classic leaf-subtask case (assignedPersonId
- *  required, must be a team member); DEPARTMENT-assigned parent → the "implementation
- *  task" case (exactly one of assignedTeamId/assignedPersonId, org-wide, no team-membership
- *  restriction). */
+/** Body for POST /tasks/{parentTaskId}/subtasks. */
 export interface CreateSubtaskRequest {
   title: string
   description?: string
@@ -185,9 +181,7 @@ export interface Page<T> {
 
 export type TaskActivityAction = 'CREATED' | 'DELETED'
 
-/** One row of GET /tasks/activity — every task/subtask created or deleted, org-wide.
- *  Director or Super Admin only. Everything here is a snapshot at the moment of the event,
- *  not a live lookup — a DELETED row's task no longer exists to look up. */
+/** One row of GET /tasks/activity — every task/subtask created or deleted, org-wide. */
 export interface TaskActivity {
   id: number
   action: TaskActivityAction

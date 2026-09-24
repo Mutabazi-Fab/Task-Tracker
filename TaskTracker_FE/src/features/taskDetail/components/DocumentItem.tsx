@@ -13,11 +13,8 @@ interface DocumentItemProps {
   document: TaskDocument
 }
 
-/** Downloading goes through the authenticated axios client and a throwaway Blob URL, not a
- *  plain link — this app's auth token lives in a header, which a bare `<a href>` never
- *  sends. Remove only shows for whoever uploaded it, or a Director/Executive/Super Admin —
- *  mirrors TaskServiceImpl.deleteDocument exactly. Adding a new document has no such
- *  restriction (see AddDocumentModal/DocumentsPanel — open to anyone who can see the task). */
+/** Downloading goes through the authenticated axios client and a throwaway Blob URL, not a plain link —
+ *  this app's auth token lives in a header, which a bare `<a href>` never sends. */
 export function DocumentItem({ taskId, document }: DocumentItemProps) {
   const { currentUser, isDirector } = useAuth()
   const [downloading, setDownloading] = useState(false)

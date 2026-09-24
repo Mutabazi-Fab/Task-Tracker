@@ -10,8 +10,6 @@ public interface TaskSourceEntryService {
      *  suggestions for the category they picked, same as Department's read access. */
     List<TaskSourceEntryResponse> getEntries(String source);
 
-    /** Executive-or-above, enforced here. Idempotent: adding a label that already exists
-     *  (case-insensitive) for this source just returns the existing entry instead of
-     *  erroring or duplicating it. */
+    /** Executive-or-above, enforced here. */
     TaskSourceEntryResponse addEntry(AddTaskSourceEntryRequest request);
 }

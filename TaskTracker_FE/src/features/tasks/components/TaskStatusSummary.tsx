@@ -9,12 +9,9 @@ interface TaskStatusSummaryProps {
   assignedPersonId?: number
 }
 
-/** The same "status + total count" the Lanes view already shows per column header, shown
- *  as one row above the Table view instead — Table only ever showed the current page's
- *  rows, with no sense of how many of each status exist overall. Fires one size:1 query
- *  per status (cheap — only the count metadata is actually used) rather than a new
- *  endpoint, always showing all three regardless of which status tab is selected, so
- *  switching tabs never loses the "how many of each" overview. */
+/** The same "status + total count" the Lanes view already shows per column header, shown as one row
+ *  above the Table view instead — Table only ever showed the current page's rows, with no sense of how
+ *  many of each status exist overall. */
 export function TaskStatusSummary({ assignedPersonId }: TaskStatusSummaryProps) {
   const pending = useTasks({ status: 'PENDING', assignedPersonId, page: 0, size: 1 })
   const ongoing = useTasks({ status: 'ONGOING', assignedPersonId, page: 0, size: 1 })

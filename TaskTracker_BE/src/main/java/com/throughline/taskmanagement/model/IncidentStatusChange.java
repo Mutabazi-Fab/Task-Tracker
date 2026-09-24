@@ -8,9 +8,8 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/** Append-only audit trail for Incident.status — the source Excel had no history at all,
- *  just one cell anyone could overwrite. Mirrors this codebase's existing audit-entity
- *  pattern (RoleChange, AccountStatusChange, TeamMembershipChange). */
+/** Append-only audit trail for Incident.status — the source Excel had no history at all, just one cell
+ *  anyone could overwrite. */
 @Entity
 @Table(name = "incident_status_changes", indexes = {
         @Index(name = "idx_incident_status_changes_incident_id", columnList = "incident_id")

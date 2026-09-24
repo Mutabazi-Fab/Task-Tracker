@@ -21,14 +21,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-/**
- * JWT, stateless. Every route requires a valid Bearer token except login/logout and the
- * account-recovery flows. There is no public self-registration endpoint — only a Super
- * Admin can create a login-enabled account (see PersonServiceImpl.createPerson).
- *
- * No DaoAuthenticationProvider bean here on purpose: Spring Boot's auto-configuration
- * builds one automatically from the CustomUserDetailsService and PasswordEncoder beans.
- */
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -38,9 +30,7 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
 
-    /** Plain-text, on request — NOT recommended. Swap to `new BCryptPasswordEncoder()` to
-     *  restore hashing; nothing else needs to change since auth only goes through this
-     *  PasswordEncoder abstraction. */
+    /** Plain-text, on request — NOT recommended. */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return NoOpPasswordEncoder.getInstance();

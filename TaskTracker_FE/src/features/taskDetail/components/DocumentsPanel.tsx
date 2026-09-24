@@ -11,11 +11,8 @@ interface DocumentsPanelProps {
   documents: TaskDocument[]
 }
 
-/** Supporting documents attached to this task — a memo, a directive, a spec, whatever's
- *  relevant alongside the task itself. Open to any authenticated person to add, same as
- *  task-detail viewing has no restriction of its own (see TaskServiceImpl.getTaskById) — so
- *  whoever's assigned, the responsible Director, and the team can all already see this
- *  panel exactly as they already see the task. */
+/** Supporting documents attached to this task — a memo, a directive, a spec, whatever's relevant
+ *  alongside the task itself. */
 export function DocumentsPanel({ taskId, documents }: DocumentsPanelProps) {
   const [addOpen, setAddOpen] = useState(false)
 

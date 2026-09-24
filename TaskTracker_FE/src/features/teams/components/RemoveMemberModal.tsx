@@ -15,9 +15,7 @@ interface RemoveMemberModalProps {
   onClose: () => void
 }
 
-/** Every remove requires a reason too, same as adding. Note: the backend doesn't yet
- *  block removing a member with unfinished subtasks assigned to them within this team —
- *  a tracked, known gap on the backend, not something this form works around. */
+/** Every remove requires a reason too, same as adding. */
 export function RemoveMemberModal({ teamId, personId, personName, open, onClose }: RemoveMemberModalProps) {
   const { currentUser } = useAuth()
   const removeMember = useRemoveTeamMember(teamId)

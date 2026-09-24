@@ -12,12 +12,8 @@ import styles from './PeopleResultsSection.module.css'
  *  actual profile page, which already shows the full breakdown. */
 const MAX_VISIBLE_TEAMS = 2
 
-/**
- * Each match shows its per-team stats breakdown — e.g. "Digital Banking 60% · Payments
- * 20%" — not one blended number across every team the person belongs to. That's the
- * whole reason this is PersonSearchResult (person + teamBreakdown) rather than a bare
- * Person: a search result is exactly the place the spec called out for this.
- */
+/** Each match shows its per-team stats breakdown — e.g. "Digital Banking 60% · Payments 20%" — not one
+ *  blended number across every team the person belongs to. */
 export function PeopleResultsSection({ people }: { people: PersonSearchResult[] }) {
   if (people.length === 0) {
     return <EmptyState title="No matching people" />

@@ -31,13 +31,9 @@ const EMPTY_STATE: Record<Tab, { title: string; description: string }> = {
   mine: { title: 'No initiatives yet', description: 'Top-level tasks you create show up here.' },
 }
 
-/**
- * A plain Director's dashboard equivalent of the Executive's "Critical & CEO-assigned"
- * panel — one panel, toggling between two department-scoped views, rather than two (or
- * three) separate panels stacked on the page. Defaults to the combined view since that's
- * what most needs a Director's attention day to day; "My initiatives" (the tasks they
- * personally created) is a tab switch away, not a whole separate section.
- */
+/** A plain Director's dashboard equivalent of the Executive's "Critical & CEO-assigned" panel — one
+ *  panel, toggling between two department-scoped views, rather than two (or three) separate panels
+ *  stacked on the page. */
 export function DirectorTasksPanel() {
   const { currentUser } = useAuth()
   const [tab, setTab] = useState<Tab>('combined')

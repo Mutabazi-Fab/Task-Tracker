@@ -27,13 +27,9 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * The core proof of this project's security-hardening pass: a client can put anyone's id
- * in a request body's "who's doing this" field, but the controller must always overwrite
- * it with whoever the JWT actually says is logged in before the service ever sees it. Each
- * test below deliberately sends a spoofed id and asserts the service received the REAL one
- * instead — exactly the scenario proven live (via curl) during that work.
- */
+/** The core proof of this project's security-hardening pass: a client can put anyone's id in a request
+ *  body's "who's doing this" field, but the controller must always overwrite it with whoever the JWT
+ *  actually says is logged in before the service ever sees it. */
 @ExtendWith(MockitoExtension.class)
 class TaskControllerActorSubstitutionTest {
 

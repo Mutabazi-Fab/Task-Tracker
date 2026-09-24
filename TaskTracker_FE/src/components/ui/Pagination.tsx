@@ -10,9 +10,8 @@ interface PaginationProps {
 
 const MAX_VISIBLE_PAGES = 5
 
-/** A sliding window of up to MAX_VISIBLE_PAGES page numbers centered on the current page,
- *  clamped to stay inside [0, totalPages). Keeps the control usable at any scale — a lane
- *  with hundreds of tasks gets the same five-button width as one with three pages. */
+/** A sliding window of up to MAX_VISIBLE_PAGES page numbers centered on the current page, clamped to
+ *  stay inside [0, totalPages). */
 function pageWindow(page: number, totalPages: number): number[] {
   const half = Math.floor(MAX_VISIBLE_PAGES / 2)
   let start = Math.max(0, page - half)

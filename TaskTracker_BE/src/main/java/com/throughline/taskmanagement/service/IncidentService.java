@@ -32,10 +32,7 @@ public interface IncidentService {
      *  always the caller's own real, JWT-resolved identity. */
     IncidentDetailResponse updateIncident(Long id, UpdateIncidentRequest request);
 
-    /** Records the transition in IncidentStatusChange. Rejects a transition to CLOSED that
-     *  doesn't meet requireClosureReadiness (root cause + corrective action, and for
-     *  CRITICAL/HIGH or regulator-notifiable incidents, both reviews COMPLETED).
-     *  Director/Executive/Super Admin only. changedById is the caller's real identity. */
+    /** Records the transition in IncidentStatusChange. */
     IncidentDetailResponse changeStatus(Long id, ChangeIncidentStatusRequest request);
 
     /** Backs the Incident Management dashboard's KPI tiles, breakdowns and trend. */

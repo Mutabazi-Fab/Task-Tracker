@@ -14,13 +14,8 @@ interface DiscussionThreadProps {
   replies: TaskComment[]
 }
 
-/**
- * One top-level discussion message, its replies (indented underneath, oldest first), and
- * a "Reply" toggle that reveals an inline reply box — the same shape Instagram uses.
- * Replying always threads under THIS top-level comment, even when replying to one of its
- * replies (the backend flattens that automatically), so there's never more than one level
- * of nesting to render.
- */
+/** One top-level discussion message, its replies (indented underneath, oldest first), and a "Reply"
+ *  toggle that reveals an inline reply box — the same shape Instagram uses. */
 export function DiscussionThread({ taskId, comment, replies }: DiscussionThreadProps) {
   const [replyOpen, setReplyOpen] = useState(false)
   const [replyBody, setReplyBody] = useState('')

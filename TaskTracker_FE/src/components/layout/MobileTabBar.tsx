@@ -4,9 +4,7 @@ import { Icon } from '../ui/Icon'
 import { getNavItems } from './Sidebar'
 import styles from './MobileTabBar.module.css'
 
-/** Bottom tab bar, swapped in for the Sidebar below 768px. A "Log out" tab is appended
- *  here rather than left mobile-only-inaccessible, since the Sidebar's logout button
- *  doesn't render at all on this breakpoint. */
+/** Bottom tab bar, swapped in for the Sidebar below 768px. */
 export function MobileTabBar() {
   const { isDirector, logout } = useAuth()
   const navItems = getNavItems(isDirector)

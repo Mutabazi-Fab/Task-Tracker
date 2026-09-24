@@ -10,11 +10,7 @@ declare module '@tanstack/react-query' {
   }
 }
 
-/**
- * One shared React Query client for the whole app. Server state (tasks,
- * people, teams, dashboard numbers) always goes through this — never
- * useState/useEffect + axios directly in a component.
- */
+/** One shared React Query client for the whole app. */
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

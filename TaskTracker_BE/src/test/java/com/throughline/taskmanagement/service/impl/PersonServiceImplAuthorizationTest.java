@@ -198,13 +198,10 @@ class PersonServiceImplAuthorizationTest {
         assertTrue(enrolled.getTotpEnabledAt() != null);
     }
 
-    // ---- createPerson ----
-    // There is no public self-registration — only a Super Admin may create a new,
-    // login-enabled account at all (not just a non-Member one), and the password they set
-    // must come through hashed and the account must start usable (emailVerified=true),
-    // since there's no more OTP step to unlock it afterward. It also has to work fully
-    // offline — an earlier mail-based sign-up-code scheme was tried and reverted for
-    // exactly that reason.
+    // ---- createPerson ---- There is no public self-registration — only a Super Admin may create a new,
+    // login-enabled account at all (not just a non-Member one), and the password they set must come
+    // through hashed and the account must start usable (emailVerified=true), since there's no more OTP
+    // step to unlock it afterward.
 
     @Test
     void superAdminMayCreateANewPerson() {

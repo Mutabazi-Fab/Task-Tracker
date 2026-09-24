@@ -17,16 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-/**
- * Runs against the real seeded database, wrapped in @Transactional so the membership change
- * it actually performs (the positive case) rolls back at the end.
- *
- * Proves the exact bug this was written to fix: Jean Paul Ndayambaje heads Information
- * Technology, not Finance — he could previously add/remove members and reassign the leader
- * on Finance's "Financial Planning & Analysis" team despite that, since TeamServiceImpl only
- * ever checked "is this any Director", never which department they actually head. He should
- * still be able to do all of that on his own department's teams.
- */
+/** Runs against the real seeded database, wrapped in @Transactional so the membership change it
+ *  actually performs (the positive case) rolls back at the end. */
 @SpringBootTest
 @Transactional
 class TeamServiceImplDepartmentAuthorizationTest {

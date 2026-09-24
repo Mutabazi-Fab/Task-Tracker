@@ -21,14 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Runs against the real seeded database (same @SpringBootTest pattern as
- * TaskRepositoryDepartmentScopingTest) — proves the Trend chart on a rollup task
- * (TEAM/DEPARTMENT) is no longer always empty. TSK-0001 is a DEPARTMENT task with no
- * PROGRESS comments of its own; before TaskMapper.buildRollupTimeline existed, its
- * progressTimeline was always `List.of()`, which is exactly what TaskProgressSparkline
- * renders as nothing (points.length < 2 -> null) — the bug the user reported.
- */
+/** Runs against the real seeded database (same @SpringBootTest pattern as
+ *  TaskRepositoryDepartmentScopingTest) — proves the Trend chart on a rollup task (TEAM/DEPARTMENT) is
+ *  no longer always empty. */
 @SpringBootTest
 @Transactional
 class TaskMapperRollupTimelineTest {
@@ -86,18 +81,11 @@ class TaskMapperRollupTimelineTest {
                 "The reconstructed timeline's final point should match the task's live rollup percentage.");
     }
 
-    /** TSK-0001 (above) happens to have its own opening-note comment seeded directly via SQL
-     *  with an explicit DISCUSSION type, so it never actually exercised the real bug: any
-     *  task created through the running app — TaskServiceImpl.addOpeningComment never sets
-     *  a type, and TaskComment.type defaults to PROGRESS — gets a spurious PROGRESS comment
-     *  of its own even when it's a rollup (TEAM/DEPARTMENT) task. The old code treated "has
-     *  its own PROGRESS comment" as "is individually tracked", so that one spurious
-     *  0%-at-creation comment short-circuited straight past the real reconstruction, leaving
-     *  the Trend chart stuck showing a single 0% point forever. Builds its own throwaway
-     *  DEPARTMENT → TEAM implementation task → INDIVIDUAL leaf chain (wrapped in
-     *  @Transactional so it rolls back) to reproduce this, rather than depending on specific
-     *  live task codes from a past manual session, which is what this test originally did
-     *  (TSK-0034/0035/0036) until that data was deleted out from under it. */
+    /** TSK-0001 (above) happens to have its own opening-note comment seeded directly via SQL with an
+     *  explicit DISCUSSION type, so it never actually exercised the real bug: any task created through the
+     *  running app — TaskServiceImpl.addOpeningComment never sets a type, and TaskComment.type defaults to
+     *  PROGRESS — gets a spurious PROGRESS comment of its own even when it's a rollup (TEAM/DEPARTMENT)
+     *  task. */
     @Test
     void rollupTaskWithItsOwnSpuriousOpeningProgressCommentStillReconstructsFromChildren() {
         Long fabiolaId = idOf("fabiola.ikirezi@ceo.com"); // CEO/Executive

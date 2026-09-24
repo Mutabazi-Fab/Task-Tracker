@@ -24,10 +24,7 @@ interface CreateSubtaskModalProps {
   onClose: () => void
 }
 
-/** Form shell + submit — owns the mutation(s), CreateSubtaskForm owns only the fields.
- *  When this is a Team-assigned implementation task with InlineSubtasksField rows, each
- *  row's createSubtask call needs THIS task's own id (not parentTaskId, one level higher),
- *  so it only fires once this task's own mutation resolves. */
+/** Form shell + submit — owns the mutation(s), CreateSubtaskForm owns only the fields. */
 export function CreateSubtaskModal({
   parentTaskId,
   teamId,

@@ -13,9 +13,7 @@ interface CreateTaskModalProps {
   onClose: () => void
 }
 
-/** Form shell + submit — owns the mutation(s), CreateTaskForm owns only the fields. When
- *  the new task is Team-assigned with InlineSubtasksField rows, each row's createSubtask
- *  call needs the parent task's id, so it only fires after the parent's own mutation resolves. */
+/** Form shell + submit — owns the mutation(s), CreateTaskForm owns only the fields. */
 export function CreateTaskModal({ open, onClose }: CreateTaskModalProps) {
   const createTask = useCreateTask()
   const queryClient = useQueryClient()

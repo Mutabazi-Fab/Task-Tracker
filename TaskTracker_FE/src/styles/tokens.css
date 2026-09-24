@@ -1,12 +1,4 @@
-/*
-  Design tokens for Throughline.
-  Every colour, radius and spacing value used anywhere in the app must come
-  from one of these variables — never a raw hex inside a component file.
-
-  Two themes, selected by [data-theme] on <html>:
-    field    — default, daylight/outdoor operations
-    command  — low-light operations room
-*/
+/* Design tokens for Throughline. */
 
 :root,
 [data-theme='field'] {
@@ -40,11 +32,9 @@
   --signal-info: #1f6f8b;
   --signal-info-bg: #dcedf1;
 
-  /* Role badges (Sidebar, PersonAdminControls) — distinct from --status-* (task status only)
-     and from --accent (Team Leader reuses --accent-strong/--accent-soft, matching the
-     existing per-team "Leader" tag). Director, Executive and Super Admin each get their
-     own hue so the five states (Member/Team Leader/Director/Executive/Super Admin) never
-     look ambiguous at a glance. */
+  /* Role badges (Sidebar, PersonAdminControls) — distinct from --status-* (task status only) and from
+   *  --accent (Team Leader reuses --accent-strong/--accent-soft, matching the existing per-team "Leader"
+   *  tag). */
   --signal-admin: #6b3fa0;
   --signal-admin-bg: #ece2f5;
   --signal-exec: #a8641a;

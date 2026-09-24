@@ -14,10 +14,8 @@ import { DeleteDepartmentModal } from './components/DeleteDepartmentModal'
 import { DepartmentAdminControls } from './components/DepartmentAdminControls'
 import styles from './DepartmentPage.module.css'
 
-/** Name, head Director, and every Team that belongs to it — open to any authenticated
- *  caller (read access is open org-chart-wide). Writes split by tier: creating a team here
- *  or deleting the department is Executive-or-above (or a Director who heads it, for
- *  creating a team); renaming and reassigning the head stay Super-Admin-only. */
+/** Name, head Director, and every Team that belongs to it — open to any authenticated caller (read
+ *  access is open org-chart-wide). */
 export function DepartmentPage() {
   const { departmentId } = useParams<{ departmentId: string }>()
   const id = Number(departmentId)

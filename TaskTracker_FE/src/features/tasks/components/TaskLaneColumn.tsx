@@ -17,17 +17,13 @@ interface TaskLaneColumnProps {
    *  the viewer's own id for a Member. */
   assignedPersonId?: number
   sort: TaskSortValue
-  /** 'column' (default) for the normal three-lanes-side-by-side board — one narrow vertical
-   *  stack of cards. 'grid' for when this is the ONLY visible lane (a status filter narrowed
-   *  the board down to one column) — cards wrap left-to-right to fill the available width
-   *  instead of sitting in one cramped column with empty space on either side. */
+  /** 'column' (default) for the normal three-lanes-side-by-side board — one narrow vertical stack of
+   *  cards. */
   layout?: 'column' | 'grid'
 }
 
-/** One status column — owns its own paginated query and page state, independent of the
- *  other two columns. A lane with hundreds of tasks pages through LANE_PAGE_SIZE at a
- *  time instead of dumping everything into one long scroll; a lane with three tasks just
- *  never shows a pager at all (Pagination renders nothing for a single page). */
+/** One status column — owns its own paginated query and page state, independent of the other two
+ *  columns. */
 export function TaskLaneColumn({ status, assignedPersonId, sort, layout = 'column' }: TaskLaneColumnProps) {
   const [page, setPage] = useState(0)
   const query = useTasks({ status, assignedPersonId, page, size: LANE_PAGE_SIZE, sort })

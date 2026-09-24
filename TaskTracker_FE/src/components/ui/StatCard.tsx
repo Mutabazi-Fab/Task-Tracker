@@ -5,9 +5,8 @@ interface StatCardProps {
   label: string
   value: string
   note?: string
-  /** Smaller padding/type — for a row with many tiles at once (see the dashboard's two
-   *  stacked KPI rows) where the default size takes up too much vertical space. Teams'/
-   *  People's own stat rows keep the default size, unchanged. */
+  /** Smaller padding/type — for a row with many tiles at once (see the dashboard's two stacked KPI rows)
+   *  where the default size takes up too much vertical space. */
   compact?: boolean
 }
 

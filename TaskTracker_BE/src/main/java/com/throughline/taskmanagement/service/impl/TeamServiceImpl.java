@@ -135,10 +135,7 @@ public class TeamServiceImpl implements TeamService {
     public void deleteTeam(Long id) {
         Team team = teamRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
-        // TeamMember rows cascade-delete with the team (Team.members is CascadeType.ALL +
-        // orphanRemoval). TeamMembershipChange rows do NOT — deleting a team with membership
-        // history intentionally fails on the FK constraint rather than silently destroying
-        // the audit log; that's a decision for later, not a side effect of this call.
+        // TeamMember rows cascade-delete with the team (Team.members is CascadeType.ALL + orphanRemoval).
         teamRepository.delete(team);
     }
 
@@ -231,10 +228,8 @@ public class TeamServiceImpl implements TeamService {
 
         requireDirectorOfTeamsDepartmentOrTeamLeader(team, changedBy);
 
-        // TODO: block this removal if the member has unfinished subtasks assigned to them
-        // within this team, per the "block removal" decision from Phase 2. This is now
-        // actually implementable (Task hierarchy/subtasks exist as of Phase 3) but hasn't
-        // been wired in yet — a real, tracked gap, not an oversight.
+        // TODO: block this removal if the member has unfinished subtasks assigned to them within this team,
+        // per the "block removal" decision from Phase 2.
 
         Person person = membership.getPerson();
         team.getMembers().remove(membership);
@@ -327,9 +322,7 @@ public class TeamServiceImpl implements TeamService {
         }
     }
 
-    /** Executive/Super Admin always qualifies. A plain DIRECTOR only qualifies when they
-     *  are the actual head of this department (Department.headDirector), not merely a
-     *  member of it. Mirrors TaskServiceImpl's identical restriction one level up. */
+    /** Executive/Super Admin always qualifies. */
     private boolean isHeadOfDepartment(Person person, Department department) {
         if (Role.isAtLeastExecutive(person.getRole())) {
             return true;

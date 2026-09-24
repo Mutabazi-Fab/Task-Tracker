@@ -4,10 +4,9 @@ import { formatCurrency } from '../lib/incidentLabels'
 import { useIncidentDashboard } from '../hooks/useIncidentDashboard'
 import styles from './IncidentKpiRow.module.css'
 
-/** Reproduces every tile the source Excel's Dashboard sheet computed: total, open/
- *  monitoring, critical/high, overdue-actions, plus the financial row (gross/recovery/net
- *  loss, regulator-notifiable count). "Closed incidents" is an addition — the Excel never
- *  surfaced it as its own tile, only buried inside the Status breakdown table. */
+/** Reproduces every tile the source Excel's Dashboard sheet computed: total, open/monitoring,
+ *  critical/high, overdue-actions, plus the financial row (gross/recovery/net loss,
+ *  regulator-notifiable count). */
 export function IncidentKpiRow() {
   const query = useIncidentDashboard()
 

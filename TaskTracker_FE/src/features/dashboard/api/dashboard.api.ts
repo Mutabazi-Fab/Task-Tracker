@@ -53,9 +53,8 @@ export async function fetchDirectorTasks(
   return data
 }
 
-/** Every HIGH/CRITICAL-severity task within this Director's own department, plus every
- *  task in it an Executive/Super Admin personally assigned — the department-scoped
- *  equivalent of fetchExecutiveTasks. No viewer id — the backend scopes to the caller's own department. */
+/** Every HIGH/CRITICAL-severity task within this Director's own department, plus every task in it an
+ *  Executive/Super Admin personally assigned — the department-scoped equivalent of fetchExecutiveTasks. */
 export async function fetchDirectorCriticalAndCeoAssignedTasks(
   page: number,
   size: number,

@@ -42,9 +42,8 @@ export interface ExtendDeadlineRequest {
   extendedById: number
 }
 
-/** One row of the cross-task "Requests" inbox — every deadline-extension request still
- *  awaiting a decision from the viewer, org-wide. Always PENDING by construction, so no
- *  status/decidedBy; carries the task's own identity since it's not already open. */
+/** One row of the cross-task "Requests" inbox — every deadline-extension request still awaiting a
+ *  decision from the viewer, org-wide. */
 export interface PendingExtensionRequest {
   id: number
   taskId: number

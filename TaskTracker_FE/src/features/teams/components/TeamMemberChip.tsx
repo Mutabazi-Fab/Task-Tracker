@@ -14,9 +14,7 @@ interface TeamMemberChipProps {
   onRemove?: () => void
 }
 
-/** One member, links to their profile. Shows a "Leader" tag for this team's leader —
- *  leadership is scoped per-team now, so this can only come from the membership row
- *  itself, never from the person. */
+/** One member, links to their profile. */
 export function TeamMemberChip({ member, onMakeLeader, onRemove }: TeamMemberChipProps) {
   return (
     <div className={styles.chip}>

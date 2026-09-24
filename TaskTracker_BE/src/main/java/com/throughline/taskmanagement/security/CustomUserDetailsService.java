@@ -30,10 +30,8 @@ public class CustomUserDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException("Account has not been provisioned for login yet");
         }
 
-        // Re-checked on EVERY request (this filter re-loads UserDetails per request, not
-        // once at login) — so an account deactivated mid-session stops working immediately,
-        // not just for its next fresh login. JwtAuthenticationFilter's catch-all treats any
-        // exception here as "leave the request unauthenticated", which is exactly right.
+        // Re-checked on EVERY request (this filter re-loads UserDetails per request, not once at login) — so
+        // an account deactivated mid-session stops working immediately, not just for its next fresh login.
         if (!person.isActive()) {
             throw new DisabledException("Account is deactivated");
         }

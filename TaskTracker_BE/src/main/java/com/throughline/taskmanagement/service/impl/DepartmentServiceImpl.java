@@ -48,10 +48,9 @@ public class DepartmentServiceImpl implements DepartmentService {
 
         Person createdBy = personRepository.findById(request.createdById())
                 .orElseThrow(() -> new ResourceNotFoundException("createdById not found"));
-        // Creating a department is the CEO's call too, not Super-Admin-only like the rest
-        // of department administration (renaming, reassigning the head) — she's the one
-        // handing whole-department work out in the first place, so standing up a new
-        // department to receive it is hers to do. Super Admin still can, same as always.
+        // Creating a department is the CEO's call too, not Super-Admin-only like the rest of department
+        // administration (renaming, reassigning the head) — she's the one handing whole-department work out in
+        // the first place, so standing up a new department to receive it is hers to do.
         if (!Role.isAtLeastExecutive(createdBy.getRole())) {
             throw new ForbiddenActionException("Only an Executive or Super Admin can create a department.");
         }

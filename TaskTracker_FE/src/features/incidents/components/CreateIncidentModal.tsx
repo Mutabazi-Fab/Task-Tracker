@@ -13,11 +13,8 @@ interface CreateIncidentModalProps {
   onClose: () => void
 }
 
-/** The form only stages a payload — nothing is sent to the backend until the user
- *  explicitly confirms "Yes, record it" on the summary step that follows. Recording an
- *  incident is a significant, hard-to-quietly-undo action, so it gets the same
- *  confirm-before-submit pattern as other consequential actions in this app (e.g. the
- *  forgot-password request flow). */
+/** The form only stages a payload — nothing is sent to the backend until the user explicitly confirms
+ *  "Yes, record it" on the summary step that follows. */
 export function CreateIncidentModal({ open, onClose }: CreateIncidentModalProps) {
   const createIncident = useCreateIncident()
   const [pendingPayload, setPendingPayload] = useState<CreateIncidentRequest | null>(null)

@@ -1,11 +1,6 @@
 import styles from './Icon.module.css'
 
-/**
- * Inline SVG line icons — no icon font, no external package. Explicitly not
- * emoji: every glyph here is a stroke-based outline drawn at a fixed 24x24
- * viewBox, coloured via currentColor so it inherits whatever text colour
- * its container sets.
- */
+/** Inline SVG line icons — no icon font, no external package. */
 export type IconName =
   | 'dashboard'
   | 'tasks'

@@ -18,14 +18,9 @@ interface TotpSetupState {
   remember?: boolean
 }
 
-/**
- * Reached from login/reset-password on an account that requires TOTP but has never
- * completed enrollment — pendingAuthToken, totpSecret, and totpQrCodeDataUri all arrive
- * via router state (login already generated and stored the secret; this page never sees
- * or handles it directly). Two phases: scan-and-confirm, then a one-time recovery-codes
- * screen — those codes are never shown again after this, so the person has to actually
- * leave this page (not get auto-redirected) to move on.
- */
+/** Reached from login/reset-password on an account that requires TOTP but has never completed
+ *  enrollment — pendingAuthToken, totpSecret, and totpQrCodeDataUri all arrive via router state (login
+ *  already generated and stored the secret; this page never sees or handles it directly). */
 export function TotpSetupPage() {
   const { confirmTotpSetup } = useAuth()
   const navigate = useNavigate()

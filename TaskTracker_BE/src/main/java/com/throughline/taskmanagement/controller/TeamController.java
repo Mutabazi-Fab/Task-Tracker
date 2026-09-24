@@ -24,14 +24,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Every "who's doing this" field (createdById/changedById) is now re-derived from the
- * caller's actual login (see CurrentPersonResolver) rather than trusted from the request
- * body — a request can no longer claim to be a Director by just putting a Director's id
- * in the JSON. The rest of each request is passed through unchanged, so TeamService's own
- * role checks (already written against whatever id they're given) become trustworthy
- * without needing to change at all.
- */
+/** Every "who's doing this" field (createdById/changedById) is now re-derived from the caller's actual
+ *  login (see CurrentPersonResolver) rather than trusted from the request body — a request can no
+ *  longer claim to be a Director by just putting a Director's id in the JSON. */
 @RestController
 @RequestMapping("/api/v1/teams")
 @RequiredArgsConstructor

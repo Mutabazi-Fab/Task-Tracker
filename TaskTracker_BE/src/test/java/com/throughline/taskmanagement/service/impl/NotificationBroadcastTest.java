@@ -17,17 +17,11 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Runs against the real seeded database, wrapped in @Transactional so everything it writes
- * (the new team, its notifications) rolls back at the end of the test instead of
- * permanently polluting the shared dev database the way a plain @SpringBootTest write
- * would — every other real-DB test this session has been read-only; this is the first one
- * that actually creates something, hence the extra care.
- *
- * Proves the new-team broadcast → per-type unread count → mark-category-read cycle end to
- * end: creating a team notifies every OTHER Director-or-above (never the creator), that
- * shows up in getUnreadCountsByType, and marking the category read clears it again.
- */
+/** Runs against the real seeded database, wrapped in @Transactional so everything it writes (the new
+ *  team, its notifications) rolls back at the end of the test instead of permanently polluting the
+ *  shared dev database the way a plain @SpringBootTest write would — every other real-DB test this
+ *  session has been read-only; this is the first one that actually creates something, hence the extra
+ *  care. */
 @SpringBootTest
 @Transactional
 class NotificationBroadcastTest {

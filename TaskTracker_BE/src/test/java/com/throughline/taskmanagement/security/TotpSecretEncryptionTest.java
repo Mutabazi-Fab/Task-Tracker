@@ -13,15 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-/**
- * Person.totpSecret goes through TotpSecretConverter (backed by TotpSecretCipher) — this
- * confirms that conversion actually happens against the real, Spring-managed
- * EntityManagerFactory, not just that the cipher class works in isolation. Specifically
- * guards against the converter silently no-op'ing if Spring Boot's JPA autoconfiguration
- * ever stopped wiring @Component-annotated AttributeConverters through Spring's bean
- * container — that would leave TotpSecretCipher's injected field null and NPE at runtime,
- * or worse, silently store the secret in plaintext.
- */
+/** Person.totpSecret goes through TotpSecretConverter (backed by TotpSecretCipher) — this confirms that
+ *  conversion actually happens against the real, Spring-managed EntityManagerFactory, not just that the
+ *  cipher class works in isolation. */
 @SpringBootTest
 @Transactional
 class TotpSecretEncryptionTest {

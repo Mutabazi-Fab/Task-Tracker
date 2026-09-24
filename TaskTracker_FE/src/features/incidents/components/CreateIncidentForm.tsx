@@ -44,15 +44,9 @@ interface CreateIncidentFormProps {
   submitting: boolean
 }
 
-/** Director/Executive/Super Admin only (gated by whoever opens the modal — see
- *  IncidentDashboardPage). reportedById is filled in by the caller from the logged-in
- *  identity; the backend re-derives and overwrites it from the JWT regardless, same pattern
- *  as CreateTaskForm/createdById.
- *
- *  Inherent Score, Severity, and Net Loss update live as Likelihood/Impact/Gross Loss/
- *  Recovery are filled in — a client-side preview only, mirroring the backend's own
- *  IncidentMapper.computeInherentScore/computeSeverity formulas exactly. The server always
- *  recomputes these independently on save and never trusts what's shown here. */
+/** Director/Executive/Super Admin only (gated by whoever opens the modal — see IncidentDashboardPage).
+ *  reportedById is filled in by the caller from the logged-in identity; the backend re-derives and
+ *  overwrites it from the JWT regardless, same pattern as CreateTaskForm/createdById. */
 export function CreateIncidentForm({ onSubmit, onCancel, submitting }: CreateIncidentFormProps) {
   const { currentUser } = useAuth()
   const peopleQuery = usePeople()

@@ -12,14 +12,9 @@ import java.util.List;
 @Component
 public class PersonMapper {
 
-    /**
-     * memberships is passed in rather than looked up here — a mapper stays a pure
-     * entity-to-DTO transform with no repository access; the caller (PersonServiceImpl)
-     * fetches this person's TeamMember rows and hands them over. Same reasoning for the
-     * two-arg overload below defaulting pendingPasswordResetRequestedAt to null: most
-     * callers (createPerson, changeRole, setActive, updatePerson, DashboardServiceImpl,
-     * AuthServiceImpl.getCurrentPerson) don't need it on their response at all.
-     */
+    /** memberships is passed in rather than looked up here — a mapper stays a pure entity-to-DTO transform
+     *  with no repository access; the caller (PersonServiceImpl) fetches this person's TeamMember rows and
+     *  hands them over. */
     public PersonResponse toResponse(Person person, List<TeamMember> memberships) {
         return toResponse(person, memberships, null);
     }

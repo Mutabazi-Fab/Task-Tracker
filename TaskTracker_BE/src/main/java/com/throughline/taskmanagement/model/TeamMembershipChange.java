@@ -9,12 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/**
- * Append-only audit log — never updated, never deleted. Preserves the full
- * history of every membership change on a team, including for members who
- * have long since moved on. Created only as a side effect of the
- * add/remove-member operations in TeamService, never directly by a client.
- */
+/** Append-only audit log — never updated, never deleted. */
 @Entity
 @Table(name = "team_membership_changes", indexes = {
         @Index(name = "idx_team_membership_changes_team_id", columnList = "team_id"),

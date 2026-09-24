@@ -39,10 +39,8 @@ function protectedPage(page: React.ReactNode) {
   )
 }
 
-/** The actual <Route> tree. /login renders outside AppShell (no logged-in identity yet)
- *  and is wrapped in PublicOnlyRoute so an already-logged-in person skips past it. There's
- *  no public /sign-up route — only a Super Admin can create a new account, password
- *  included, so there's nothing left for the new person to complete themselves. */
+/** The actual <Route> tree. /login renders outside AppShell (no logged-in identity yet) and is wrapped
+ *  in PublicOnlyRoute so an already-logged-in person skips past it. */
 export function AppRoutes() {
   return (
     <Routes>

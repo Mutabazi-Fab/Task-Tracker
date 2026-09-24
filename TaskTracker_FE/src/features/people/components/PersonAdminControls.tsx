@@ -24,13 +24,7 @@ const ROLE_OPTIONS: { label: string; value: Role }[] = [
   { label: 'Super Admin', value: 'SUPER_ADMIN' },
 ]
 
-/**
- * Super-Admin-only — not rendered at all otherwise (see PersonProfilePage). The backend
- * still enforces the real rules (can't remove the last Super Admin, can't deactivate
- * yourself) — this just surfaces whatever error that produces rather than duplicating
- * the logic client-side. Reason is mandatory for both actions — enforced here (button
- * stays disabled without one) and server-side (the request is rejected regardless).
- */
+/** Super-Admin-only — not rendered at all otherwise (see PersonProfilePage). */
 export function PersonAdminControls({ person }: { person: Person }) {
   const { currentUser } = useAuth()
   const changeRole = useChangeRole(person.id)

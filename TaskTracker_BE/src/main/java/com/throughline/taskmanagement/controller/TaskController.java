@@ -204,10 +204,8 @@ public class TaskController {
         return ResponseEntity.ok(taskService.decideDeadlineExtension(id, extensionId, verified));
     }
 
-    /** Only meaningful on a CEO-mandated chain — sends a request into the true approver's
-     *  (the CEO/Super Admin's) own "Requests" inbox; see TaskService.
-     *  forwardExtensionRequestToApprover. No request body: everything needed is already in
-     *  the path plus the caller's own JWT-resolved identity. */
+    /** Only meaningful on a CEO-mandated chain — sends a request into the true approver's (the CEO/Super
+     *  Admin's) own "Requests" inbox; see TaskService. forwardExtensionRequestToApprover. */
     @PutMapping("/{id}/deadline-extensions/{extensionId}/forward")
     public ResponseEntity<TaskDetailResponse> forwardExtensionRequestToApprover(
             @PathVariable Long id,
@@ -295,9 +293,8 @@ public class TaskController {
         return viewer.getId();
     }
 
-    /** A plain Director (role DIRECTOR exactly) only sees tasks in their own department,
-     *  once assignedPersonId comes back null from scopeToSelfUnlessDirector above. Null for
-     *  anyone else. */
+    /** A plain Director (role DIRECTOR exactly) only sees tasks in their own department, once
+     *  assignedPersonId comes back null from scopeToSelfUnlessDirector above. */
     private Long departmentScopeForViewer(Person viewer) {
         if (viewer.getRole() != Role.DIRECTOR) {
             return null;

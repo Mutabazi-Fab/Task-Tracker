@@ -196,9 +196,7 @@ public class DashboardServiceImpl implements DashboardService {
             throw new ForbiddenActionException("Only an Executive or Super Admin has an Executive Dashboard.");
         }
 
-        // Depth alone doesn't say what deserves an Executive's attention. Shows anything
-        // CRITICAL (any depth) plus anything an Executive/Super Admin personally assigned,
-        // org-wide — not scoped to this viewer's own, unlike getDirectorTasks above.
+        // Depth alone doesn't say what deserves an Executive's attention.
         return taskRepository.findBySeverityOrAssignedByRoleIn(
                         TaskSeverity.CRITICAL, List.of(Role.EXECUTIVE, Role.SUPER_ADMIN), pageable)
                 .map(t -> {

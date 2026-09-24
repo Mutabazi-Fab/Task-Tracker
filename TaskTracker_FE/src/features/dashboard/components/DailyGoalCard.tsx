@@ -28,10 +28,8 @@ interface PickableTask {
   parentTitle: string | null
 }
 
-/** "What I'm focused on today" — up to 3 of a Member's own assigned tasks, picked by them,
- *  shown at the top of their dashboard. Removing a goal is always a manual, explicit
- *  action — a completed task doesn't disappear on its own, it just switches to a "done"
- *  treatment until the Member clears it themselves. */
+/** "What I'm focused on today" — up to 3 of a Member's own assigned tasks, picked by them, shown at the
+ *  top of their dashboard. */
 export function DailyGoalCard({ personId, dailyGoalTasks, myTasks }: DailyGoalCardProps) {
   const [pickerTaskId, setPickerTaskId] = useState('')
   const addGoal = useAddDailyGoal(personId)
@@ -40,10 +38,8 @@ export function DailyGoalCard({ personId, dailyGoalTasks, myTasks }: DailyGoalCa
   const goalTaskIds = new Set(dailyGoalTasks.map((t) => t.id))
 
   // The backend only accepts a task actually assigned to this person directly
-  // (PersonServiceImpl.addDailyGoal) — myTasks also includes team-assigned tasks the
-  // person merely has visibility into, which would fail that check silently. Own
-  // individually-assigned subtasks count too — flattened out of each top-level task's
-  // nested subtasks so a Member doesn't have to open "My tasks" just to focus on one.
+  // (PersonServiceImpl.addDailyGoal) — myTasks also includes team-assigned tasks the person merely has
+  // visibility into, which would fail that check silently.
   const ownTopLevelTasks: PickableTask[] = myTasks
     .filter((t) => t.assigneeType === 'INDIVIDUAL')
     .map((t) => ({ id: t.id, taskCode: t.taskCode, title: t.title, parentTitle: null }))

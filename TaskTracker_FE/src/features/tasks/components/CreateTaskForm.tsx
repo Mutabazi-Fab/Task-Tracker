@@ -40,11 +40,9 @@ interface CreateTaskFormProps {
   submitting: boolean
 }
 
-/** Top-level (depth 0) tasks only — team, individual (behaves like a subtask itself, no
- *  rollup, no children), or Department (Executive-only; its head Director later turns it
- *  into a real "implementation task"). createdById is always the logged-in Director-or-
- *  above. The CEO seat (role EXECUTIVE) only ever hands work to a whole Department, so she
- *  never sees the Team/Individual choice at all — Super Admin keeps every option. */
+/** Top-level (depth 0) tasks only — team, individual (behaves like a subtask itself, no rollup, no
+ *  children), or Department (Executive-only; its head Director later turns it into a real
+ *  "implementation task"). createdById is always the logged-in Director-or- above. */
 export function CreateTaskForm({ onSubmit, onCancel, submitting }: CreateTaskFormProps) {
   const { currentUser, isExecutive } = useAuth()
   const teamsQuery = useTeams()

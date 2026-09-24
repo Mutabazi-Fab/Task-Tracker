@@ -9,14 +9,8 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/**
- * Append-only audit log of every top-level task/subtask creation and deletion — mirrors
- * RoleChange/AccountStatusChange's pattern. Visible to a Director or Super Admin (see
- * TaskServiceImpl.getTaskActivity), unlike those two logs which are Super-Admin-only.
- *
- * Everything about the task is snapshotted onto this row rather than held as a live FK to
- * Task: a DELETED entry's task no longer exists by the time anyone reads this.
- */
+/** Append-only audit log of every top-level task/subtask creation and deletion — mirrors
+ *  RoleChange/AccountStatusChange's pattern. */
 @Entity
 @Table(name = "task_activities", indexes = {
         @Index(name = "idx_task_activities_task_code", columnList = "task_code")

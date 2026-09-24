@@ -15,10 +15,8 @@ public record PersonResponse(
     boolean active,
     boolean totpRequired,
     boolean totpEnabled,
-    /** Null unless this person has an open (PENDING) password-reset request awaiting a
-     *  Super Admin — see PasswordResetRequest. Only ever populated on the responses that
-     *  actually need to show it (getPersonById/getAllPeople); every other PersonResponse
-     *  in this app passes null here since nothing else needs it. */
+    /** Null unless this person has an open (PENDING) password-reset request awaiting a Super Admin — see
+     *  PasswordResetRequest. */
     LocalDateTime pendingPasswordResetRequestedAt,
     List<PersonTeamMembershipResponse> teams,
     String departmentName,

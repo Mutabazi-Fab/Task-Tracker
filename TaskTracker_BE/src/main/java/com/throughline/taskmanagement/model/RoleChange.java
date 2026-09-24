@@ -8,12 +8,8 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/**
- * Append-only audit log of every role change — who was promoted/demoted, to what, by
- * whom, and (optionally) why. Mirrors TeamMembershipChange's audit pattern: never updated,
- * only ever inserted, so the full history survives even after a person's role moves on
- * again.
- */
+/** Append-only audit log of every role change — who was promoted/demoted, to what, by whom, and
+ *  (optionally) why. */
 @Entity
 @Table(name = "role_changes", indexes = {
         @Index(name = "idx_role_changes_person_id", columnList = "person_id")

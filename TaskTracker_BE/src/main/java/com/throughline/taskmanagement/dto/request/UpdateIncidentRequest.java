@@ -12,13 +12,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-/** Edits an incident's investigation/closure fields over its lifecycle — everything except
- *  status (see ChangeIncidentStatusRequest, which also carries its own audit trail) and the
- *  server-generated incidentCode/reportedBy. Director/Executive/Super Admin only, same as
- *  creating one. changedById is overwritten by the controller with the caller's own
- *  JWT-resolved identity. actualClosureDate is set here in preparation for closing, but the
- *  transition to CLOSED itself still goes through ChangeIncidentStatusRequest, which is what
- *  enforces IncidentServiceImpl.requireClosureReadiness. */
+/** Edits an incident's investigation/closure fields over its lifecycle — everything except status (see
+ *  ChangeIncidentStatusRequest, which also carries its own audit trail) and the server-generated
+ *  incidentCode/reportedBy. */
 public record UpdateIncidentRequest(
     LocalDate dateOccurred,
     LocalTime timeOccurred,

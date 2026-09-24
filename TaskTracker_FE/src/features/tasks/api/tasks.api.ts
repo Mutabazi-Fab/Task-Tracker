@@ -49,16 +49,13 @@ export async function createSubtask(parentTaskId: number, payload: CreateSubtask
   return data
 }
 
-// No body — the actor is derived from the JWT server-side, and the backend independently
-// re-checks Director/Super Admin (TaskServiceImpl.deleteTask). Also recorded in the
-// activity log — see fetchTaskActivity below.
+// No body — the actor is derived from the JWT server-side, and the backend independently re-checks
+// Director/Super Admin (TaskServiceImpl.deleteTask).
 export async function deleteTask(id: number): Promise<void> {
   await axiosClient.delete(endpoints.tasks.remove(id))
 }
 
-/** Director or Super Admin only — every task/subtask created or deleted, org-wide, newest
- *  first. The backend independently re-checks that tier, same as every other admin-facing
- *  read in this app. */
+/** Director or Super Admin only — every task/subtask created or deleted, org-wide, newest first. */
 export async function fetchTaskActivity(page: number, size: number): Promise<Page<TaskActivity>> {
   const { data } = await axiosClient.get<Page<TaskActivity>>(endpoints.tasks.activity(), {
     params: { page, size, sort: 'timestamp,desc' },

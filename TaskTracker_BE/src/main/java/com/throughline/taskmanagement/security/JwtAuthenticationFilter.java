@@ -14,12 +14,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * Reads "Authorization: Bearer <token>", and if it's valid, populates the
- * SecurityContext for this request. No token, or an invalid one, just falls
- * through unauthenticated — it's up to the security filter chain's
- * authorizeHttpRequests rules whether that matters for the given path.
- */
+/** Reads "Authorization: Bearer <token>", and if it's valid, populates the SecurityContext for this
+ *  request. */
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {

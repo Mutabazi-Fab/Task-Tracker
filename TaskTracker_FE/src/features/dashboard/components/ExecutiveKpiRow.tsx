@@ -4,10 +4,9 @@ import { formatPercentage } from '../../../lib/formatPercentage'
 import { useExecutiveKpis } from '../hooks/useExecutiveKpis'
 import styles from './KpiRow.module.css'
 
-/** The four org-health tiles atop the Executive Dashboard — its own component/data source,
- *  not KpiRow/useDashboardOverview, since a Director's dashboard still needs the old ones
- *  unchanged and these four numbers don't exist in DashboardOverview. Reuses KpiRow's own
- *  grid layout (same 4-tile shape). */
+/** The four org-health tiles atop the Executive Dashboard — its own component/data source, not
+ *  KpiRow/useDashboardOverview, since a Director's dashboard still needs the old ones unchanged and
+ *  these four numbers don't exist in DashboardOverview. */
 export function ExecutiveKpiRow() {
   const query = useExecutiveKpis()
 

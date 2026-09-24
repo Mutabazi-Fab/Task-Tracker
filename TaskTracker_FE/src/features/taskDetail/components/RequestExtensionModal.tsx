@@ -16,9 +16,8 @@ interface RequestExtensionModalProps {
   onClose: () => void
 }
 
-/** Requested by whoever's doing the work, sent up the chain of command to this task's
- *  deadline decider (task.deadlineDeciderName) — always a Director-or-above. Never moves
- *  the deadline itself — only an approval does that. */
+/** Requested by whoever's doing the work, sent up the chain of command to this task's deadline decider
+ *  (task.deadlineDeciderName) — always a Director-or-above. */
 export function RequestExtensionModal({ task, open, onClose }: RequestExtensionModalProps) {
   const [requestedDeadline, setRequestedDeadline] = useState('')
   const [justification, setJustification] = useState('')

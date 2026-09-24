@@ -6,12 +6,10 @@ import com.throughline.taskmanagement.dto.response.GuidanceNoteResponse;
 
 import java.util.List;
 
-/** The editable half of the Incident Guidance page — free-text notes a Director/Executive/
- *  Super Admin can add on top of the fixed reference material (severity table, likelihood/
- *  impact scale, minimum-completion checklist) carried over verbatim from the source Excel's
- *  "Lists & Guidance" sheet. That fixed material is hardcoded on the frontend, not served
- *  from here, since it's the same text the app's own closure-enforcement logic is built
- *  from and isn't meant to drift from it. */
+/** The editable half of the Incident Guidance page — free-text notes a Director/Executive/ Super Admin
+ *  can add on top of the fixed reference material (severity table, likelihood/impact scale,
+ *  minimum-completion checklist) carried over verbatim from the source Excel's "Lists & Guidance"
+ *  sheet. */
 public interface IncidentGuidanceService {
 
     List<GuidanceNoteResponse> getNotes();

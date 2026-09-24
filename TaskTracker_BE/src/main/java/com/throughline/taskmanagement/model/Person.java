@@ -46,21 +46,13 @@ public class Person {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    /** Every person belongs to exactly one Department, independent of team membership.
-     *  Required in practice (PersonServiceImpl.createPerson), not a DB constraint.
-     *  Nullable only for accounts that predate this field. LAZY — Department.headDirector/
-     *  createdBy point back to Person, so an EAGER default here (JPA's default for
-     *  @ManyToOne) turns any query touching a Person into an unbounded join across that
-     *  cycle. See Task.java's comment on assignedBy for the full story. */
+    /** Every person belongs to exactly one Department, independent of team membership. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     private Department department;
 
-    /** Stored in plaintext (see SecurityConfig's NoOpPasswordEncoder, a deliberate choice
-     *  for this project). Set by the Super Admin who creates the account, or later via
-     *  PersonServiceImpl.setPasswordDirectly (the offline password-recovery path — see
-     *  PasswordResetRequest) — never emailed, never OTP-verified. Null only means a
-     *  pre-this-system legacy row that never went through createPerson. */
+    /** Stored in plaintext (see SecurityConfig's NoOpPasswordEncoder, a deliberate choice for this
+     *  project). */
     private String password;
 
     /** Whether this account can log in at all. A Super Admin can deactivate an account
@@ -77,25 +69,17 @@ public class Person {
     @Column(nullable = false)
     private boolean totpRequired = false;
 
-    /** The shared TOTP secret (Base32), encrypted at rest — see TotpSecretConverter. Unlike
-     *  the password, nobody ever needs to read this back as a human, so there's no
-     *  "convenient to look up" tradeoff in favor of storing it in plaintext. Null means
-     *  "never generated yet" (see totpEnabledAt for the actual enrolled/pending distinction). */
+    /** The shared TOTP secret (Base32), encrypted at rest — see TotpSecretConverter. */
     @Convert(converter = TotpSecretConverter.class)
     private String totpSecret;
 
-    /** Set only once a submitted code against totpSecret is actually verified — generating
-     *  the secret/QR alone does NOT set this. Keeps an abandoned enrollment (QR shown, never
-     *  confirmed) from being treated as done, and lets a repeated login attempt during
-     *  enrollment reuse the same still-unconfirmed secret rather than generating a new one
-     *  that would no longer match a QR the person already scanned. */
+    /** Set only once a submitted code against totpSecret is actually verified — generating the secret/QR
+     *  alone does NOT set this. */
     private LocalDateTime totpEnabledAt;
 
-    /** Short-lived, single-purpose token issued after a correct password (or password
-     *  reset) when TOTP is still needed, one way or another — either to complete
-     *  enrollment or to challenge an already-enrolled account. Deliberately NOT a JWT: a
-     *  real session JWT is only ever issued once TOTP actually passes, so this can't be
-     *  used against any other endpoint even if intercepted. */
+    /** Short-lived, single-purpose token issued after a correct password (or password reset) when TOTP is
+     *  still needed, one way or another — either to complete enrollment or to challenge an already-enrolled
+     *  account. */
     private String pendingAuthToken;
 
     /** Same cooldown/expiry-column pattern as otpExpiresAt/resetCodeExpiresAt above. */

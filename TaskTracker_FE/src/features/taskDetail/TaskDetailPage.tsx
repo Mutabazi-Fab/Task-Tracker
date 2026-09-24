@@ -31,11 +31,7 @@ import { DeleteTaskModal } from './components/DeleteTaskModal'
 import type { TaskDetail } from '../../types/task.types'
 import styles from './TaskDetailPage.module.css'
 
-/** Thin wrapper — waits for the task, then hands it to TaskDetailBody. Hooks that need the
- *  loaded task live in the child so nothing here is called conditionally. A 404 gets its
- *  own friendly page (someone may still be on a stale link after the task was deleted)
- *  rather than QueryBoundary's generic error callout; any other failure still falls
- *  through to QueryBoundary's normal handling. */
+/** Thin wrapper — waits for the task, then hands it to TaskDetailBody. */
 export function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>()
   const query = useTaskDetail(Number(taskId))
@@ -83,9 +79,8 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
   // Same simplifying comparison CreateTeamForm relies on: a Director's own department
   // membership already matches their headship. Executive/Super Admin bypass this everywhere below.
   const headsTasksDepartment = task.taskDepartmentId !== null && task.taskDepartmentId === currentUser?.departmentId
-  // Mirrors TaskServiceImpl.requireCanDelete: Executive/Super Admin always; a plain
-  // Director only their own created task within the department they head. A Team Leader
-  // can never delete, unlike reassign below.
+  // Mirrors TaskServiceImpl.requireCanDelete: Executive/Super Admin always; a plain Director only their
+  // own created task within the department they head.
   const canDelete =
     isExecutive || (isDirector && task.assignedById === currentUser?.id && headsTasksDepartment)
   // Mirrors TaskServiceImpl.setPinned: a Director who heads this task's department, or Executive/Super Admin.
@@ -183,9 +178,8 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
         </Card>
       )}
 
-      {/* Only an individually-tracked task sets its own percentage directly — a TEAM/DEPARTMENT task's is always a rollup, so it gets no "Log progress" form.
-          Within that, only the assignee, the leader of a team the assignee is on, or a Director/Executive/Super Admin sees the form (see useCanLogProgress).
-          The backend enforces the same rule (TaskServiceImpl.addProgressComment), this just doesn't show a form that would be rejected. */}
+      {/* Only an individually-tracked task sets its own percentage directly — a TEAM/DEPARTMENT task's is
+         always a rollup, so it gets no "Log progress" form. */}
       {canLogProgress && <AddCommentForm taskId={task.id} currentPercentage={task.progressPercentage} />}
 
       {/* Documents rides alongside Discussion as a narrow sidebar — usually just a handful of files. */}

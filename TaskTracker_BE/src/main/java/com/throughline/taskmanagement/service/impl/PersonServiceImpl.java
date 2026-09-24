@@ -113,11 +113,7 @@ public class PersonServiceImpl implements PersonService {
         person.setRole(targetRole);
         person.setDepartment(department);
         person.setPassword(passwordEncoder.encode(request.password()));
-        // No code/verification step, and no mail dependency at all: creating an account
-        // works fully offline. The Super Admin hands the password to them directly.
-        // Every account created from now on requires TOTP 2FA; accounts that already
-        // existed before this rollout default to false (see Person.totpRequired) and are
-        // never retroactively forced into enrollment by this change.
+        // No code/verification step, and no mail dependency at all: creating an account works fully offline.
         person.setTotpRequired(true);
 
         Person saved = personRepository.save(person);
@@ -227,10 +223,7 @@ public class PersonServiceImpl implements PersonService {
         Person person = personRepository.findById(personId)
                 .orElseThrow(() -> new ResourceNotFoundException("Person not found"));
 
-        // Only ever the password. Deliberately no reference to totpSecret/totpEnabledAt
-        // anywhere in this method — password and TOTP are two independent Super-Admin
-        // actions (see resetTotp below), and a routine password change must never
-        // silently knock someone back into full QR re-enrollment.
+        // Only ever the password.
         person.setPassword(passwordEncoder.encode(request.newPassword()));
         personRepository.save(person);
 
@@ -312,9 +305,7 @@ public class PersonServiceImpl implements PersonService {
         }
     }
 
-    /** A Director/Super Admin can view anyone's profile/stats/task-history. Anyone else
-     *  can only view their own, or a teammate's (someone who shares at least one team
-     *  with them) — everyone else is forbidden, not just hidden by the frontend. */
+    /** A Director/Super Admin can view anyone's profile/stats/task-history. */
     private void requireCanViewPerson(Long viewerId, Long targetId) {
         if (viewerId.equals(targetId)) {
             return;

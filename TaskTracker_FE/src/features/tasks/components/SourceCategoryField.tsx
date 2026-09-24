@@ -12,10 +12,9 @@ interface SourceCategoryFieldProps {
   onChange: (value: string) => void
 }
 
-/** The Source dropdown itself — its options come from the saved, open TaskSourceCategory
- *  list rather than a fixed set, so an Executive/Super Admin can add a brand new category
- *  (e.g. a source Zigama hasn't needed before) via the "+" button next to it. Anyone else
- *  just picks from whatever's already there. */
+/** The Source dropdown itself — its options come from the saved, open TaskSourceCategory list rather
+ *  than a fixed set, so an Executive/Super Admin can add a brand new category (e.g. a source Zigama
+ *  hasn't needed before) via the "+" button next to it. */
 export function SourceCategoryField({ value, onChange }: SourceCategoryFieldProps) {
   const { currentUser, isExecutive } = useAuth()
   const categoriesQuery = useSourceCategories()

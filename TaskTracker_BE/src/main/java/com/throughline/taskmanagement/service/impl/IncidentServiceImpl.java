@@ -288,10 +288,8 @@ public class IncidentServiceImpl implements IncidentService {
 
     // --- helpers ---
 
-    /** Business Unit must be a Department that currently exists (matched case-insensitively,
-     *  stored under its canonical name) or the catch-all "Other" carried over from the
-     *  Excel's list. That's what keeps the incident dropdown and the Departments page in
-     *  lockstep: a department the CEO/Super Admin creates is immediately a valid choice. */
+    /** Business Unit must be a Department that currently exists (matched case-insensitively, stored under
+     *  its canonical name) or the catch-all "Other" carried over from the Excel's list. */
     private String resolveBusinessUnit(String requested) {
         String name = requested == null ? "" : requested.trim();
         if (name.equalsIgnoreCase("Other")) {
@@ -305,9 +303,8 @@ public class IncidentServiceImpl implements IncidentService {
                         "Business unit must be one of the existing departments (or \"Other\")."));
     }
 
-    /** Checked only at creation, not on every update — an incident already past its target
-     *  date (an overdue one) must stay editable without being forced to bump the date just
-     *  to save an unrelated field. Null is allowed (no due date yet). */
+    /** Checked only at creation, not on every update — an incident already past its target date (an overdue
+     *  one) must stay editable without being forced to bump the date just to save an unrelated field. */
     private void requireTargetClosureDateNotInPast(LocalDate targetClosureDate) {
         if (targetClosureDate != null && targetClosureDate.isBefore(LocalDate.now())) {
             throw new InvalidAssignmentException("Target closure date can't be in the past.");

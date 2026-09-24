@@ -15,9 +15,7 @@ const STYLE: Record<TaskSeverity, string> = {
   CRITICAL: styles.critical,
 }
 
-/** Executive-set-only classification — see Task.severity. Rendered wherever StatusChip
- *  already is; omitted entirely for a task with no severity (most of them), rather than
- *  showing an empty/placeholder badge. */
+/** Executive-set-only classification — see Task.severity. */
 export function SeverityBadge({ severity }: { severity: TaskSeverity }) {
   return <span className={`${styles.badge} ${STYLE[severity]}`}>{LABEL[severity]}</span>
 }

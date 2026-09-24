@@ -20,18 +20,13 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
 
     Optional<Incident> findByIncidentCode(String incidentCode);
 
-    /** Every filter is optional — a null parameter matches everything, so the dashboard's
-     *  plain "all incidents" list and its filtered views share one query instead of a
-     *  combinatorial explosion of derived-name methods. qPattern is the fully-formed,
-     *  already-lowercased "%...%" pattern (see IncidentServiceImpl.getAllIncidents) — NOT
-     *  built here with CONCAT: binding a null :q through LOWER(CONCAT('%', :q, '%')) leaves
-     *  Postgres unable to infer that parameter's type, and it silently resolves to bytea,
-     *  which then fails with "function lower(bytea) does not exist" the moment a real
-     *  string is compared against it. Precomputing the whole pattern in Java sidesteps the
-     *  ambiguity entirely — this parameter is always either a plain String or null.
-     *  legacyBusinessUnit is the same department name spelled the old enum way ("Information
-     *  Technology" -> "INFORMATION_TECHNOLOGY"), so incidents recorded before Business Unit
-     *  became department-driven still match the filter without being rewritten. */
+    /** Every filter is optional — a null parameter matches everything, so the dashboard's plain "all
+     *  incidents" list and its filtered views share one query instead of a combinatorial explosion of
+     *  derived-name methods. qPattern is the fully-formed, already-lowercased "%...%" pattern (see
+     *  IncidentServiceImpl.getAllIncidents) — NOT built here with CONCAT: binding a null :q through
+     *  LOWER(CONCAT('%', :q, '%')) leaves Postgres unable to infer that parameter's type, and it silently
+     *  resolves to bytea, which then fails with "function lower(bytea) does not exist" the moment a real
+     *  string is compared against it. */
     @Query("SELECT i FROM Incident i WHERE "
             + "(:status IS NULL OR i.status = :status) "
             + "AND (:severity IS NULL OR i.severity = :severity) "

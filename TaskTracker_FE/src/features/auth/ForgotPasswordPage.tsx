@@ -13,15 +13,7 @@ import forgotStyles from './ForgotPasswordPage.module.css'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-/**
- * Entirely offline: no email is ever sent. Checking whether an account exists is a real,
- * honest answer (not the generic non-answer a public internet-facing service would need —
- * this is an internal tool, and telling a real user their account genuinely isn't found is
- * better UX), guarded server-side by a rate limit (5 checks per email per 15 minutes) since
- * a truthful yes/no answer is exactly what makes this endpoint useful for roster-scanning
- * without one. Confirming creates a request a Super Admin resolves from that person's
- * profile page — there is no follow-on code-entry step at all.
- */
+/** Entirely offline: no email is ever sent. */
 export function ForgotPasswordPage() {
   const { checkEmailForPasswordReset, createPasswordResetRequest } = useAuth()
 

@@ -23,13 +23,10 @@ interface CreatePersonFormProps {
   submitting: boolean
 }
 
-/** Only a Super Admin ever reaches this form (see PeopleListPage's gate on the "New
- *  person" button) — there's no public self-registration, so this is the only way a new
- *  account gets created, and it's created fully login-ready: whatever password is set here
- *  is what the person logs in with, so the Super Admin is expected to hand it to them
- *  directly afterward. Deliberately offline — no email/OTP step in between. Every new
- *  account also requires TOTP 2FA (accounts that predate this rollout are unaffected):
- *  their first login walks them through scanning a QR code before they get in. */
+/** Only a Super Admin ever reaches this form (see PeopleListPage's gate on the "New person" button) —
+ *  there's no public self-registration, so this is the only way a new account gets created, and it's
+ *  created fully login-ready: whatever password is set here is what the person logs in with, so the
+ *  Super Admin is expected to hand it to them directly afterward. */
 export function CreatePersonForm({ onSubmit, onCancel, submitting }: CreatePersonFormProps) {
   const { currentUser } = useAuth()
   const departmentsQuery = useDepartments()

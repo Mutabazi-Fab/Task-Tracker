@@ -7,12 +7,9 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/**
- * Append-only log of department deletions — mirrors TaskActivity's snapshot pattern: the
- * department no longer exists by the time anyone reads this, so its name is stored as a
- * plain string rather than a live FK. Visible to a Director or Super Admin, same tier as
- * task activity (see DepartmentServiceImpl.getDepartmentActivity).
- */
+/** Append-only log of department deletions — mirrors TaskActivity's snapshot pattern: the department no
+ *  longer exists by the time anyone reads this, so its name is stored as a plain string rather than a
+ *  live FK. */
 @Entity
 @Table(name = "department_activities")
 @Getter

@@ -13,9 +13,7 @@ interface DeleteTaskModalProps {
   onDeleted: () => void
 }
 
-/** No reason field — the backend doesn't take one for this endpoint. Deleting a top-level
- *  task takes its subtasks with it (cascade), so that's called out explicitly when there
- *  are any, rather than being a silent side effect. */
+/** No reason field — the backend doesn't take one for this endpoint. */
 export function DeleteTaskModal({ taskId, taskCode, hasSubtasks, open, onClose, onDeleted }: DeleteTaskModalProps) {
   const deleteTask = useDeleteTask()
 

@@ -31,17 +31,10 @@ export interface AuthContextValue {
   isExecutive: boolean
   /** Super Admin only — granting roles, deactivating accounts, department administration. */
   isSuperAdmin: boolean
-  /** remember=true persists the token in localStorage; false keeps it sessionStorage-only —
-   *  the "Remember me" checkbox on LoginPage. Returns the full AuthResponse (rather than
-   *  void) since a TOTP-enabled account doesn't get a token immediately — the caller
-   *  branches on response.status to route to enrollment/challenge instead. remember is
-   *  carried through that detour via router state so the eventual real token still
-   *  respects the checkbox. */
+  /** remember=true persists the token in localStorage; false keeps it sessionStorage-only — the "Remember
+   *  me" checkbox on LoginPage. */
   login: (request: LoginRequest, remember: boolean) => Promise<AuthResponse>
-  /** Completes TOTP enrollment. On success, response.recoveryCodes carries the one-time
-   *  batch to show the person — also logs them in. remember carries the original login
-   *  checkbox through this detour (the page that calls this gets it via router state from
-   *  LoginPage, since this is a separate request from the original one). */
+  /** Completes TOTP enrollment. */
   confirmTotpSetup: (request: TotpConfirmRequest, remember: boolean) => Promise<AuthResponse>
   /** Completes a login for an already-enrolled account. Same remember-carries-through shape
    *  as confirmTotpSetup above. */
@@ -49,9 +42,7 @@ export interface AuthContextValue {
   /** Whether an account exists for this email — the backend deliberately tells the truth
    *  here (rate-limited, 5 checks per email per 15 minutes) rather than staying silent. */
   checkEmailForPasswordReset: (request: PasswordResetEmailRequest) => Promise<CheckEmailResponse>
-  /** Creates a password-reset request for the Super Admin to see, or reports that one is
-   *  already pending. Only call this after checkEmailForPasswordReset confirmed the
-   *  account exists and the person explicitly confirmed. */
+  /** Creates a password-reset request for the Super Admin to see, or reports that one is already pending. */
   createPasswordResetRequest: (request: PasswordResetEmailRequest) => Promise<PasswordResetRequestOutcome>
   logout: () => void
 }
@@ -89,11 +80,8 @@ function clearStoredToken() {
   }
 }
 
-/** Owns the logged-in person for the whole app — every "who's doing this" field the
- *  backend still takes explicitly is filled in from currentUser here rather than a picker.
- *  AuthResponse only carries a slim subset of fields, so right after login/TOTP yields a
- *  real token, this fetches the full profile from GET /auth/me before considering the
- *  user "authenticated". */
+/** Owns the logged-in person for the whole app — every "who's doing this" field the backend still takes
+ *  explicitly is filled in from currentUser here rather than a picker. */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading')
   const [currentUser, setCurrentUser] = useState<Person | null>(null)

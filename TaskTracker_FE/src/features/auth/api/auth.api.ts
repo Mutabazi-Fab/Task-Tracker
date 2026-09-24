@@ -30,9 +30,7 @@ export async function verifyTotp(request: TotpVerifyRequest): Promise<AuthRespon
   return data
 }
 
-/** Whether an account exists for this email — deliberately not silent (see
- *  CheckEmailResponse). Rate-limited server-side (5 per email per 15 minutes); a
- *  TooManyAttemptsException surfaces as a normal thrown ApiError. */
+/** Whether an account exists for this email — deliberately not silent (see CheckEmailResponse). */
 export async function checkEmailForPasswordReset(request: PasswordResetEmailRequest): Promise<CheckEmailResponse> {
   const { data } = await axiosClient.post<CheckEmailResponse>(endpoints.auth.passwordResetRequestCheck(), request)
   return data

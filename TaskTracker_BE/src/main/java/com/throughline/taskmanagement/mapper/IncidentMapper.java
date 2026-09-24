@@ -118,10 +118,7 @@ public class IncidentMapper {
         );
     }
 
-    /** New incidents store a department's name as typed ("Information Technology"). Rows
-     *  recorded before Business Unit became department-driven hold the old enum constant
-     *  ("INFORMATION_TECHNOLOGY") — left untouched in the database and just re-spelled here
-     *  as "Information Technology" when read, so nothing has to be rewritten. */
+    /** New incidents store a department's name as typed ("Information Technology"). */
     public String displayBusinessUnit(String stored) {
         if (stored == null || !stored.matches("[A-Z_]+")) {
             return stored;
@@ -181,9 +178,7 @@ public class IncidentMapper {
     }
 
     /** What's still missing before ChangeIncidentStatusRequest(CLOSED) would succeed — see
-     *  IncidentServiceImpl.requireClosureReadiness, which enforces the same rules. Kept here
-     *  too so the read side (closureReady/closureBlockers) never drifts out of sync with the
-     *  write side. */
+     *  IncidentServiceImpl.requireClosureReadiness, which enforces the same rules. */
     private List<String> closureBlockers(Incident incident) {
         List<String> blockers = new ArrayList<>();
         if (incident.getStatus() == IncidentStatus.CLOSED) {

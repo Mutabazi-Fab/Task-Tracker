@@ -21,12 +21,8 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Notifications are inherently personal, so personId is never accepted from the client —
- * it's always the caller's own real, logged-in identity (CurrentPersonResolver), regardless
- * of role. Nobody, not even a Super Admin, can read someone else's notification inbox by
- * passing a different id.
- */
+/** Notifications are inherently personal, so personId is never accepted from the client — it's always
+ *  the caller's own real, logged-in identity (CurrentPersonResolver), regardless of role. */
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor

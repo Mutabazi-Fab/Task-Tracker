@@ -20,15 +20,12 @@ import java.util.List;
 /** No assignToTeam here — team membership is exclusively managed through TeamService
  *  (addMember/removeMember), since a person can now belong to multiple teams at once. */
 public interface PersonService {
-    /** createdById must be a Director or Super Admin; only a Super Admin may set role to
-     *  anything other than Member (null defaults to Member). Sends a best-effort invite
-     *  email. */
+    /** createdById must be a Director or Super Admin; only a Super Admin may set role to anything other
+     *  than Member (null defaults to Member). */
     PersonResponse createPerson(CreatePersonRequest request);
 
-    /** A Director/Super Admin can view anyone; anyone else can only view themself or a
-     *  teammate (someone who shares at least one team with them) — forbidden otherwise,
-     *  not just hidden by the frontend. Same rule for getPersonStatistics and
-     *  getPersonTaskHistory below. */
+    /** A Director/Super Admin can view anyone; anyone else can only view themself or a teammate (someone
+     *  who shares at least one team with them) — forbidden otherwise, not just hidden by the frontend. */
     PersonResponse getPersonById(Long id, Long viewerId);
 
     /** A Director/Super Admin sees everyone; anyone else sees only people who share at
@@ -58,24 +55,17 @@ public interface PersonService {
      *  newest first. */
     Page<AccountStatusChangeResponse> getAccountStatusChangeActivity(Long requesterId, Pageable pageable);
 
-    /** Super-Admin-only. Sets the password directly — no code, no email, entirely
-     *  offline. Never touches totpSecret/totpEnabledAt (password and TOTP stay two
-     *  independent Super-Admin actions). If this person has a PENDING PasswordResetRequest,
-     *  it's auto-marked FULFILLED as a side effect of resolving it this way. */
     void setPasswordDirectly(Long personId, SetPasswordRequest request);
 
     /** Super-Admin-only. Dismisses a PENDING PasswordResetRequest without changing the
      *  person's password — for a mistaken/duplicate/already-otherwise-resolved request. */
     void dismissPasswordResetRequest(Long personId, DismissPasswordResetRequestRequest request);
 
-    /** Super-Admin-only — for a lost/replaced phone. Clears totpSecret/totpEnabledAt and
-     *  every recovery code; the person's next login re-enters TOTP enrollment from scratch
-     *  with a fresh QR code. Fails if this person was never enrolled in the first place. */
+    /** Super-Admin-only — for a lost/replaced phone. */
     void resetTotp(Long personId, ResetTotpRequest request);
 
-    /** Self-only — a purely personal "what I'm focused on today" pointer, up to 3 at once.
-     *  taskId must already be one of this person's own assigned tasks. Rejects a 4th with a
-     *  clear message rather than auto-evicting the oldest — the caller removes one first. */
+    /** Self-only — a purely personal "what I'm focused on today" pointer, up to 3 at once. taskId must
+     *  already be one of this person's own assigned tasks. */
     PersonStatisticsResponse addDailyGoal(Long personId, Long taskId, Long actorId);
 
     /** Self-only. Silently fine if the task wasn't a daily goal to begin with. */

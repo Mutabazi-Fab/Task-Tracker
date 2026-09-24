@@ -9,9 +9,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TaskCommentRepository extends JpaRepository<TaskComment, Long> {
-    /** Used only where the full history is genuinely needed in one shot (e.g. the embedded
-     *  list inside TaskDetailResponse). The paginated overload below backs the dedicated
-     *  GET /tasks/{id}/comments endpoint. */
+    /** Used only where the full history is genuinely needed in one shot (e.g. the embedded list inside
+     *  TaskDetailResponse). */
     List<TaskComment> findByTaskIdOrderByCreatedAtAsc(Long taskId);
 
     Page<TaskComment> findByTaskIdOrderByCreatedAtAsc(Long taskId, Pageable pageable);

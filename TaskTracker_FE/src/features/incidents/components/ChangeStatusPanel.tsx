@@ -11,9 +11,7 @@ import styles from './ChangeStatusPanel.module.css'
 
 const STATUS_OPTIONS: IncidentStatus[] = ['OPEN', 'UNDER_INVESTIGATION', 'MONITORING', 'CLOSED', 'REJECTED_NOT_AN_INCIDENT']
 
-/** Moves an incident to a new status. Attempting CLOSED while closureReady is false is still
- *  sent (the backend is the real enforcement — see IncidentServiceImpl.requireClosureReadiness);
- *  this panel just surfaces the same blockers up front so the request isn't a surprise. */
+/** Moves an incident to a new status. */
 export function ChangeStatusPanel({ incident }: { incident: IncidentDetail }) {
   const { currentUser } = useAuth()
   const changeStatus = useChangeIncidentStatus(incident.id)

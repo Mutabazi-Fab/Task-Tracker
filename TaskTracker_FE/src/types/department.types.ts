@@ -1,7 +1,4 @@
-/** The org-chart layer above Team — every Team and every Person belongs to exactly one
- *  Department. Administration (create/rename/change head) is Super-Admin-only; read
- *  access is open to any authenticated caller (a Director/Executive needs the list to
- *  pick one when creating a team, person, or department-level task). */
+/** The org-chart layer above Team — every Team and every Person belongs to exactly one Department. */
 export interface Department {
   id: number
   name: string
@@ -34,9 +31,7 @@ export interface ChangeDepartmentHeadRequest {
   changedById: number
 }
 
-/** One row of GET /departments/activity — every department deletion, org-wide. Director or
- *  Super Admin only. departmentName is a snapshot taken at the moment of deletion, not a
- *  live lookup — the department no longer exists to look up. */
+/** One row of GET /departments/activity — every department deletion, org-wide. */
 export interface DepartmentActivity {
   id: number
   departmentName: string

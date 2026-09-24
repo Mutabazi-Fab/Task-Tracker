@@ -15,12 +15,8 @@ interface PendingExtensionRequestItemProps {
   request: PendingExtensionRequest
 }
 
-/** One row of the "Requests" inbox — every row is guaranteed PENDING and already scoped to
- *  requests the viewer is a decider for, so no canDecide check here. But "a decider" isn't
- *  always "the full decider": on a CEO-mandated chain, the Director it first landed on can
- *  reject but not approve — see request.canApprove, which hides Approve rather than
- *  showing a button that'd fail. Before the CEO has seen it, the Director instead gets a
- *  "Send to CEO for approval" action (see request.forwardedToApprover). */
+/** One row of the "Requests" inbox — every row is guaranteed PENDING and already scoped to requests the
+ *  viewer is a decider for, so no canDecide check here. */
 export function PendingExtensionRequestItem({ request }: PendingExtensionRequestItemProps) {
   const [decisionNote, setDecisionNote] = useState('')
   const { currentUser } = useAuth()

@@ -13,10 +13,7 @@ interface CreateDepartmentFormProps {
   submitting: boolean
 }
 
-/** Executive-or-above (see CreateDepartmentModal's caller — the CEO or Super Admin). A
- *  department's head must already hold the Director role or above — the picker only offers
- *  people who qualify, same "don't offer a choice that'd just be rejected" approach as
- *  CreatePersonForm's role picker. */
+/** Executive-or-above (see CreateDepartmentModal's caller — the CEO or Super Admin). */
 export function CreateDepartmentForm({ onSubmit, onCancel, submitting }: CreateDepartmentFormProps) {
   const { currentUser } = useAuth()
   const peopleQuery = usePeople()

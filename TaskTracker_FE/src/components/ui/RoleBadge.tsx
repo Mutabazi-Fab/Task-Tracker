@@ -1,11 +1,8 @@
 import type { Role } from '../../types/person.types'
 import styles from './RoleBadge.module.css'
 
-/** The five states worth calling out at a glance: a Super Admin, an Executive (the CEO's
- *  seat), a Director, a Member who leads at least one of their teams, or a plain Member.
- *  Team Leader isn't a Role value on the backend (leadership is scoped per-team, see
- *  PersonTeamMembership.isLeader) — it's derived here from whether any of the person's
- *  team memberships has isLeader set. */
+/** The five states worth calling out at a glance: a Super Admin, an Executive (the CEO's seat), a
+ *  Director, a Member who leads at least one of their teams, or a plain Member. */
 export type BadgeRole = 'SUPER_ADMIN' | 'EXECUTIVE' | 'DIRECTOR' | 'TEAM_LEADER' | 'MEMBER'
 
 const LABEL: Record<BadgeRole, string> = {

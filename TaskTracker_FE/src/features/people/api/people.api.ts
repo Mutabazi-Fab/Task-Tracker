@@ -41,9 +41,7 @@ export async function fetchPersonTaskHistory(id: number): Promise<PersonTaskHist
   return data.content
 }
 
-/** Super-Admin-only, enforced server-side — there is no public self-registration. Creates
- *  the account fully login-ready (password hashed) with no mail dependency at all, so it
- *  works fully offline. */
+/** Super-Admin-only, enforced server-side — there is no public self-registration. */
 export async function createPerson(payload: CreatePersonRequest): Promise<Person> {
   const { data } = await axiosClient.post<Person>(endpoints.people.create(), payload)
   return data
@@ -69,9 +67,7 @@ export async function fetchRoleChangeActivity(requesterId: number): Promise<Role
   return data.content
 }
 
-/** Super-Admin-only, enforced server-side. Sets the password directly — no code, no
- *  email — and never touches TOTP enrollment. If this person has a pending
- *  password-reset request, it's auto-marked fulfilled. */
+/** Super-Admin-only, enforced server-side. */
 export async function setPassword(id: number, payload: SetPasswordRequest): Promise<void> {
   await axiosClient.post(endpoints.people.setPassword(id), payload)
 }
@@ -82,9 +78,7 @@ export async function dismissPasswordResetRequest(id: number, payload: DismissPa
   await axiosClient.post(endpoints.people.dismissPasswordResetRequest(id), payload)
 }
 
-/** Super-Admin-only, enforced server-side — for a lost/replaced phone. Fails if this
- *  person was never enrolled in TOTP. Their next login re-enters enrollment with a fresh
- *  QR code and a fresh batch of recovery codes. */
+/** Super-Admin-only, enforced server-side — for a lost/replaced phone. */
 export async function resetTotp(id: number, payload: ResetTotpRequest): Promise<void> {
   await axiosClient.post(endpoints.people.resetTotp(id), payload)
 }
@@ -98,9 +92,7 @@ export async function fetchAccountStatusChangeActivity(requesterId: number): Pro
   return data.content
 }
 
-/** Self-only, enforced server-side — taskId must be one of the caller's own assigned
- *  tasks. Rejects a 4th daily goal rather than evicting the oldest. Returns the refreshed
- *  statistics so callers don't need a separate refetch. */
+/** Self-only, enforced server-side — taskId must be one of the caller's own assigned tasks. */
 export async function addDailyGoal(personId: number, taskId: number): Promise<PersonStatistics> {
   const { data } = await axiosClient.post<PersonStatistics>(endpoints.people.addDailyGoal(personId), { taskId })
   return data

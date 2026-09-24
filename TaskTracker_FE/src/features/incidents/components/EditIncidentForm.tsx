@@ -42,10 +42,9 @@ interface EditIncidentFormProps {
   submitting: boolean
 }
 
-/** Edits everything the investigation/closure lifecycle needs (see UpdateIncidentRequest) —
- *  status itself is changed separately (see ChangeIncidentStatusModal), which is also what
- *  enforces closure readiness. Same live Inherent Score/Severity/Net Loss preview as
- *  CreateIncidentForm. */
+/** Edits everything the investigation/closure lifecycle needs (see UpdateIncidentRequest) — status
+ *  itself is changed separately (see ChangeIncidentStatusModal), which is also what enforces closure
+ *  readiness. */
 export function EditIncidentForm({ incident, onSubmit, onCancel, submitting }: EditIncidentFormProps) {
   const peopleQuery = usePeople()
 

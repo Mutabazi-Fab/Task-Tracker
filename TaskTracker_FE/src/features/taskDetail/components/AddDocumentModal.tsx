@@ -28,9 +28,8 @@ interface AddDocumentModalProps {
   onClose: () => void
 }
 
-/** A supporting document attached directly to an already-existing task — the other half of
- *  attaching one at creation time (see CreateTaskForm/CreateSubtaskForm). Visible to whoever
- *  can already see this task; no separate permission model. */
+/** A supporting document attached directly to an already-existing task — the other half of attaching
+ *  one at creation time (see CreateTaskForm/CreateSubtaskForm). */
 export function AddDocumentModal({ taskId, open, onClose }: AddDocumentModalProps) {
   const [file, setFile] = useState<File | null>(null)
   const [clientError, setClientError] = useState<string | null>(null)

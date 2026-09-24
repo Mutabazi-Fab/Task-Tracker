@@ -1,6 +1,5 @@
 /* Fixed at 4 columns (not auto-fill) so a page is deterministically 4 rows — see
-   PeopleSummaryGrid.tsx's PAGE_SIZE, set to 4 * 4 = 16 to match. Narrower widths still
-   reflow instead of squeezing 4 columns into too little space. */
+ *  PeopleSummaryGrid.tsx's PAGE_SIZE, set to 4 * 4 = 16 to match. */
 .grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

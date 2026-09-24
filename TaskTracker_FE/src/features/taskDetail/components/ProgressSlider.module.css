@@ -22,11 +22,8 @@
   white-space: nowrap;
 }
 
-/* The native input IS the interactive track — thumb/track styled to match the app's
-   accent colour, ticks below are purely visual (see .ticks). The traversed portion (0 up
-   to the current value) fills in green via --fill, an inline custom property set on the
-   element itself in ProgressSlider.tsx — inherited by its own pseudo-elements, which is
-   what lets ::-webkit-slider-runnable-track's background reference it below. */
+/* The native input IS the interactive track — thumb/track styled to match the app's accent colour,
+ *  ticks below are purely visual (see .ticks). */
 .range {
   appearance: none;
   -webkit-appearance: none;

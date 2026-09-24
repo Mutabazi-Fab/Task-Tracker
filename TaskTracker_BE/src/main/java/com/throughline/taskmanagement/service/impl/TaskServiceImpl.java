@@ -230,10 +230,7 @@ public class TaskServiceImpl implements TaskService {
         return taskMapper.toDetailResponse(savedSubtask);
     }
 
-    /** The depth-1 case: parent is a Department task. Its "implementation task" is team-
-     *  or individual-assigned, like a fresh top-level task (see createTask), with no team-
-     *  membership restriction. Restricted to that Department's own head Director (or an
-     *  Executive/Super Admin override). */
+    /** The depth-1 case: parent is a Department task. */
     private TaskDetailResponse createImplementationTask(Task parent, CreateSubtaskRequest request, Person createdBy) {
         Department department = parent.getAssignedDepartment();
         if (!isHeadOfDepartment(createdBy, department)) {
@@ -311,10 +308,7 @@ public class TaskServiceImpl implements TaskService {
         task.getComments().add(comment);
     }
 
-    /** Recomputes a task's percentage as the average of its own subtasks (0 if none).
-     *  Self-recursive so it bubbles all the way up a 3-level Department hierarchy, not just
-     *  one level. Never called for a rolled-up (TEAM-assigned) task's own comments — those
-     *  are narrative only. */
+    /** Recomputes a task's percentage as the average of its own subtasks (0 if none). */
     private void recalculateParentRollup(Task parent) {
         List<Task> subtasks = taskRepository.findByParentTaskId(parent.getId());
         int rollup = subtasks.isEmpty()
@@ -393,11 +387,7 @@ public class TaskServiceImpl implements TaskService {
         Person author = personRepository.findById(request.authorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Author not found"));
 
-        // Progress on an individually-tracked task is the assignee's to report. Also allowed:
-        // the leader of a team the assignee belongs to (only their own team — leading some
-        // other team grants nothing), and a Director, Executive or Super Admin (same override
-        // tier used elsewhere in this service). A plain teammate can't log it for someone
-        // else. Rolled-up TEAM/DEPARTMENT tasks aren't affected.
+        // Progress on an individually-tracked task is the assignee's to report.
         boolean isIndividualTask = task.getAssigneeType() == AssigneeType.INDIVIDUAL;
         boolean isAssignee = task.getAssignedPerson() != null && task.getAssignedPerson().getId().equals(author.getId());
         if (isIndividualTask && !isAssignee && !Role.isAtLeastDirector(author.getRole())) {
@@ -447,9 +437,7 @@ public class TaskServiceImpl implements TaskService {
         return taskMapper.toDetailResponse(taskRepository.save(task));
     }
 
-    /** A plain Q&A message, fully open to any authenticated person on any task. Never
-     *  touches percentage/status/staleAlertSentAt. Threading is one level deep — a reply to
-     *  a reply attaches to its own top-level parent instead of nesting further. */
+    /** A plain Q&A message, fully open to any authenticated person on any task. */
     @Override
     public TaskDetailResponse addDiscussionComment(Long taskId, AddDiscussionCommentRequest request) {
         Task task = taskRepository.findWithDetailsById(taskId)
@@ -521,9 +509,8 @@ public class TaskServiceImpl implements TaskService {
         reassignment.setFromTeam(task.getAssignedTeam());
         reassignment.setFromDepartment(task.getAssignedDepartment());
 
-        // "Top-level-shaped" covers a real depth-0 task and a depth-1 Department
-        // implementation task — both staffed freely. Only a true leaf subtask is
-        // restricted to reassignSubtask's "same team, individual only" rule.
+        // "Top-level-shaped" covers a real depth-0 task and a depth-1 Department implementation task — both
+        // staffed freely.
         boolean isTopLevelShaped = isTopLevelShaped(task);
         if (isDepartmentTask) {
             reassignDepartmentTask(task, request, reassignment);
@@ -573,9 +560,7 @@ public class TaskServiceImpl implements TaskService {
         return task.getParentTask() == null || task.getParentTask().getAssigneeType() == AssigneeType.DEPARTMENT;
     }
 
-    /** Executive/Super Admin always qualifies. A Director only qualifies if they actually
-     *  head this department (Department.headDirector), not merely belong to it — the
-     *  boundary for every cross-department write action in this class. */
+    /** Executive/Super Admin always qualifies. */
     private boolean isHeadOfDepartment(Person person, Department department) {
         if (Role.isAtLeastExecutive(person.getRole())) {
             return true;
@@ -607,10 +592,7 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    /** Called once the caller is already confirmed Director-or-above. A Director may only
-     *  delete a task they personally created, within the department they head — a
-     *  defense-in-depth check beyond what createTask/createSubtask already enforce.
-     *  Executive/Super Admin can always delete anything, regardless of who created it. */
+    /** Called once the caller is already confirmed Director-or-above. */
     private void requireCanDelete(Person actor, Task task) {
         if (Role.isAtLeastExecutive(actor.getRole())) {
             return;
@@ -753,9 +735,8 @@ public class TaskServiceImpl implements TaskService {
         return taskMapper.toDetailResponse(taskRepository.save(task));
     }
 
-    /** Bounds dateAssigned: no more than a year ahead (typo guard), and no more than 3
-     *  months in the past (real backfilling fits that; anything older is likely a mistyped
-     *  date). The authoritative check — mirrors the frontend's own date-picker limits. */
+    /** Bounds dateAssigned: no more than a year ahead (typo guard), and no more than 3 months in the past
+     *  (real backfilling fits that; anything older is likely a mistyped date). */
     private void requireReasonableDate(LocalDate dateAssigned) {
         if (dateAssigned.isAfter(LocalDate.now().plusYears(1))) {
             throw new InvalidAssignmentException("dateAssigned can't be more than a year in the future.");
@@ -773,9 +754,8 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    /** source/sourceLabel are open to any creator. severity is Executive-only — even a
-     *  Director creating a task under a CRITICAL Department root can't set it. CRITICAL
-     *  auto-pins once, at creation only; pinning stays independently editable afterward. */
+    /** source/sourceLabel are open to any creator. severity is Executive-only — even a Director creating a
+     *  task under a CRITICAL Department root can't set it. */
     private void applySourceAndSeverity(Task task, String source, String sourceLabel, TaskSeverity severity, Person createdBy) {
         task.setSource(source);
         task.setSourceLabel(sourceLabel);
@@ -811,9 +791,8 @@ public class TaskServiceImpl implements TaskService {
 
         Task parent = task.getParentTask();
 
-        // Both recorded before the delete — they read taskCode/title off the entity, which
-        // won't exist to read from once it's gone. Only this one task gets a log entry, not
-        // the whole cascade it takes with it.
+        // Both recorded before the delete — they read taskCode/title off the entity, which won't exist to read
+        // from once it's gone.
         recordActivity(task, TaskActivityAction.DELETED, actor);
         notificationService.notifyTaskDeleted(task, actor);
 
@@ -1029,10 +1008,9 @@ public class TaskServiceImpl implements TaskService {
                     .toList();
         }
 
-        // The rejecter sees it immediately; the approver only once it's explicitly
-        // forwarded (see forwardExtensionRequestToApprover) — keeps the CEO's inbox from
-        // filling with every request automatically on a CEO-mandated chain. On an ordinary
-        // Director-originated chain, rejecter and approver are the same person either way.
+        // The rejecter sees it immediately; the approver only once it's explicitly forwarded (see
+        // forwardExtensionRequestToApprover) — keeps the CEO's inbox from filling with every request
+        // automatically on a CEO-mandated chain.
         return pending.stream()
                 .filter(request -> {
                     Task task = request.getTask();
@@ -1063,9 +1041,8 @@ public class TaskServiceImpl implements TaskService {
 
     private static final long MAX_DOCUMENT_SIZE_BYTES = 20L * 1024 * 1024;
 
-    // Common office/document/image types a "supporting document" for a task realistically
-    // is — not an arbitrary-file upload. Easy to extend later (a plain Set, no enum/CHECK
-    // constraint involved).
+    // Common office/document/image types a "supporting document" for a task realistically is — not an
+    // arbitrary-file upload.
     private static final Set<String> ALLOWED_DOCUMENT_CONTENT_TYPES = Set.of(
             "application/pdf",
             "application/msword",
@@ -1146,9 +1123,8 @@ public class TaskServiceImpl implements TaskService {
     }
 
     /** Same "who's actually responsible for this task" concept used by TaskStalenessJob/
-     *  notifyTaskAssigned: the team's Leader for a TEAM-assigned task, the assignee for an
-     *  INDIVIDUAL one, or the Department's head Director for a DEPARTMENT-assigned one.
-     *  Null if there's nobody to resolve to (e.g. a team with no leader set). */
+     *  notifyTaskAssigned: the team's Leader for a TEAM-assigned task, the assignee for an INDIVIDUAL one,
+     *  or the Department's head Director for a DEPARTMENT-assigned one. */
     private Person resolveAccountablePerson(Task task) {
         return switch (task.getAssigneeType()) {
             case INDIVIDUAL -> task.getAssignedPerson();
@@ -1195,12 +1171,9 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    /** Approving (or a direct extension — an implicit, immediate approval): on a
-     *  CEO-mandated chain, only Executive-or-above may grant it, no matter how far down the
-     *  hierarchy or who created this particular task — a Director can still reject such a
-     *  request, just not approve it. Otherwise the same authority as rejecting. Also backs
-     *  the "Requests" inbox's canApprove flag, so it can hide an Approve button that would
-     *  just fail. */
+    /** Approving (or a direct extension — an implicit, immediate approval): on a CEO-mandated chain, only
+     *  Executive-or-above may grant it, no matter how far down the hierarchy or who created this particular
+     *  task — a Director can still reject such a request, just not approve it. */
     private boolean canApproveDeadline(Person actor, Task task) {
         if (isCeoMandated(task) && !Role.isAtLeastExecutive(actor.getRole())) {
             return false;
@@ -1215,9 +1188,7 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    /** Walks up to this task's own root (depth 0 — the top of whatever hierarchy it sits
-     *  in). Every hierarchy is rooted in something a Director-or-above created (see
-     *  createTask's own role floor), so this always terminates. */
+    /** Walks up to this task's own root (depth 0 — the top of whatever hierarchy it sits in). */
     private Task findRoot(Task task) {
         Task current = task;
         while (current.getParentTask() != null) {
@@ -1226,16 +1197,14 @@ public class TaskServiceImpl implements TaskService {
         return current;
     }
 
-    /** True when this task's hierarchy originates from an Executive/Super Admin's own
-     *  mandate (a Department task, not an ordinary Director-created one). Everything below
-     *  that root inherits the same "only the CEO actually approves" rule. */
+    /** True when this task's hierarchy originates from an Executive/Super Admin's own mandate (a Department
+     *  task, not an ordinary Director-created one). */
     private boolean isCeoMandated(Task task) {
         return Role.isAtLeastExecutive(findRoot(task).getAssignedBy().getRole());
     }
 
-    /** The true approving authority: on a CEO-mandated chain, the root's own assignedBy
-     *  (the CEO), even though a Director further down is who the request first lands on and
-     *  resolves as its rejecter. Identical to resolveDeadlineDecider otherwise. */
+    /** The true approving authority: on a CEO-mandated chain, the root's own assignedBy (the CEO), even
+     *  though a Director further down is who the request first lands on and resolves as its rejecter. */
     private Person resolveDeadlineApprover(Task task) {
         Task root = findRoot(task);
         if (Role.isAtLeastExecutive(root.getAssignedBy().getRole())) {
@@ -1244,9 +1213,8 @@ public class TaskServiceImpl implements TaskService {
         return resolveDeadlineDecider(task);
     }
 
-    /** Deadline decisions are a Director's job, not a Team Leader's, even though a Team
-     *  Leader can be a leaf subtask's own assignedBy. Uses this task's own assignedBy if
-     *  already Director-or-above, else walks up to the nearest ancestor whose creator is. */
+    /** Deadline decisions are a Director's job, not a Team Leader's, even though a Team Leader can be a
+     *  leaf subtask's own assignedBy. */
     private Person resolveDeadlineDecider(Task task) {
         Task current = task;
         while (current != null) {

@@ -17,14 +17,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Runs against the real seeded database, wrapped in @Transactional so the throwaway task
- * chain it creates rolls back at the end. Reproduces the exact scenario reported: a CEO
- * assigns a Department task, a Director carves out an implementation task under it for a
- * team, and a plain team member (not individually named on either task) should be able to
- * see the CEO's original task too, not just the slice handed to their team — see
- * TaskRepository.VISIBLE_TO_PERSON_OR_ANCESTOR.
- */
+/** Runs against the real seeded database, wrapped in @Transactional so the throwaway task chain it
+ *  creates rolls back at the end. */
 @SpringBootTest
 @Transactional
 class TaskRepositoryVisibleToPersonAncestorTest {

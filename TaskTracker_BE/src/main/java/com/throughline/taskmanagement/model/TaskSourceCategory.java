@@ -8,10 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/** One entry in the Source dropdown itself (e.g. "Initiative", "Regulator") — an open,
- *  saved list rather than a fixed enum, so an Executive/Super Admin can add a brand new
- *  category (see TaskSourceCategoryServiceImpl). addedBy is null for the 4 built-in
- *  categories seeded at launch, which predate this feature and have no real creator. */
+/** One entry in the Source dropdown itself (e.g. */
 @Entity
 @Table(name = "task_source_categories")
 @Getter

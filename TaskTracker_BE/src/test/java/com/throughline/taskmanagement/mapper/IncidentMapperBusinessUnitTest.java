@@ -5,9 +5,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-/** Business Unit is now a department name, but incidents recorded while it was still an enum
- *  hold constants like "INFORMATION_TECHNOLOGY". Those rows are never rewritten — they must
- *  read back as normal text, while a real department name passes through untouched. */
+/** Business Unit is now a department name, but incidents recorded while it was still an enum hold
+ *  constants like "INFORMATION_TECHNOLOGY". */
 class IncidentMapperBusinessUnitTest {
 
     private final IncidentMapper mapper = new IncidentMapper();

@@ -21,16 +21,10 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Runs against the real seeded database (same @SpringBootTest pattern as
- * ThroughlineApplicationTests), not mocks — a naive JPQL translation of "match any of these
- * three mutually-exclusive nullable associations" silently compiles to ANDed INNER joins
- * and returns zero rows for every department, which no Mockito-based test can ever catch
- * since it never touches Hibernate's actual SQL generation. This is what proved the bug in
- * TaskRepository.findByDepartmentId/findByDepartmentIdAndStatus/searchByDepartmentId and
- * now guards against it coming back — alongside the newer "top-level only" scoping added on
- * top of it (see findByDepartmentId's own doc comment).
- */
+/** Runs against the real seeded database (same @SpringBootTest pattern as ThroughlineApplicationTests),
+ *  not mocks — a naive JPQL translation of "match any of these three mutually-exclusive nullable
+ *  associations" silently compiles to ANDed INNER joins and returns zero rows for every department,
+ *  which no Mockito-based test can ever catch since it never touches Hibernate's actual SQL generation. */
 @SpringBootTest
 @Transactional
 class TaskRepositoryDepartmentScopingTest {
@@ -85,10 +79,7 @@ class TaskRepositoryDepartmentScopingTest {
                 "Expected a DEPARTMENT-assigned IT task (TSK-0001) to be included.");
         assertTrue(results.stream().anyMatch(t -> t.getAssignedPerson() != null),
                 "Expected an INDIVIDUAL-assigned top-level IT task (e.g. TSK-0033) to be included.");
-        // The newer half of what this query does: every row is top-level, none of IT's
-        // depth-1/2 tasks (e.g. TSK-0009, TSK-0017, TSK-0018) leak in even though they
-        // belong to IT too — the Tasks list is meant to read as "what are the
-        // initiatives", not every leaf subtask mixed in alongside them.
+        // The newer half of what this query does: every row is top-level, none of IT's depth-1/2 tasks (e.g.
         assertTrue(results.stream().allMatch(t -> t.getParentTask() == null),
                 "Expected every result to be a top-level task (no parent) — a subtask leaked in.");
     }
@@ -117,11 +108,8 @@ class TaskRepositoryDepartmentScopingTest {
         Long fabiolaId = idOf("fabiola.ikirezi@ceo.com"); // CEO/Executive
         Long jeanPaulId = idOf("jeanpaul.ndayambaje@example.com"); // Director heading IT
 
-        // A throwaway CRITICAL, CEO-assigned, DEPARTMENT-assigned task in IT — satisfies both
-        // halves of the OR at once, same join shape findByDepartmentId already proves doesn't
-        // get silently dropped. Created fresh (wrapped in @Transactional to roll back) rather
-        // than depending on a specific pre-existing seed task code, which already broke this
-        // test once when that row was later deleted through the running app.
+        // A throwaway CRITICAL, CEO-assigned, DEPARTMENT-assigned task in IT — satisfies both halves of the OR
+        // at once, same join shape findByDepartmentId already proves doesn't get silently dropped.
         TaskDetailResponse matching = taskService.createTask(new CreateTaskRequest(
                 "Department Scoping Test — Critical CEO Task", null, fabiolaId, null, null, itDepartmentId,
                 LocalDate.now(), LocalDate.now().plusDays(30), null, null, TaskSeverity.CRITICAL,

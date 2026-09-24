@@ -1,10 +1,4 @@
-/** Verbatim from the source Excel's "Lists & Guidance" sheet. This is the same text the
- *  app's own severity bands (IncidentMapper.computeSeverity) and closure enforcement
- *  (IncidentServiceImpl.requireClosureReadiness) are built from — it's shown here as
- *  read-only reference, not editable, so it can never drift from what the system actually
- *  does. For anything org-specific beyond this fixed sheet (escalation contacts changing,
- *  onboarding notes for a new Director/CEO), see the editable Guidance Notes section below
- *  it on the page instead. */
+/** Verbatim from the source Excel's "Lists & Guidance" sheet. */
 
 export interface SeverityRow {
   severity: string

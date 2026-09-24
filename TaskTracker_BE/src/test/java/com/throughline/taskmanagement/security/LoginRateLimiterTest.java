@@ -7,12 +7,9 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-/** Covers the exact brute-force scenario this class exists for: five wrong attempts lock
- *  an account out, a sixth (even a correct one) is still rejected, and a completely
- *  unrelated account is never affected by someone else's lockout. Doesn't test the
- *  15-minute window actually expiring — that would mean either sleeping the real 15
- *  minutes in a test or reworking the class to accept an injectable clock, neither of
- *  which is worth it just to cover a plain "time passed" branch. */
+/** Covers the exact brute-force scenario this class exists for: five wrong attempts lock an account
+ *  out, a sixth (even a correct one) is still rejected, and a completely unrelated account is never
+ *  affected by someone else's lockout. */
 class LoginRateLimiterTest {
 
     private LoginRateLimiter rateLimiter;

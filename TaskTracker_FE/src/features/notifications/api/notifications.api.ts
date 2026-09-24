@@ -35,9 +35,7 @@ export async function fetchUnreadCountsByType(): Promise<Partial<Record<Notifica
   return data
 }
 
-/** Called when the viewer opens the page a badge points at, to clear it. Comma-joined into
- *  one query param rather than relying on axios's array serialization, which Spring's
- *  @RequestParam List<NotificationType> binding accepts natively either way. */
+/** Called when the viewer opens the page a badge points at, to clear it. */
 export async function markCategoryRead(types: NotificationType[]): Promise<void> {
   await axiosClient.put(endpoints.notifications.markCategoryRead(), null, { params: { types: types.join(',') } })
 }
