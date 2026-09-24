@@ -24,6 +24,11 @@ export type NotificationType =
   | 'TEAM_CREATED'
   | 'DEPARTMENT_CREATED'
   | 'TASK_DELETED'
+  | 'INCIDENT_REPORTED'
+  | 'INCIDENT_ACTION_OWNER_ASSIGNED'
+  | 'TASK_ACCESS_GRANTED'
+  | 'INCIDENT_ACCESS_GRANTED'
+  | 'ACCESS_REVOKED'
 
 export interface Notification {
   id: number

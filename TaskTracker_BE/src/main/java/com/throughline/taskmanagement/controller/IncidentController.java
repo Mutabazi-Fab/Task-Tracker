@@ -54,8 +54,8 @@ public class IncidentController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<IncidentDetailResponse> getIncidentById(@PathVariable Long id) {
-        return ResponseEntity.ok(incidentService.getIncidentById(id));
+    public ResponseEntity<IncidentDetailResponse> getIncidentById(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(incidentService.getIncidentById(id, currentPersonResolver.resolveId(authentication)));
     }
 
     @GetMapping
@@ -67,8 +67,10 @@ public class IncidentController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) String q,
-            Pageable pageable) {
-        return ResponseEntity.ok(incidentService.getAllIncidents(status, severity, category, businessUnit, from, to, q, pageable));
+            Pageable pageable,
+            Authentication authentication) {
+        return ResponseEntity.ok(incidentService.getAllIncidents(status, severity, category, businessUnit, from, to, q,
+                currentPersonResolver.resolveId(authentication), pageable));
     }
 
     @PutMapping("/{id}")
@@ -97,7 +99,7 @@ public class IncidentController {
     }
 
     @GetMapping("/dashboard")
-    public ResponseEntity<IncidentDashboardResponse> getDashboard() {
-        return ResponseEntity.ok(incidentService.getDashboard());
+    public ResponseEntity<IncidentDashboardResponse> getDashboard(Authentication authentication) {
+        return ResponseEntity.ok(incidentService.getDashboard(currentPersonResolver.resolveId(authentication)));
     }
 }

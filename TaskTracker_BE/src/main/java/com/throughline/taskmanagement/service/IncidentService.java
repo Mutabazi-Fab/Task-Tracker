@@ -21,12 +21,13 @@ public interface IncidentService {
      *  reportedById is always the caller's own real, JWT-resolved identity. */
     IncidentDetailResponse createIncident(CreateIncidentRequest request);
 
-    IncidentDetailResponse getIncidentById(Long id);
+    /** Fails with a Forbidden error unless the viewer may see it — see IncidentAccessPolicy. */
+    IncidentDetailResponse getIncidentById(Long id, Long viewerId);
 
     /** Every filter is optional. q searches title and incident code. */
     Page<IncidentListResponse> getAllIncidents(
             IncidentStatus status, IncidentSeverity severity, IncidentCategory category,
-            String businessUnit, LocalDate from, LocalDate to, String q, Pageable pageable);
+            String businessUnit, LocalDate from, LocalDate to, String q, Long viewerId, Pageable pageable);
 
     /** Director/Executive/Super Admin only, same tier as creating one. changedById is
      *  always the caller's own real, JWT-resolved identity. */
@@ -36,5 +37,6 @@ public interface IncidentService {
     IncidentDetailResponse changeStatus(Long id, ChangeIncidentStatusRequest request);
 
     /** Backs the Incident Management dashboard's KPI tiles, breakdowns and trend. */
-    IncidentDashboardResponse getDashboard();
+    /** Counts only what this viewer may see (see IncidentAccessPolicy). */
+    IncidentDashboardResponse getDashboard(Long viewerId);
 }

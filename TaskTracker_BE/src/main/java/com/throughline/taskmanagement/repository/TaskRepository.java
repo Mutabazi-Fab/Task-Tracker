@@ -18,6 +18,11 @@ import java.util.Optional;
 
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
+    /** Ids of the tasks an Executive/Super Admin has shared with :personId (see AccessGrantService). */
+    String GRANTED_TASK_IDS =
+            "SELECT g.resourceId FROM AccessGrant g WHERE g.grantee.id = :personId "
+            + "AND g.resourceType = com.throughline.taskmanagement.enums.AccessResourceType.TASK AND g.revokedAt IS NULL";
+
     /** A Member's visible task set: assigned to them or their team, plus the ancestor chain (parent,
      *  grandparent) so they can also see the Department/implementation task their work was carved out of. */
     String VISIBLE_TO_PERSON_OR_ANCESTOR =
@@ -26,7 +31,12 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             + "OR t.id IN (SELECT s.parentTask.id FROM Task s WHERE s.parentTask IS NOT NULL AND "
             + "(s.assignedPerson.id = :personId OR s.assignedTeam.id IN (SELECT tm2.team.id FROM TeamMember tm2 WHERE tm2.person.id = :personId))) "
             + "OR t.id IN (SELECT s.parentTask.parentTask.id FROM Task s WHERE s.parentTask IS NOT NULL AND s.parentTask.parentTask IS NOT NULL AND "
-            + "(s.assignedPerson.id = :personId OR s.assignedTeam.id IN (SELECT tm3.team.id FROM TeamMember tm3 WHERE tm3.person.id = :personId))))";
+            + "(s.assignedPerson.id = :personId OR s.assignedTeam.id IN (SELECT tm3.team.id FROM TeamMember tm3 WHERE tm3.person.id = :personId)))"
+            + " OR t.id IN (" + GRANTED_TASK_IDS + "))";
+
+    // Is this one task visible to this person under the same rule as their task list? Backs TaskAccessPolicy.
+    @Query("SELECT COUNT(t) > 0 FROM Task t WHERE t.id = :taskId AND " + VISIBLE_TO_PERSON_OR_ANCESTOR)
+    boolean isVisibleToPerson(@Param("taskId") Long taskId, @Param("personId") Long personId);
 
     Optional<Task> findByTaskCode(String taskCode);
     
@@ -92,6 +102,42 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
                   + "WHERE (dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId) AND "
                   + "(LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%')))")
     Page<Task> searchByDepartmentId(@Param("q") String q, @Param("departmentId") Long departmentId, Pageable pageable);
+
+    // The Director's list: their department's top-level tasks PLUS any task shared with them (any depth,
+    // any department) - the same lists as above, with the shared ones added.
+    @Query("SELECT t FROM Task t "
+            + "LEFT JOIN t.assignedDepartment dept "
+            + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
+            + "LEFT JOIN t.assignedPerson person LEFT JOIN person.department personDept "
+            + "WHERE ((dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId) "
+            + "AND t.parentTask IS NULL) OR t.id IN (" + GRANTED_TASK_IDS + ")")
+    Page<Task> findByDepartmentIdOrSharedWith(@Param("departmentId") Long departmentId, @Param("personId") Long personId, Pageable pageable);
+
+    @Query("SELECT t FROM Task t "
+            + "LEFT JOIN t.assignedDepartment dept "
+            + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
+            + "LEFT JOIN t.assignedPerson person LEFT JOIN person.department personDept "
+            + "WHERE (((dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId) "
+            + "AND t.parentTask IS NULL) OR t.id IN (" + GRANTED_TASK_IDS + ")) AND t.status = :status")
+    Page<Task> findByDepartmentIdAndStatusOrSharedWith(@Param("departmentId") Long departmentId, @Param("personId") Long personId,
+                                                       @Param("status") TaskStatus status, Pageable pageable);
+
+    @Query(value = "SELECT t FROM Task t "
+                  + "LEFT JOIN t.assignedDepartment dept "
+                  + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
+                  + "LEFT JOIN t.assignedPerson person LEFT JOIN person.department personDept "
+                  + "WHERE (((dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId)) "
+                  + "OR t.id IN (" + GRANTED_TASK_IDS + ")) AND "
+                  + "(LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%')))",
+           countQuery = "SELECT COUNT(t) FROM Task t "
+                  + "LEFT JOIN t.assignedDepartment dept "
+                  + "LEFT JOIN t.assignedTeam team LEFT JOIN team.department teamDept "
+                  + "LEFT JOIN t.assignedPerson person LEFT JOIN person.department personDept "
+                  + "WHERE (((dept.id = :departmentId OR teamDept.id = :departmentId OR personDept.id = :departmentId)) "
+                  + "OR t.id IN (" + GRANTED_TASK_IDS + ")) AND "
+                  + "(LOWER(t.taskCode) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(t.title) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<Task> searchByDepartmentIdOrSharedWith(@Param("q") String q, @Param("departmentId") Long departmentId,
+                                                @Param("personId") Long personId, Pageable pageable);
 
     // Unpaged variant of findByDepartmentId, for DashboardServiceImpl.buildDepartmentHealth
     // — needs every top-level task in one shot to aggregate in Java.

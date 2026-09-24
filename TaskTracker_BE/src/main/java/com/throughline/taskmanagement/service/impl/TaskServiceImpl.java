@@ -350,6 +350,11 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public Page<TaskListResponse> getAllTasks(TaskStatus status, Long assignedPersonId, Long departmentId, Pageable pageable) {
+        return getAllTasks(status, assignedPersonId, departmentId, null, pageable);
+    }
+
+    @Override
+    public Page<TaskListResponse> getAllTasks(TaskStatus status, Long assignedPersonId, Long departmentId, Long viewerId, Pageable pageable) {
         Pageable pinnedFirst = withPinnedFirst(pageable);
         Page<Task> tasks;
         if (assignedPersonId != null && status != null) {
@@ -357,9 +362,13 @@ public class TaskServiceImpl implements TaskService {
         } else if (assignedPersonId != null) {
             tasks = taskRepository.findVisibleToPerson(assignedPersonId, pinnedFirst);
         } else if (departmentId != null && status != null) {
-            tasks = taskRepository.findByDepartmentIdAndStatus(departmentId, status, pinnedFirst);
+            tasks = viewerId != null
+                    ? taskRepository.findByDepartmentIdAndStatusOrSharedWith(departmentId, viewerId, status, pinnedFirst)
+                    : taskRepository.findByDepartmentIdAndStatus(departmentId, status, pinnedFirst);
         } else if (departmentId != null) {
-            tasks = taskRepository.findByDepartmentId(departmentId, pinnedFirst);
+            tasks = viewerId != null
+                    ? taskRepository.findByDepartmentIdOrSharedWith(departmentId, viewerId, pinnedFirst)
+                    : taskRepository.findByDepartmentId(departmentId, pinnedFirst);
         } else if (status != null) {
             // Top-level only — this branch never runs for a Member's own "My Tasks" scope.
             tasks = taskRepository.findByStatusAndParentTaskIsNull(status, pinnedFirst);
@@ -710,11 +719,18 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public Page<TaskListResponse> searchTasks(String q, Long assignedPersonId, Long departmentId, Pageable pageable) {
+        return searchTasks(q, assignedPersonId, departmentId, null, pageable);
+    }
+
+    @Override
+    public Page<TaskListResponse> searchTasks(String q, Long assignedPersonId, Long departmentId, Long viewerId, Pageable pageable) {
         Pageable pinnedFirst = withPinnedFirst(pageable);
         Page<Task> results = assignedPersonId != null
                 ? taskRepository.searchVisibleToPerson(q, assignedPersonId, pinnedFirst)
                 : departmentId != null
-                        ? taskRepository.searchByDepartmentId(q, departmentId, pinnedFirst)
+                        ? (viewerId != null
+                                ? taskRepository.searchByDepartmentIdOrSharedWith(q, departmentId, viewerId, pinnedFirst)
+                                : taskRepository.searchByDepartmentId(q, departmentId, pinnedFirst))
                         : taskRepository.search(q, pinnedFirst);
         return results.map(t -> {
             TaskComment lastComment = taskCommentRepository.findFirstByTaskIdOrderByCreatedAtDesc(t.getId()).orElse(null);

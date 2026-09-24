@@ -32,5 +32,10 @@ public enum NotificationType {
     // TEAM_CREATED/DEPARTMENT_CREATED — see NotificationServiceImpl.notifyIncidentReported.
     INCIDENT_REPORTED,
     // Direct to the newly-assigned Action Owner — see notifyIncidentActionOwnerAssigned.
-    INCIDENT_ACTION_OWNER_ASSIGNED
+    INCIDENT_ACTION_OWNER_ASSIGNED,
+    // An Executive/Super Admin shared one task or incident with someone outside its normal scope,
+    // or took that access away again — see AccessGrantService.
+    TASK_ACCESS_GRANTED,
+    INCIDENT_ACCESS_GRANTED,
+    ACCESS_REVOKED
 }

@@ -4,6 +4,7 @@ import { EmptyState } from '../../../components/ui/EmptyState'
 import { formatDate } from '../../../lib/formatDate'
 import type { IncidentListItem } from '../../../types/incident.types'
 import { businessUnitLabel, categoryLabel, formatCurrency } from '../lib/incidentLabels'
+import { SharedNote } from '../../accessGrants/components/SharedNote'
 import { IncidentSeverityBadge } from './IncidentSeverityBadge'
 import { IncidentStatusBadge } from './IncidentStatusBadge'
 import { ActionSlaBadge } from './ActionSlaBadge'
@@ -31,6 +32,7 @@ export function IncidentTable({ incidents }: { incidents: IncidentListItem[] }) 
           <span className={styles.code}>{incident.incidentCode}</span>
           <div className={styles.title}>
             <span className={styles.titleText}>{incident.title}</span>
+            <SharedNote resourceType="INCIDENT" resourceId={incident.id} />
             <span className={styles.subText}>
               {categoryLabel(incident.category)} · {formatDate(incident.dateOccurred)}
             </span>

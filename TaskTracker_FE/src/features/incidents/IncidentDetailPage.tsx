@@ -7,6 +7,8 @@ import { QueryBoundary } from '../../components/feedback/QueryBoundary'
 import { formatDate, formatDateTime } from '../../lib/formatDate'
 import { useAuth } from '../auth/useAuth'
 import { useIncident } from './hooks/useIncident'
+import { AccessGrantsPanel } from '../accessGrants/components/AccessGrantsPanel'
+import { GrantedAccessBanner } from '../accessGrants/components/GrantedAccessBanner'
 import { IncidentSeverityBadge } from './components/IncidentSeverityBadge'
 import { IncidentStatusBadge } from './components/IncidentStatusBadge'
 import { ActionSlaBadge } from './components/ActionSlaBadge'
@@ -46,6 +48,8 @@ function IncidentDetailBody({ incident }: { incident: IncidentDetail }) {
         onBack={() => navigate(-1)}
         right={isDirector ? <Button onClick={() => setEditOpen(true)}>Edit</Button> : undefined}
       />
+
+      <GrantedAccessBanner resourceType="INCIDENT" resourceId={incident.id} />
 
       <div className={styles.badgeRow}>
         <IncidentStatusBadge status={incident.status} />
@@ -132,6 +136,8 @@ function IncidentDetailBody({ incident }: { incident: IncidentDetail }) {
           )}
         </Card>
       </div>
+
+      <AccessGrantsPanel resourceType="INCIDENT" resourceId={incident.id} />
 
       {isDirector && <EditIncidentModal incident={incident} open={editOpen} onClose={() => setEditOpen(false)} />}
     </>

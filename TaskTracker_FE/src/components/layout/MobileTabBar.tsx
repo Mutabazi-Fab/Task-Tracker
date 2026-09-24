@@ -1,13 +1,15 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../features/auth/useAuth'
 import { Icon } from '../ui/Icon'
+import { useSharedWithMe } from '../../features/accessGrants/hooks/useAccessGrants'
 import { getNavItems } from './Sidebar'
 import styles from './MobileTabBar.module.css'
 
 /** Bottom tab bar, swapped in for the Sidebar below 768px. */
 export function MobileTabBar() {
   const { isDirector, logout } = useAuth()
-  const navItems = getNavItems(isDirector)
+  const sharedWithMe = useSharedWithMe()
+  const navItems = getNavItems(isDirector, (sharedWithMe.data ?? []).some((g) => g.resourceType === 'INCIDENT'))
 
   return (
     <nav className={styles.bar}>

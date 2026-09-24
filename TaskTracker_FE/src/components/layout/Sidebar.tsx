@@ -5,6 +5,7 @@ import { ThemeToggle } from '../../features/theme/ThemeToggle'
 import { useAuth } from '../../features/auth/useAuth'
 import { useUnreadCountsByType } from '../../features/notifications/hooks/useUnreadCountsByType'
 import { usePendingExtensionRequests } from '../../features/taskDetail/hooks/usePendingExtensionRequests'
+import { useSharedWithMe } from '../../features/accessGrants/hooks/useAccessGrants'
 import { Avatar } from '../ui/Avatar'
 import { Icon } from '../ui/Icon'
 import { RoleBadge, resolveBadgeRole } from '../ui/RoleBadge'
@@ -23,11 +24,15 @@ const BASE_NAV_ITEMS: NavItem[] = [
 ]
 
 /** Shared with MobileTabBar. */
-export function getNavItems(isDirector: boolean): NavItem[] {
+export function getNavItems(isDirector: boolean, hasSharedIncident = false): NavItem[] {
   const items = [...BASE_NAV_ITEMS]
   if (isDirector) {
     items.push({ to: ROUTES.departments, label: 'Departments', icon: 'departments' })
+  }
+  if (isDirector || hasSharedIncident) {
     items.push({ to: ROUTES.incidents, label: 'Incidents', icon: 'alert' })
+  }
+  if (isDirector) {
     items.push({ to: ROUTES.requests, label: 'Requests', icon: 'mail' })
     items.push({ to: ROUTES.activity, label: 'Activity', icon: 'shield' })
   }
@@ -47,7 +52,9 @@ function useNavBadgeCounts(hasUser: boolean, isDirector: boolean) {
         ? (typeCounts.data?.TASK_ASSIGNED ?? 0) +
           (typeCounts.data?.SUBTASK_ASSIGNED ?? 0) +
           (typeCounts.data?.TASK_REASSIGNED ?? 0) +
-          (typeCounts.data?.SUBTASK_REASSIGNED ?? 0)
+          (typeCounts.data?.SUBTASK_REASSIGNED ?? 0) +
+          (typeCounts.data?.TASK_ACCESS_GRANTED ?? 0)
+      : routeTo === ROUTES.incidents ? typeCounts.data?.INCIDENT_ACCESS_GRANTED
       : routeTo === ROUTES.teams ? typeCounts.data?.TEAM_CREATED
       : routeTo === ROUTES.departments ? typeCounts.data?.DEPARTMENT_CREATED
       : routeTo === ROUTES.activity ? typeCounts.data?.TASK_DELETED
@@ -61,7 +68,9 @@ function useNavBadgeCounts(hasUser: boolean, isDirector: boolean) {
 
 export function Sidebar() {
   const { currentUser, isDirector, logout } = useAuth()
-  const navItems = getNavItems(isDirector)
+  const sharedWithMe = useSharedWithMe()
+  const hasSharedIncident = (sharedWithMe.data ?? []).some((g) => g.resourceType === 'INCIDENT')
+  const navItems = getNavItems(isDirector, hasSharedIncident)
   const countFor = useNavBadgeCounts(!!currentUser, isDirector)
 
   return (

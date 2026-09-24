@@ -34,6 +34,8 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
             + "AND (:businessUnit IS NULL OR i.businessUnit = :businessUnit OR i.businessUnit = :legacyBusinessUnit) "
             + "AND (:from IS NULL OR i.dateOccurred >= :from) "
             + "AND (:to IS NULL OR i.dateOccurred <= :to) "
+            + "AND (:seeAll = true OR i.reportedBy.id = :viewerId OR i.actionOwner.id = :viewerId "
+            + "     OR i.businessUnit IN :unitNames OR i.id IN :grantedIds) "
             + "AND (:qPattern IS NULL OR LOWER(i.title) LIKE :qPattern OR LOWER(i.incidentCode) LIKE :qPattern)")
     Page<Incident> search(
             @Param("status") IncidentStatus status,
@@ -43,6 +45,10 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
             @Param("legacyBusinessUnit") String legacyBusinessUnit,
             @Param("from") LocalDate from,
             @Param("to") LocalDate to,
+            @Param("seeAll") boolean seeAll,
+            @Param("viewerId") Long viewerId,
+            @Param("unitNames") List<String> unitNames,
+            @Param("grantedIds") List<Long> grantedIds,
             @Param("qPattern") String qPattern,
             Pageable pageable);
 

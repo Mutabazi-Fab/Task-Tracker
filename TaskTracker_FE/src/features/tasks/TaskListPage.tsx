@@ -32,7 +32,7 @@ export function TaskListPage() {
   // Clears the Sidebar's Tasks badge — every logged-in person can get this one (Member
   // included), so unlike Teams/Departments/Activity this runs unconditionally.
   useEffect(() => {
-    markCategoryRead.mutate(['TASK_ASSIGNED', 'SUBTASK_ASSIGNED', 'TASK_REASSIGNED', 'SUBTASK_REASSIGNED'])
+    markCategoryRead.mutate(['TASK_ASSIGNED', 'SUBTASK_ASSIGNED', 'TASK_REASSIGNED', 'SUBTASK_REASSIGNED', 'TASK_ACCESS_GRANTED'])
   }, [])
 
   const isPlainDirector = isDirector && !isExecutive

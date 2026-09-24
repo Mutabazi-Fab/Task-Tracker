@@ -1,6 +1,8 @@
 package com.throughline.taskmanagement.service.impl;
 
+import com.throughline.taskmanagement.access.IncidentAccessPolicy;
 import com.throughline.taskmanagement.dto.response.NotificationResponse;
+import com.throughline.taskmanagement.enums.AccessResourceType;
 import com.throughline.taskmanagement.enums.AssigneeType;
 import com.throughline.taskmanagement.enums.NotificationType;
 import com.throughline.taskmanagement.enums.Role;
@@ -487,7 +489,33 @@ public class NotificationServiceImpl implements NotificationService {
     public void notifyIncidentReported(com.throughline.taskmanagement.model.Incident incident, Person reportedBy) {
         String message = String.format("%s reported a new incident: \"%s\" (%s).",
                 reportedBy.getFullName(), incident.getTitle(), incident.getIncidentCode());
-        broadcastToDirectorsExcept(reportedBy, NotificationType.INCIDENT_REPORTED, message, incident.getId());
+        for (Person recipient : personRepository.findByRoleIn(List.of(Role.DIRECTOR, Role.EXECUTIVE, Role.SUPER_ADMIN))) {
+            if (recipient.getId().equals(reportedBy.getId())) {
+                continue;
+            }
+            boolean seesEverything = Role.isAtLeastExecutive(recipient.getRole());
+            boolean headOfThatDepartment = recipient.getDepartment() != null
+                    && IncidentAccessPolicy.unitMatchesDepartment(incident.getBusinessUnit(), recipient.getDepartment().getName());
+            if (seesEverything || headOfThatDepartment) {
+                send(recipient, NotificationType.INCIDENT_REPORTED, message, incident.getId());
+            }
+        }
+    }
+
+    @Override
+    public void notifyAccessGranted(Person grantee, Person grantedBy, AccessResourceType type, Long resourceId, String resourceLabel) {
+        String kind = type == AccessResourceType.INCIDENT ? "incident" : "task";
+        String message = String.format("%s shared the %s \"%s\" with you. You can view it and act on it; actions are recorded.",
+                grantedBy.getFullName(), kind, resourceLabel);
+        NotificationType notificationType = type == AccessResourceType.INCIDENT
+                ? NotificationType.INCIDENT_ACCESS_GRANTED : NotificationType.TASK_ACCESS_GRANTED;
+        send(grantee, notificationType, message, resourceId);
+    }
+
+    @Override
+    public void notifyAccessRevoked(Person grantee, Person revokedBy, String resourceLabel) {
+        String message = String.format("%s removed your access to \"%s\".", revokedBy.getFullName(), resourceLabel);
+        send(grantee, NotificationType.ACCESS_REVOKED, message, null);
     }
 
     @Override

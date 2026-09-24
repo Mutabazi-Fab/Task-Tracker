@@ -190,7 +190,7 @@ public class IncidentMapper {
         if (blank(incident.getCorrectiveAction())) {
             blockers.add("Corrective / preventive action is required before closing.");
         }
-        boolean needsReview = HIGH_TIER.contains(incident.getSeverity())
+        boolean needsReview = (incident.getSeverity() != null && HIGH_TIER.contains(incident.getSeverity()))
                 || incident.getRegulatorNotifiable() == com.throughline.taskmanagement.enums.RegulatorNotifiableStatus.YES
                 || incident.getRegulatorNotifiable() == com.throughline.taskmanagement.enums.RegulatorNotifiableStatus.ASSESS;
         if (needsReview) {

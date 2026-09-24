@@ -1,5 +1,6 @@
 package com.throughline.taskmanagement.service.impl;
 
+import com.throughline.taskmanagement.access.IncidentAccessPolicy;
 import com.throughline.taskmanagement.dto.request.ChangeIncidentStatusRequest;
 import com.throughline.taskmanagement.dto.request.CreateIncidentRequest;
 import com.throughline.taskmanagement.dto.request.UpdateIncidentRequest;
@@ -57,6 +58,7 @@ public class IncidentServiceImpl implements IncidentService {
     private final DepartmentRepository departmentRepository;
     private final IncidentMapper incidentMapper;
     private final NotificationService notificationService;
+    private final IncidentAccessPolicy accessPolicy;
 
     @Override
     public IncidentDetailResponse createIncident(CreateIncidentRequest request) {
@@ -124,20 +126,24 @@ public class IncidentServiceImpl implements IncidentService {
     }
 
     @Override
-    public IncidentDetailResponse getIncidentById(Long id) {
-        return incidentMapper.toDetailResponse(findIncident(id));
+    public IncidentDetailResponse getIncidentById(Long id, Long viewerId) {
+        Incident incident = findIncident(id);
+        accessPolicy.requireCanView(findViewer(viewerId), incident);
+        return incidentMapper.toDetailResponse(incident);
     }
 
     @Override
     public Page<IncidentListResponse> getAllIncidents(
             IncidentStatus status, IncidentSeverity severity, IncidentCategory category,
-            String businessUnit, LocalDate from, LocalDate to, String q, Pageable pageable) {
+            String businessUnit, LocalDate from, LocalDate to, String q, Long viewerId, Pageable pageable) {
+        Person viewer = findViewer(viewerId);
         // Built here, not with CONCAT inside the query itself — see IncidentRepository.search's
         // Javadoc for why a null :q through LOWER(CONCAT(...)) broke on Postgres.
         String qPattern = (q == null || q.isBlank()) ? null : "%" + q.trim().toLowerCase() + "%";
         String unit = (businessUnit == null || businessUnit.isBlank()) ? null : businessUnit.trim();
         String legacyUnit = unit == null ? null : unit.toUpperCase().replace(' ', '_');
-        return incidentRepository.search(status, severity, category, unit, legacyUnit, from, to, qPattern, pageable)
+        return incidentRepository.search(status, severity, category, unit, legacyUnit, from, to,
+                        accessPolicy.seesAll(viewer), viewer.getId(), accessPolicy.ownUnitNames(viewer), accessPolicy.grantedIncidentIds(viewer), qPattern, pageable)
                 .map(incidentMapper::toListResponse);
     }
 
@@ -150,6 +156,7 @@ public class IncidentServiceImpl implements IncidentService {
         }
 
         Incident incident = findIncident(id);
+        accessPolicy.requireCanView(actor, incident);
         Person previousOwner = incident.getActionOwner();
 
         if (request.dateOccurred() != null) incident.setDateOccurred(request.dateOccurred());
@@ -210,6 +217,7 @@ public class IncidentServiceImpl implements IncidentService {
         }
 
         Incident incident = findIncident(id);
+        accessPolicy.requireCanView(actor, incident);
         IncidentStatus from = incident.getStatus();
         IncidentStatus to = request.newStatus();
 
@@ -236,12 +244,13 @@ public class IncidentServiceImpl implements IncidentService {
     }
 
     @Override
-    public IncidentDashboardResponse getDashboard() {
-        List<Incident> all = incidentRepository.findAll();
+    public IncidentDashboardResponse getDashboard(Long viewerId) {
+        Person viewer = findViewer(viewerId);
+        List<Incident> all = incidentRepository.findAll().stream().filter(accessPolicy.visibleTo(viewer)).toList();
 
         long total = all.size();
         long openOrMonitoring = all.stream().filter(i -> OPEN_OR_MONITORING.contains(i.getStatus())).count();
-        long criticalOrHigh = all.stream().filter(i -> HIGH_TIER.contains(i.getSeverity())).count();
+        long criticalOrHigh = all.stream().filter(i -> (i.getSeverity() != null && HIGH_TIER.contains(i.getSeverity()))).count();
         long overdueActions = all.stream()
                 .filter(i -> i.getStatus() != IncidentStatus.CLOSED
                         && i.getTargetClosureDate() != null
@@ -311,6 +320,10 @@ public class IncidentServiceImpl implements IncidentService {
         }
     }
 
+    private Person findViewer(Long viewerId) {
+        return personRepository.findById(viewerId).orElseThrow(() -> new ResourceNotFoundException("Person not found"));
+    }
+
     private Incident findIncident(Long id) {
         return incidentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Incident not found"));
@@ -342,7 +355,7 @@ public class IncidentServiceImpl implements IncidentService {
         if (incident.getCorrectiveAction() == null || incident.getCorrectiveAction().isBlank()) {
             blockers.add("corrective/preventive action");
         }
-        boolean needsReview = HIGH_TIER.contains(incident.getSeverity())
+        boolean needsReview = (incident.getSeverity() != null && HIGH_TIER.contains(incident.getSeverity()))
                 || incident.getRegulatorNotifiable() == com.throughline.taskmanagement.enums.RegulatorNotifiableStatus.YES
                 || incident.getRegulatorNotifiable() == com.throughline.taskmanagement.enums.RegulatorNotifiableStatus.ASSESS;
         if (needsReview) {

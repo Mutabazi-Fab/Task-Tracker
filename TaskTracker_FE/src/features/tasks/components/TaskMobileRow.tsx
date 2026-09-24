@@ -8,6 +8,7 @@ import { StatusChip } from '../../../components/ui/StatusChip'
 import { formatPercentage } from '../../../lib/formatPercentage'
 import { isRecentlyCreated } from '../../../lib/isRecentlyCreated'
 import type { TaskListItem } from '../../../types/task.types'
+import { SharedNote } from '../../accessGrants/components/SharedNote'
 import { TaskLastCommentCell } from './TaskLastCommentCell'
 import styles from './TaskMobileRow.module.css'
 
@@ -27,6 +28,7 @@ export function TaskMobileRow({ task }: { task: TaskListItem }) {
         </div>
       </div>
       <span className={styles.title}>{task.title}</span>
+      <SharedNote resourceType="TASK" resourceId={task.id} />
       <span className={styles.assignee}>{task.assigneeName}</span>
       <div className={styles.progress}>
         <ProgressBar percentage={task.progressPercentage} status={task.status} />

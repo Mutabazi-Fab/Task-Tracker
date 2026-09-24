@@ -9,6 +9,7 @@ import { formatDate } from '../../../lib/formatDate'
 import { formatPercentage } from '../../../lib/formatPercentage'
 import { isRecentlyCreated } from '../../../lib/isRecentlyCreated'
 import type { TaskListItem } from '../../../types/task.types'
+import { SharedNote } from '../../accessGrants/components/SharedNote'
 import { TaskLastCommentCell } from './TaskLastCommentCell'
 import styles from './TaskTable.module.css'
 
@@ -23,6 +24,7 @@ export function TaskTableRow({ task }: { task: TaskListItem }) {
       </span>
       <div className={styles.title}>
         <span className={styles.titleText}>{task.title}</span>
+        <SharedNote resourceType="TASK" resourceId={task.id} />
         <span className={styles.dateAssigned}>{formatDate(task.dateAssigned)}</span>
       </div>
       <div className={styles.assignee}>

@@ -18,6 +18,8 @@ import { TaskProgressSparkline } from './components/TaskProgressSparkline'
 import { AssignmentMetaPanel } from './components/AssignmentMetaPanel'
 import { AddCommentForm } from './components/AddCommentForm'
 import { useCanLogProgress } from './hooks/useCanLogProgress'
+import { AccessGrantsPanel } from '../accessGrants/components/AccessGrantsPanel'
+import { GrantedAccessBanner } from '../accessGrants/components/GrantedAccessBanner'
 import { CommentTimeline } from './components/CommentTimeline'
 import { DiscussionPanel } from './components/DiscussionPanel'
 import { ReassignmentHistoryPanel } from './components/ReassignmentHistoryPanel'
@@ -48,6 +50,25 @@ export function TaskDetailPage() {
             action={
               <Link to={ROUTES.tasks}>
                 <Button variant="secondary">View all tasks</Button>
+              </Link>
+            }
+          />
+        </Card>
+      </>
+    )
+  }
+
+  if (query.isError && query.error.status === 403) {
+    return (
+      <>
+        <PageHeader breadcrumb="Throughline / Tasks" title="No access" onBack={() => navigate(-1)} />
+        <Card>
+          <EmptyState
+            title="This task isn't shared with you"
+            description="It belongs to another department. Ask a Super Admin or the CEO to share it with you."
+            action={
+              <Link to={ROUTES.tasks}>
+                <Button variant="secondary">Back to tasks</Button>
               </Link>
             }
           />
@@ -153,6 +174,8 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
         }
       />
 
+      <GrantedAccessBanner resourceType="TASK" resourceId={task.id} />
+
       {/* Lets a viewer climb back up the hierarchy — parentTaskId isn't otherwise surfaced anywhere on this page. */}
       {task.parentTaskId !== null && (
         <Link to={ROUTES.taskDetail(task.parentTaskId)} className={styles.parentLink}>
@@ -192,6 +215,8 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
           <DocumentsPanel taskId={task.id} documents={task.documents} />
         </Card>
       </div>
+
+      <AccessGrantsPanel resourceType="TASK" resourceId={task.id} />
 
       {task.assigneeType === 'INDIVIDUAL' && (
         <Card>

@@ -93,13 +93,20 @@ public interface NotificationService {
      *  read from — same ordering as recordActivity's own DELETED entry). */
     void notifyTaskDeleted(Task task, Person deletedBy);
 
-    /** Called by IncidentServiceImpl right after a new incident is reported. Broadcasts to
-     *  every Director-or-above except the reporter, same pattern as notifyTeamCreated. */
+    /** Called by IncidentServiceImpl right after a new incident is reported. Goes to the Director of
+     *  the incident's own department plus every Executive/Super Admin, never the reporter. */
     void notifyIncidentReported(com.throughline.taskmanagement.model.Incident incident, Person reportedBy);
 
     /** Called by IncidentServiceImpl whenever an incident's Action Owner is set or changed.
      *  Notifies the new owner directly. Never fires if the owner is unchanged. */
     void notifyIncidentActionOwnerAssigned(com.throughline.taskmanagement.model.Incident incident, Person assignedBy);
+
+    /** Called by AccessGrantServiceImpl when an Executive/Super Admin shares a task or incident. */
+    void notifyAccessGranted(Person grantee, Person grantedBy, com.throughline.taskmanagement.enums.AccessResourceType type,
+                             Long resourceId, String resourceLabel);
+
+    /** Called by AccessGrantServiceImpl when a grant is taken away. */
+    void notifyAccessRevoked(Person grantee, Person revokedBy, String resourceLabel);
 
     Page<NotificationResponse> getNotifications(Long recipientId, Pageable pageable);
 

@@ -111,7 +111,17 @@ written for someone opening this project for the first time.
   severity/category charts, a monthly trend and SLA compliance, and a filterable, searchable
   incident list. A **Guidance** page carries the Excel's severity/escalation table, score
   scale and closing checklist read-only, plus notes a Director-or-above can add for new
-  reporters.
+  reporters. **An incident is visible only to its own department**: Executive and Super
+  Admin see all, a Director sees their department's, and the reporter and Action Owner
+  always see theirs. Ordinary department members do not see incidents unless shared.
+- **Sharing access.** An Executive or Super Admin (or a Director, for items belonging to
+  their own department) can share one specific task or incident with one specific person
+  outside its department ("Share access", with a required reason). It then shows up in
+  that person's normal list with a small "shared with you by ..." note, they can view it
+  and act on it within their role, see a warning that it isn't from their department and
+  that actions are recorded, and keep access, with no expiry, until it is removed. Task pages are private the same way:
+  they open only for people who normally see the task, or were given access. Every grant
+  and removal is kept as a record and notifies the person.
 - **In-app notifications**, always sent to the affected person, for: task/subtask
   assignment and reassignment, deadline-extension requests/approvals/rejections/forwards,
   discussion replies, team membership changes, role changes, account (de)activation, and

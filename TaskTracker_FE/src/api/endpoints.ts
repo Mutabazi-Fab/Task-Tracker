@@ -107,6 +107,14 @@ export const endpoints = {
     changeStatus: (id: number | string) => `${BASE}/incidents/${id}/status`,
     dashboard: () => `${BASE}/incidents/dashboard`,
   },
+  accessGrants: {
+    list: () => `${BASE}/access-grants`,
+    create: () => `${BASE}/access-grants`,
+    revoke: (id: number | string) => `${BASE}/access-grants/${id}`,
+    mine: () => `${BASE}/access-grants/mine`,
+    myStatus: () => `${BASE}/access-grants/mine/status`,
+    canManage: () => `${BASE}/access-grants/can-manage`,
+  },
   incidentGuidanceNotes: {
     list: () => `${BASE}/incidents/guidance-notes`,
     create: () => `${BASE}/incidents/guidance-notes`,

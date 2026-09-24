@@ -23,6 +23,13 @@ const TASK_NOTIFICATION_TYPES = new Set<NotificationType>([
   'DEADLINE_EXTENDED',
   'DISCUSSION_COMMENT_POSTED',
   'DISCUSSION_REPLY_POSTED',
+  'TASK_ACCESS_GRANTED',
+])
+// Incident notifications carry the incident's id.
+const INCIDENT_NOTIFICATION_TYPES = new Set<NotificationType>([
+  'INCIDENT_REPORTED',
+  'INCIDENT_ACTION_OWNER_ASSIGNED',
+  'INCIDENT_ACCESS_GRANTED',
 ])
 const PERSON_NOTIFICATION_TYPES = new Set<NotificationType>([
   'ROLE_CHANGED',
@@ -34,6 +41,7 @@ const PERSON_NOTIFICATION_TYPES = new Set<NotificationType>([
 function resolveNotificationRoute(notification: Notification): string | null {
   if (notification.relatedEntityId == null) return null
   if (TASK_NOTIFICATION_TYPES.has(notification.type)) return ROUTES.taskDetail(notification.relatedEntityId)
+  if (INCIDENT_NOTIFICATION_TYPES.has(notification.type)) return ROUTES.incidentDetail(notification.relatedEntityId)
   if (PERSON_NOTIFICATION_TYPES.has(notification.type)) return ROUTES.personProfile(notification.relatedEntityId)
   // TASK_DELETED is deliberately excluded — the task it points at no longer exists.
   if (notification.type === 'TEAM_CREATED') return ROUTES.team(notification.relatedEntityId)

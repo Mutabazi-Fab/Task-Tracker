@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '../../app/routes'
 import { PageHeader } from '../../components/layout/PageHeader'
@@ -10,6 +10,7 @@ import { SelectField } from '../../components/ui/SelectField'
 import { TextField } from '../../components/ui/TextField'
 import { QueryBoundary } from '../../components/feedback/QueryBoundary'
 import { useAuth } from '../auth/useAuth'
+import { useMarkCategoryRead } from '../notifications/hooks/useMarkCategoryRead'
 import { IncidentKpiRow } from './components/IncidentKpiRow'
 import { IncidentBreakdownChart } from './components/IncidentBreakdownChart'
 import { IncidentTrendChart } from './components/IncidentTrendChart'
@@ -46,6 +47,12 @@ export function IncidentDashboardPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [createOpen, setCreateOpen] = useState(false)
+  const markCategoryRead = useMarkCategoryRead()
+
+  // Clears the Incidents badge for incidents shared with this person, once they open the page.
+  useEffect(() => {
+    markCategoryRead.mutate(['INCIDENT_ACCESS_GRANTED'])
+  }, [])
 
   const businessUnits = useBusinessUnitOptions()
   const dashboardQuery = useIncidentDashboard()

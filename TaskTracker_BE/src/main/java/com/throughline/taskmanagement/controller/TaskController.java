@@ -1,5 +1,6 @@
 package com.throughline.taskmanagement.controller;
 
+import com.throughline.taskmanagement.access.TaskAccessPolicy;
 import com.throughline.taskmanagement.dto.request.AddCommentRequest;
 import com.throughline.taskmanagement.dto.request.AddDiscussionCommentRequest;
 import com.throughline.taskmanagement.dto.request.CreateSubtaskRequest;
@@ -53,6 +54,12 @@ public class TaskController {
 
     private final TaskService taskService;
     private final CurrentPersonResolver currentPersonResolver;
+    private final TaskAccessPolicy taskAccessPolicy;
+
+    /** Every endpoint below that opens or acts on ONE task first checks the caller may see it — see TaskAccessPolicy. */
+    private void requireVisible(Long taskId, Authentication authentication) {
+        taskAccessPolicy.requireCanView(taskId, currentPersonResolver.resolveId(authentication));
+    }
 
     @PostMapping
     public ResponseEntity<TaskDetailResponse> createTask(@Valid @RequestBody CreateTaskRequest request, Authentication authentication) {
@@ -86,17 +93,20 @@ public class TaskController {
         Person viewer = currentPersonResolver.resolve(authentication);
         Long scopedPersonId = scopeToSelfUnlessDirector(assignedPersonId, viewer);
         Long departmentId = departmentScopeForViewer(viewer);
-        return ResponseEntity.ok(taskService.getAllTasks(status, scopedPersonId, departmentId, pageable));
+        return ResponseEntity.ok(taskService.getAllTasks(status, scopedPersonId, departmentId, viewer.getId(), pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TaskDetailResponse> getTaskById(@PathVariable Long id) {
+    public ResponseEntity<TaskDetailResponse> getTaskById(@PathVariable Long id, Authentication authentication) {
+        requireVisible(id, authentication);
         return ResponseEntity.ok(taskService.getTaskById(id));
     }
 
     @GetMapping("/code/{taskCode}")
-    public ResponseEntity<TaskDetailResponse> getTaskByCode(@PathVariable String taskCode) {
-        return ResponseEntity.ok(taskService.getTaskByCode(taskCode));
+    public ResponseEntity<TaskDetailResponse> getTaskByCode(@PathVariable String taskCode, Authentication authentication) {
+        TaskDetailResponse detail = taskService.getTaskByCode(taskCode);
+        requireVisible(detail.id(), authentication);
+        return ResponseEntity.ok(detail);
     }
 
     @GetMapping("/search")
@@ -108,7 +118,7 @@ public class TaskController {
         Person viewer = currentPersonResolver.resolve(authentication);
         Long scopedPersonId = scopeToSelfUnlessDirector(assignedPersonId, viewer);
         Long departmentId = departmentScopeForViewer(viewer);
-        return ResponseEntity.ok(taskService.searchTasks(q, scopedPersonId, departmentId, pageable));
+        return ResponseEntity.ok(taskService.searchTasks(q, scopedPersonId, departmentId, viewer.getId(), pageable));
     }
 
     @PutMapping("/{id}")
@@ -139,12 +149,14 @@ public class TaskController {
             @Valid @RequestBody AddCommentRequest request,
             Authentication authentication) {
         Long actorId = currentPersonResolver.resolveId(authentication);
+        requireVisible(id, authentication);
         AddCommentRequest verified = new AddCommentRequest(actorId, request.percentageAtComment(), request.body());
         return ResponseEntity.ok(taskService.addProgressComment(id, verified));
     }
 
     @GetMapping("/{id}/comments")
-    public ResponseEntity<Page<CommentResponse>> getTaskComments(@PathVariable Long id, Pageable pageable) {
+    public ResponseEntity<Page<CommentResponse>> getTaskComments(@PathVariable Long id, Pageable pageable, Authentication authentication) {
+        requireVisible(id, authentication);
         return ResponseEntity.ok(taskService.getTaskComments(id, pageable));
     }
 
@@ -156,6 +168,7 @@ public class TaskController {
             @Valid @RequestBody AddDiscussionCommentRequest request,
             Authentication authentication) {
         Long actorId = currentPersonResolver.resolveId(authentication);
+        requireVisible(id, authentication);
         AddDiscussionCommentRequest verified = new AddDiscussionCommentRequest(actorId, request.body(), request.parentCommentId());
         return new ResponseEntity<>(taskService.addDiscussionComment(id, verified), HttpStatus.CREATED);
     }
@@ -172,12 +185,14 @@ public class TaskController {
     }
 
     @GetMapping("/{id}/reassignments")
-    public ResponseEntity<Page<ReassignmentResponse>> getTaskReassignments(@PathVariable Long id, Pageable pageable) {
+    public ResponseEntity<Page<ReassignmentResponse>> getTaskReassignments(@PathVariable Long id, Pageable pageable, Authentication authentication) {
+        requireVisible(id, authentication);
         return ResponseEntity.ok(taskService.getTaskReassignments(id, pageable));
     }
 
     @GetMapping("/{id}/progress-timeline")
-    public ResponseEntity<Page<TaskTimelineResponse>> getTaskProgressTimeline(@PathVariable Long id, Pageable pageable) {
+    public ResponseEntity<Page<TaskTimelineResponse>> getTaskProgressTimeline(@PathVariable Long id, Pageable pageable, Authentication authentication) {
+        requireVisible(id, authentication);
         return ResponseEntity.ok(taskService.getTaskProgressTimeline(id, pageable));
     }
 
@@ -226,7 +241,8 @@ public class TaskController {
     }
 
     @GetMapping("/{id}/deadline-extensions")
-    public ResponseEntity<Page<DeadlineExtensionResponse>> getDeadlineHistory(@PathVariable Long id, Pageable pageable) {
+    public ResponseEntity<Page<DeadlineExtensionResponse>> getDeadlineHistory(@PathVariable Long id, Pageable pageable, Authentication authentication) {
+        requireVisible(id, authentication);
         return ResponseEntity.ok(taskService.getDeadlineHistory(id, pageable));
     }
 
@@ -258,6 +274,7 @@ public class TaskController {
             @RequestParam("file") MultipartFile file,
             Authentication authentication) throws IOException {
         Long actorId = currentPersonResolver.resolveId(authentication);
+        requireVisible(id, authentication);
         return ResponseEntity.ok(taskService.addDocument(
                 id, file.getOriginalFilename(), file.getContentType(), file.getBytes(), actorId));
     }
@@ -265,7 +282,8 @@ public class TaskController {
     /** Open read, same as getTaskReassignments/getDeadlineHistory — whoever can see the task
      *  can download anything attached to it. */
     @GetMapping("/{id}/documents/{documentId}/download")
-    public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id, @PathVariable Long documentId) {
+    public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id, @PathVariable Long documentId, Authentication authentication) {
+        requireVisible(id, authentication);
         DocumentDownload document = taskService.getDocumentContent(id, documentId);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(document.contentType()))
@@ -279,6 +297,7 @@ public class TaskController {
             @PathVariable Long documentId,
             Authentication authentication) {
         Long actorId = currentPersonResolver.resolveId(authentication);
+        requireVisible(id, authentication);
         return ResponseEntity.ok(taskService.deleteDocument(id, documentId, actorId));
     }
 

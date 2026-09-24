@@ -37,6 +37,12 @@ public interface TaskService {
      *  scope (a plain Director's own department), checked only when assignedPersonId is
      *  absent. */
     Page<TaskListResponse> getAllTasks(TaskStatus status, Long assignedPersonId, Long departmentId, Pageable pageable);
+    /** Same as the 4-argument version, but a Director's department list also includes tasks shared with
+     *  viewerId (see AccessGrantService). viewerId may be null (no shared tasks added). */
+    Page<TaskListResponse> getAllTasks(TaskStatus status, Long assignedPersonId, Long departmentId, Long viewerId, Pageable pageable);
+
+    Page<TaskListResponse> searchTasks(String q, Long assignedPersonId, Long departmentId, Long viewerId, Pageable pageable);
+
     TaskDetailResponse addProgressComment(Long taskId, AddCommentRequest request);
     /** A plain Q&A message, fully open — any authenticated person may post on any task, same as the
      *  progress log always has been. */

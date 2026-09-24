@@ -22,6 +22,7 @@ import org.springframework.security.core.Authentication;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
@@ -35,6 +36,7 @@ class TaskControllerActorSubstitutionTest {
 
     @Mock private TaskService taskService;
     @Mock private CurrentPersonResolver currentPersonResolver;
+    @Mock private com.throughline.taskmanagement.access.TaskAccessPolicy taskAccessPolicy;
     @Mock private Authentication authentication;
 
     private TaskController controller;
@@ -44,7 +46,7 @@ class TaskControllerActorSubstitutionTest {
 
     @BeforeEach
     void setUp() {
-        controller = new TaskController(taskService, currentPersonResolver);
+        controller = new TaskController(taskService, currentPersonResolver, taskAccessPolicy);
         // Not every test below goes through resolveId (getAllTasks's scoping helper calls
         // resolve() instead) — lenient so those tests don't fail Mockito's unused-stub check.
         lenient().when(currentPersonResolver.resolveId(authentication)).thenReturn(REAL_ACTOR_ID);
@@ -98,12 +100,12 @@ class TaskControllerActorSubstitutionTest {
         member.setId(REAL_ACTOR_ID);
         member.setRole(Role.MEMBER);
         when(currentPersonResolver.resolve(authentication)).thenReturn(member);
-        when(taskService.getAllTasks(null, REAL_ACTOR_ID, null, Pageable.unpaged())).thenReturn(Page.empty());
+        when(taskService.getAllTasks(eq(null), eq(REAL_ACTOR_ID), eq(null), anyLong(), eq(Pageable.unpaged()))).thenReturn(Page.empty());
 
         // Asking for someone else's tasks (id 99) by leaving the door open in the query param.
         controller.getAllTasks(null, 99L, Pageable.unpaged(), authentication);
 
-        verify(taskService).getAllTasks(null, REAL_ACTOR_ID, null, Pageable.unpaged());
+        verify(taskService).getAllTasks(eq(null), eq(REAL_ACTOR_ID), eq(null), anyLong(), eq(Pageable.unpaged()));
     }
 
     @Test
@@ -112,11 +114,11 @@ class TaskControllerActorSubstitutionTest {
         director.setId(1L);
         director.setRole(Role.DIRECTOR);
         when(currentPersonResolver.resolve(authentication)).thenReturn(director);
-        when(taskService.getAllTasks(null, 99L, null, Pageable.unpaged())).thenReturn(Page.empty());
+        when(taskService.getAllTasks(eq(null), eq(99L), eq(null), anyLong(), eq(Pageable.unpaged()))).thenReturn(Page.empty());
 
         controller.getAllTasks(null, 99L, Pageable.unpaged(), authentication);
 
-        verify(taskService).getAllTasks(null, 99L, null, Pageable.unpaged());
+        verify(taskService).getAllTasks(eq(null), eq(99L), eq(null), anyLong(), eq(Pageable.unpaged()));
     }
 
     // This Director has no department set (never assigned one, an edge case — see
@@ -129,11 +131,11 @@ class TaskControllerActorSubstitutionTest {
         director.setId(1L);
         director.setRole(Role.DIRECTOR);
         when(currentPersonResolver.resolve(authentication)).thenReturn(director);
-        when(taskService.getAllTasks(TaskStatus.ONGOING, null, null, Pageable.unpaged())).thenReturn(Page.empty());
+        when(taskService.getAllTasks(eq(TaskStatus.ONGOING), eq(null), eq(null), anyLong(), eq(Pageable.unpaged()))).thenReturn(Page.empty());
 
         controller.getAllTasks(TaskStatus.ONGOING, null, Pageable.unpaged(), authentication);
 
-        verify(taskService).getAllTasks(TaskStatus.ONGOING, null, null, Pageable.unpaged());
+        verify(taskService).getAllTasks(eq(TaskStatus.ONGOING), eq(null), eq(null), anyLong(), eq(Pageable.unpaged()));
     }
 
     @Test
@@ -145,13 +147,13 @@ class TaskControllerActorSubstitutionTest {
         director.setRole(Role.DIRECTOR);
         director.setDepartment(itDepartment);
         when(currentPersonResolver.resolve(authentication)).thenReturn(director);
-        when(taskService.getAllTasks(null, null, 7L, Pageable.unpaged())).thenReturn(Page.empty());
+        when(taskService.getAllTasks(eq(null), eq(null), eq(7L), anyLong(), eq(Pageable.unpaged()))).thenReturn(Page.empty());
 
         // No assignedPersonId asked for — a plain Director never gets "see everything"
         // any more, they get their own department's id passed through instead.
         controller.getAllTasks(null, null, Pageable.unpaged(), authentication);
 
-        verify(taskService).getAllTasks(null, null, 7L, Pageable.unpaged());
+        verify(taskService).getAllTasks(eq(null), eq(null), eq(7L), anyLong(), eq(Pageable.unpaged()));
     }
 
     @Test
@@ -163,10 +165,10 @@ class TaskControllerActorSubstitutionTest {
         executive.setRole(Role.EXECUTIVE);
         executive.setDepartment(itDepartment); // even if one happened to be set
         when(currentPersonResolver.resolve(authentication)).thenReturn(executive);
-        when(taskService.getAllTasks(null, null, null, Pageable.unpaged())).thenReturn(Page.empty());
+        when(taskService.getAllTasks(eq(null), eq(null), eq(null), anyLong(), eq(Pageable.unpaged()))).thenReturn(Page.empty());
 
         controller.getAllTasks(null, null, Pageable.unpaged(), authentication);
 
-        verify(taskService).getAllTasks(null, null, null, Pageable.unpaged());
+        verify(taskService).getAllTasks(eq(null), eq(null), eq(null), anyLong(), eq(Pageable.unpaged()));
     }
 }
