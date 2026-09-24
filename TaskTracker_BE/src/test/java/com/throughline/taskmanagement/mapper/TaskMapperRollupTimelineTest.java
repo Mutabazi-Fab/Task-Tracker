@@ -7,6 +7,7 @@ import com.throughline.taskmanagement.dto.response.TaskDetailResponse;
 import com.throughline.taskmanagement.dto.response.TaskTimelineResponse;
 import com.throughline.taskmanagement.repository.PersonRepository;
 import com.throughline.taskmanagement.repository.TaskRepository;
+import com.throughline.taskmanagement.repository.TeamRepository;
 import com.throughline.taskmanagement.service.TaskService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,17 @@ class TaskMapperRollupTimelineTest {
 
     @Autowired
     private TaskRepository taskRepository;
+
+    @Autowired
+    private TeamRepository teamRepository;
+
+    /** Looked up by name rather than hard-coding id 1 — team ids change whenever the org
+     *  is re-seeded, the name doesn't. */
+    private Long digitalBankingTeamId() {
+        return teamRepository.findByName("Digital Banking")
+                .orElseThrow(() -> new IllegalStateException("Seed data missing team: Digital Banking"))
+                .getId();
+    }
 
     @Autowired
     private PersonRepository personRepository;
@@ -97,7 +109,7 @@ class TaskMapperRollupTimelineTest {
                 LocalDate.now(), LocalDate.now().plusDays(30), null, null, null,
                 "Opening note for the department task."));
         TaskDetailResponse implementationTask = taskService.createSubtask(departmentTask.id(), new CreateSubtaskRequest(
-                "Rollup Timeline Test — Implementation Task", null, jeanPaulId, null, 1L,
+                "Rollup Timeline Test — Implementation Task", null, jeanPaulId, null, digitalBankingTeamId(),
                 LocalDate.now(), LocalDate.now().plusDays(20), null, null, null,
                 "Opening note for the implementation task."));
         TaskDetailResponse leafTask = taskService.createSubtask(implementationTask.id(), new CreateSubtaskRequest(

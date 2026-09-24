@@ -32,5 +32,10 @@ public enum NotificationType {
     // NotificationService.getUnreadCountsByType and Sidebar's own badge wiring.
     TEAM_CREATED,
     DEPARTMENT_CREATED,
-    TASK_DELETED
+    TASK_DELETED,
+    // Broadcast to every Director-or-above except the reporter, same pattern as
+    // TEAM_CREATED/DEPARTMENT_CREATED — see NotificationServiceImpl.notifyIncidentReported.
+    INCIDENT_REPORTED,
+    // Direct to the newly-assigned Action Owner — see notifyIncidentActionOwnerAssigned.
+    INCIDENT_ACTION_OWNER_ASSIGNED
 }

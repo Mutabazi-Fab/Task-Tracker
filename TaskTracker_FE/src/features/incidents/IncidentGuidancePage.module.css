@@ -1,0 +1,81 @@
+.sectionHeadingLg {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-bottom: var(--space-4);
+}
+
+.intro {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: var(--space-4);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--khaki);
+}
+
+.table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  color: var(--ink);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.severityCell {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.checklistItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.checklistTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.checklistDescription {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.attentionRules {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.6;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--status-pending-bg);
+}

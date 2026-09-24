@@ -1,0 +1,36 @@
+.badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.unscored {
+  color: var(--muted);
+  background: var(--track);
+}
+
+.low {
+  color: var(--muted);
+  background: var(--track);
+}
+
+.moderate {
+  color: var(--signal-info);
+  background: var(--signal-info-bg);
+}
+
+.high {
+  color: var(--signal-exec);
+  background: var(--signal-exec-bg);
+}
+
+.critical {
+  color: var(--status-pending);
+  background: var(--status-pending-bg);
+}

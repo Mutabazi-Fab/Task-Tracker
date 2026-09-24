@@ -498,7 +498,7 @@ the authenticator code too.
 
 ## Configuration reference
 
-Split across the two gitignored files from step 2 above.
+All in the one gitignored file from step 2 above.
 
 ### `application.properties`
 
@@ -513,15 +513,6 @@ Split across the two gitignored files from step 2 above.
 | `app.jwt.secret` | Signs every login token. **If this leaks, anyone who has it can forge a valid login as any user, including a Super Admin**; see the security note below |
 | `app.jwt.expiration-ms` | How long a login token stays valid, in milliseconds (currently 24 hours) |
 | `app.totp.encryption-key` | AES-256 key encrypting every stored TOTP secret at rest. **If this leaks, every already-enrolled account's 2FA secret is exposed**; losing/rotating it forces everyone back through enrollment |
-| `spring.config.import` | Pulls in `application-secrets.properties`, without failing if it's absent |
-| `spring.mail.host` / `.port` / `.properties.mail.smtp.*` | Gmail SMTP connection settings; not secret, just config |
-| `app.frontend-url` | Used only to build clickable links inside invite/notification emails |
-
-### `application-secrets.properties`
-
-| Property | What it does |
-|---|---|
-| `spring.mail.username` / `spring.mail.password` | The Gmail address + App Password that sends OTP/invite/notification/reset emails; the only properties in either file that are genuinely optional at runtime |
 
 ## Roles & permissions
 
@@ -537,11 +528,10 @@ Split across the two gitignored files from step 2 above.
 ## Security: what must never be committed
 
 - `TaskTracker_BE/src/main/resources/application.properties`: gitignored.
-- `TaskTracker_BE/src/main/resources/application-secrets.properties`: gitignored.
 - `TaskTracker_BE/seed-data/`: gitignored; contains real names/emails used during
   development.
 - Anything containing a database password, the JWT signing secret, the TOTP encryption
-  key, a Gmail App Password, or real personal data of any kind.
+  key, or real personal data of any kind.
 - **Passwords are stored in plain text in this project**: a deliberate, explicit choice
   (see the `NoOpPasswordEncoder` comment in `SecurityConfig.java`), made during development
   so a forgotten password can just be looked up and remembered instead of reset every time,
@@ -559,9 +549,9 @@ Split across the two gitignored files from step 2 above.
   silently and indefinitely, with no failed-login trail to notice.
 
 If this repository has ever been pushed to a public remote with real credentials inside
-either config file, treat those credentials as burned: rotate `app.jwt.secret` (a fresh
+that config file, treat those credentials as burned: rotate `app.jwt.secret` (a fresh
 random string immediately invalidates every existing login token; everyone, including
-you, needs to log in again) and change the exposed Postgres/Gmail credentials. Untracking
+you, needs to log in again) and change the exposed Postgres credentials. Untracking
 a file from git (`git rm --cached`) only stops *future* commits from carrying it; it does
 nothing to old commits that already have it, which remain fully recoverable from history
 for anyone with a clone. Fully scrubbing old values out of history (e.g. with
@@ -585,10 +575,6 @@ commit hash.
 ## Known limitations
 
 - **No automated frontend test suite.** See [Testing](#testing) above.
-- **Forgot-password / reset-password only work for a real, deliverable email address.**
-  Seeded test accounts using a fake domain (`@example.com`) can never actually receive a
-  reset code; the request itself will still "succeed" (by design, to avoid leaking which
-  emails are registered), but no email ever arrives.
 - **An account that signed up before this project switched to plain-text passwords is
   permanently locked out of login**, since its stored value is an old BCrypt hash and
   `NoOpPasswordEncoder` does a raw string comparison; no plaintext a person types will

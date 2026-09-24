@@ -103,6 +103,20 @@ export const endpoints = {
     unreadCountsByType: () => `${BASE}/notifications/unread-counts-by-type`,
     markCategoryRead: () => `${BASE}/notifications/mark-category-read`,
   },
+  incidents: {
+    list: () => `${BASE}/incidents`,
+    create: () => `${BASE}/incidents`,
+    detail: (id: number | string) => `${BASE}/incidents/${id}`,
+    update: (id: number | string) => `${BASE}/incidents/${id}`,
+    changeStatus: (id: number | string) => `${BASE}/incidents/${id}/status`,
+    dashboard: () => `${BASE}/incidents/dashboard`,
+  },
+  incidentGuidanceNotes: {
+    list: () => `${BASE}/incidents/guidance-notes`,
+    create: () => `${BASE}/incidents/guidance-notes`,
+    update: (id: number | string) => `${BASE}/incidents/guidance-notes/${id}`,
+    remove: (id: number | string) => `${BASE}/incidents/guidance-notes/${id}`,
+  },
   dashboard: {
     overview: () => `${BASE}/dashboard/overview`,
     statusMix: () => `${BASE}/dashboard/status-mix`,

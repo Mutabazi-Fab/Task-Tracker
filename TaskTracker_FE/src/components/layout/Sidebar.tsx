@@ -29,6 +29,7 @@ export function getNavItems(isDirector: boolean): NavItem[] {
   const items = [...BASE_NAV_ITEMS]
   if (isDirector) {
     items.push({ to: ROUTES.departments, label: 'Departments', icon: 'departments' })
+    items.push({ to: ROUTES.incidents, label: 'Incidents', icon: 'alert' })
     items.push({ to: ROUTES.requests, label: 'Requests', icon: 'mail' })
     items.push({ to: ROUTES.activity, label: 'Activity', icon: 'shield' })
   }

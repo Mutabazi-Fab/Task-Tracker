@@ -10,6 +10,9 @@ import { TeamsListPage } from '../features/teams/TeamsListPage'
 import { TeamPage } from '../features/teams/TeamPage'
 import { DepartmentsListPage } from '../features/departments/DepartmentsListPage'
 import { DepartmentPage } from '../features/departments/DepartmentPage'
+import { IncidentDashboardPage } from '../features/incidents/IncidentDashboardPage'
+import { IncidentDetailPage } from '../features/incidents/IncidentDetailPage'
+import { IncidentGuidancePage } from '../features/incidents/IncidentGuidancePage'
 import { SearchResultsPage } from '../features/search/SearchResultsPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
@@ -87,6 +90,9 @@ export function AppRoutes() {
       <Route path="/teams/:teamId" element={protectedPage(<TeamPage />)} />
       <Route path={ROUTES.departments} element={protectedPage(<DepartmentsListPage />)} />
       <Route path="/departments/:departmentId" element={protectedPage(<DepartmentPage />)} />
+      <Route path={ROUTES.incidents} element={protectedPage(<IncidentDashboardPage />)} />
+      <Route path={ROUTES.incidentGuidance} element={protectedPage(<IncidentGuidancePage />)} />
+      <Route path="/incidents/:incidentId" element={protectedPage(<IncidentDetailPage />)} />
       <Route path={ROUTES.search} element={protectedPage(<SearchResultsPage />)} />
       <Route path="*" element={protectedPage(<NotFoundPage />)} />
     </Routes>

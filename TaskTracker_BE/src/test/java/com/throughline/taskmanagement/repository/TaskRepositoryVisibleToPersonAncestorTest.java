@@ -36,6 +36,17 @@ class TaskRepositoryVisibleToPersonAncestorTest {
     private TaskRepository taskRepository;
 
     @Autowired
+    private TeamRepository teamRepository;
+
+    /** Looked up by name rather than hard-coding id 1 — team ids change whenever the org
+     *  is re-seeded, the name doesn't. */
+    private Long digitalBankingTeamId() {
+        return teamRepository.findByName("Digital Banking")
+                .orElseThrow(() -> new IllegalStateException("Seed data missing team: Digital Banking"))
+                .getId();
+    }
+
+    @Autowired
     private PersonRepository personRepository;
 
     private Long idOf(String email) {
@@ -60,7 +71,7 @@ class TaskRepositoryVisibleToPersonAncestorTest {
         // Patrick is a member of that team, but neither the department task nor the
         // implementation task names him individually anywhere.
         TaskDetailResponse implementationTask = taskService.createSubtask(departmentTask.id(), new CreateSubtaskRequest(
-                "Ancestor Visibility Test — Implementation Task", null, jeanPaulId, null, 1L,
+                "Ancestor Visibility Test — Implementation Task", null, jeanPaulId, null, digitalBankingTeamId(),
                 LocalDate.now(), LocalDate.now().plusDays(20), null, null, null,
                 "Opening note for the implementation task."));
 

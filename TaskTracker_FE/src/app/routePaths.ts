@@ -20,5 +20,8 @@ export const ROUTES = {
   team: (teamId: number | string) => `/teams/${teamId}`,
   departments: '/departments',
   department: (departmentId: number | string) => `/departments/${departmentId}`,
+  incidents: '/incidents',
+  incidentDetail: (incidentId: number | string) => `/incidents/${incidentId}`,
+  incidentGuidance: '/incidents/guidance',
   search: '/search',
 } as const

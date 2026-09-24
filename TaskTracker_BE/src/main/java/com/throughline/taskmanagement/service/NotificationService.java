@@ -129,6 +129,14 @@ public interface NotificationService {
      *  Activity nav item's "new" badge. */
     void notifyTaskDeleted(Task task, Person deletedBy);
 
+    /** Called by IncidentServiceImpl right after a new incident is reported. Broadcasts to
+     *  every Director-or-above except the reporter, same pattern as notifyTeamCreated. */
+    void notifyIncidentReported(com.throughline.taskmanagement.model.Incident incident, Person reportedBy);
+
+    /** Called by IncidentServiceImpl whenever an incident's Action Owner is set or changed.
+     *  Notifies the new owner directly. Never fires if the owner is unchanged. */
+    void notifyIncidentActionOwnerAssigned(com.throughline.taskmanagement.model.Incident incident, Person assignedBy);
+
     Page<NotificationResponse> getNotifications(Long recipientId, Pageable pageable);
 
     /** requesterId must match the notification's recipient — enforced here, not just trusted. */

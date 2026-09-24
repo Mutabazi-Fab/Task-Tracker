@@ -13,3 +13,9 @@ export function minAssignableDate(): string {
   d.setMonth(d.getMonth() - 3)
   return d.toISOString().slice(0, 10)
 }
+
+/** Today's date as YYYY-MM-DD — used as a `min` on any date field that must be today or
+ *  later (e.g. an incident's Target Closure Date). Backend-enforced too. */
+export function todayDate(): string {
+  return new Date().toISOString().slice(0, 10)
+}

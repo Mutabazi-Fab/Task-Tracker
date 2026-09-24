@@ -1,0 +1,82 @@
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Distinct from the primary "Report incident" button so both stand out rather than blur
+   together — signal-info is this app's established "informational" accent (used for the
+   Open status chip), fitting for a reference/help action. */
+.guidanceButton {
+  background: var(--signal-info);
+  color: var(--panel);
+}
+
+.guidanceButton:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.kpiStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.sectionHeadingLg {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-bottom: var(--space-4);
+}
+
+.listHeadingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.listHeadingRow .sectionHeadingLg {
+  margin-bottom: 0;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.filterField {
+  min-width: 160px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .charts {
+    grid-template-columns: 1fr;
+  }
+}

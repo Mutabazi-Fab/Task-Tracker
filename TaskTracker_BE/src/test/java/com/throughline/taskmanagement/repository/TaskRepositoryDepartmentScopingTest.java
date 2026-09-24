@@ -45,6 +45,17 @@ class TaskRepositoryDepartmentScopingTest {
     private PersonRepository personRepository;
 
     @Autowired
+    private TeamRepository teamRepository;
+
+    /** Looked up by name rather than hard-coding id 1 — team ids change whenever the org
+     *  is re-seeded, the name doesn't. */
+    private Long digitalBankingTeamId() {
+        return teamRepository.findByName("Digital Banking")
+                .orElseThrow(() -> new IllegalStateException("Seed data missing team: Digital Banking"))
+                .getId();
+    }
+
+    @Autowired
     private TaskService taskService;
 
     private Long itDepartmentId() {
@@ -118,7 +129,7 @@ class TaskRepositoryDepartmentScopingTest {
         // A throwaway ordinary IT task — no severity, Director-assigned — proves this isn't
         // just "every IT task" ignoring both filter halves.
         TaskDetailResponse nonMatching = taskService.createTask(new CreateTaskRequest(
-                "Department Scoping Test — Ordinary Director Task", null, jeanPaulId, 1L, null, null,
+                "Department Scoping Test — Ordinary Director Task", null, jeanPaulId, digitalBankingTeamId(), null, null,
                 LocalDate.now(), LocalDate.now().plusDays(30), null, null, null,
                 "Opening note for the non-matching control task."));
 

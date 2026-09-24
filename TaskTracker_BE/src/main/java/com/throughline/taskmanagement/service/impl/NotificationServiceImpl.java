@@ -484,6 +484,24 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+    @Override
+    public void notifyIncidentReported(com.throughline.taskmanagement.model.Incident incident, Person reportedBy) {
+        String message = String.format("%s reported a new incident: \"%s\" (%s).",
+                reportedBy.getFullName(), incident.getTitle(), incident.getIncidentCode());
+        broadcastToDirectorsExcept(reportedBy, NotificationType.INCIDENT_REPORTED, message, incident.getId());
+    }
+
+    @Override
+    public void notifyIncidentActionOwnerAssigned(com.throughline.taskmanagement.model.Incident incident, Person assignedBy) {
+        Person owner = incident.getActionOwner();
+        if (owner == null || owner.getId().equals(assignedBy.getId())) {
+            return;
+        }
+        String message = String.format("%s assigned you as Action Owner for incident \"%s\" (%s).",
+                assignedBy.getFullName(), incident.getTitle(), incident.getIncidentCode());
+        send(owner, NotificationType.INCIDENT_ACTION_OWNER_ASSIGNED, message, incident.getId());
+    }
+
     /** Every Director-or-above except whoever did the thing being announced — backs the
      *  three broadcasts above. Deliberately org-wide, not department/team-scoped. */
     private void broadcastToDirectorsExcept(Person exclude, NotificationType type, String message, Long relatedEntityId) {

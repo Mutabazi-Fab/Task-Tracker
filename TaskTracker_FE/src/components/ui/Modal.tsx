@@ -6,15 +6,24 @@ interface ModalProps {
   onClose: () => void
   title?: string
   children: ReactNode
+  /** 'md' (default, 480px) fits most forms. 'lg' (720px) is for forms with many fields at
+   *  once — e.g. CreateIncidentModal/EditIncidentModal — so the fields aren't cramped into a
+   *  narrow column. */
+  size?: 'md' | 'lg'
 }
 
 /** Overlay + panel + close. Feature modals (CreateTaskModal, ReassignTaskModal) wrap this. */
-export function Modal({ open, onClose, title, children }: ModalProps) {
+export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
   if (!open) return null
 
   return (
     <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.panel} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div
+        className={size === 'lg' ? `${styles.panel} ${styles.panelLg}` : styles.panel}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className={styles.header}>
           {title && <h2 className={styles.title}>{title}</h2>}
           <button type="button" className={styles.close} onClick={onClose} aria-label="Close">
