@@ -40,7 +40,10 @@ written for someone opening this project for the first time.
 - **Progress only moves one way.** A task's percentage never gets edited directly; it
   changes only when someone adds a dated progress comment on an individually-tracked task.
   A team/department task's percentage is always the automatic roll-up (average) of its
-  children. Status (Pending/Ongoing/Completed) is derived from the percentage.
+  children. Status (Pending/Ongoing/Completed) is derived from the percentage. Progress on
+  an individually-assigned task can only be logged by its assignee, the leader of a team
+  that assignee belongs to (their own team only), or a Director/Executive/Super Admin,
+  enforced server-side.
 - **Reassignment needs a reason, and isn't open to everyone.** A mandatory written reason
   is required, and only a Director/Executive/Super Admin, or the task's own Team Leader,
   can do it, scoped to who actually has standing over that specific task.
@@ -94,6 +97,21 @@ written for someone opening this project for the first time.
   Initiative, Regulator, Auditor, Board) from an open, admin-extensible list, plus a free
   "Source Detail" field — always typed by hand, no clickable suggestions to pick from
   instead.
+- **Incident management.** A replacement for the bank's manual IT incident register
+  (an Excel workbook), inside the same app. Directors, Executives and Super Admins report
+  an incident; a confirmation step comes before anything is recorded. The Excel's formulas
+  are reproduced live in the form and always recomputed on the server: Inherent Score
+  (Likelihood × Impact) and its Severity band (Low / Moderate / High / Critical), Net Loss,
+  Days Open and Action SLA (including a "closed late" flag the Excel never had). Status
+  follows the Excel exactly (Open → Under Investigation → Monitoring → Closed, or Rejected /
+  Not an Incident), every change is logged, and **closing is blocked** until root cause and
+  corrective action are filled in, plus Risk and Compliance review for Critical/High or
+  regulator-notifiable incidents. **Business Unit is the list of Departments**, so a new
+  department appears in the dropdown automatically. The dashboard has KPI tiles, status/
+  severity/category charts, a monthly trend and SLA compliance, and a filterable, searchable
+  incident list. A **Guidance** page carries the Excel's severity/escalation table, score
+  scale and closing checklist read-only, plus notes a Director-or-above can add for new
+  reporters.
 - **In-app notifications**, always sent to the affected person, for: task/subtask
   assignment and reassignment, deadline-extension requests/approvals/rejections/forwards,
   discussion replies, team membership changes, role changes, account (de)activation, and
@@ -101,7 +119,10 @@ written for someone opening this project for the first time.
   Super Admin instead (only they can resolve it), and says plainly if the account is
   currently deactivated — that's flagged for a Super Admin specifically, never for the
   person who submitted the request. New teams/departments/task-deletions also broadcast,
-  backing small "new activity" badges next to the relevant sidebar item.
+  backing small "new activity" badges next to the relevant sidebar item. A newly reported
+  incident notifies every Director-or-above, and assigning an incident's Action Owner
+  notifies that person. A daily job deletes read notifications older than 90 days, and any
+  older than a year.
 - **Director/Executive dashboards.** Org-wide KPIs, a progress-over-time trend line, a
   status-mix donut, a team leaderboard, a people summary, a "my initiatives" panel, and
   (for Executive/Super Admin) a department-by-department traffic-light health roll-up
@@ -117,9 +138,9 @@ written for someone opening this project for the first time.
 
 | Role | Who they are in the theming | What sets them apart |
 |---|---|---|
-| **Member** | An ordinary staff member | Sees only their own work; can log progress, comment, pick daily goals |
-| **Team Leader** *(per-team, not a global role)* | Whoever leads one specific team | Can create/reassign that team's own tasks, same standing as a Director but scoped to their team |
-| **Director** | A department's day-to-day manager | Creates teams/tasks, sees their whole department, decides deadlines for their own tasks |
+| **Member** | An ordinary staff member | Sees only their own work; can log progress on tasks assigned to them, comment, pick daily goals |
+| **Team Leader** *(per-team, not a global role)* | Whoever leads one specific team | Can create/reassign that team's own tasks and log progress for their team's members, same standing as a Director but scoped to their team |
+| **Director** | A department's day-to-day manager | Creates teams/tasks, sees their whole department, decides deadlines for their own tasks, reports and manages incidents |
 | **Department Head** *(per-department, not a global role)* | The one Director accountable for a whole Department | Turns the CEO's Department-level mandate into a real implementation task |
 | **Executive** | The CEO | Hands mandates to whole Departments, sets task severity, approves CEO-mandated deadline extensions, org-wide read view |
 | **Super Admin** | System governance & technical support | Not a business role like the others: exists to administer the system itself and the org structure inside it. Everything Executive can do, plus creating user accounts (the only way anyone gets into the system in the first place), granting/revoking roles, (de)activating accounts, department administration |
@@ -156,7 +177,9 @@ join entity. `Task` is the other core entity, assigned to a `Team`, a `Person`, 
 (`TaskComment`), reassignment history, deadline-extension requests, and attached
 documents. `PersonDailyGoal` links a person to up to 3 tasks they're focused on right now,
 `TaskSourceCategory`/`TaskSourceEntry` back the task-origin picklist, and `Notification`
-is every person's own inbox.
+is every person's own inbox. `Incident` is a separate record type from `Task`: it keeps its
+own status history (`IncidentStatusChange`), and `IncidentGuidanceNote` holds the editable
+guidance shown to incident reporters.
 
 ```mermaid
 classDiagram
@@ -167,7 +190,7 @@ classDiagram
         +String jobTitle
         +String rank
         +Role role
-        +boolean emailVerified
+        +boolean totpRequired
         +boolean active
         +LocalDateTime createdAt
     }
@@ -316,6 +339,38 @@ classDiagram
         +LocalDateTime createdAt
     }
 
+    class Incident {
+        +Long id
+        +String incidentCode
+        +String businessUnit
+        +IncidentCategory category
+        +Integer likelihood
+        +Integer impact
+        +Integer inherentScore
+        +IncidentSeverity severity
+        +BigDecimal grossLoss
+        +BigDecimal netLoss
+        +IncidentStatus status
+        +String rootCause
+        +String correctiveAction
+        +LocalDate targetClosureDate
+        +LocalDate actualClosureDate
+    }
+
+    class IncidentStatusChange {
+        +Long id
+        +IncidentStatus fromStatus
+        +IncidentStatus toStatus
+        +String note
+        +LocalDateTime changedAt
+    }
+
+    class IncidentGuidanceNote {
+        +Long id
+        +String title
+        +String body
+    }
+
     Person "0..1" --> "1" Department : belongs to
     Person "1" --> "0..1" Role
     Department "1" --> "0..*" Team : has
@@ -335,6 +390,10 @@ classDiagram
     PersonDailyGoal "0..*" --> "1" Task
     Person "1" --> "0..*" Notification : inbox
     TaskSourceCategory "1" --> "0..*" TaskSourceEntry : suggestions under
+    Incident "1" --> "0..*" IncidentStatusChange : status history
+    Incident "1" --> "1" Person : reportedBy
+    Incident "0..1" --> "0..1" Person : actionOwner
+    IncidentGuidanceNote "0..*" --> "1" Person : createdBy
 ```
 
 ## Tech stack
@@ -359,12 +418,14 @@ Task_Tracker/
 │   │   ├── service/        Business logic interfaces + impl/
 │   │   ├── controller/     REST endpoints
 │   │   ├── dto/             request/ and response/ records
-│   │   ├── enums/          Role, TaskStatus, AssigneeType, ...
+│   │   ├── enums/          Role, TaskStatus, AssigneeType, IncidentStatus, ...
+│   │   ├── scheduling/     Daily jobs (stalled-task alerts, old-notification cleanup)
 │   │   └── security/       JWT filter, current-user resolution
+│   ├── seed-data/          Gitignored SQL: Super Admin bootstrap + demo dataset
 │   └── src/test/java/...   Real-database integration tests (see Testing)
 └── TaskTracker_FE/    React app, Vite (http://localhost:5173)
     └── src/
-        ├── features/        one folder per feature area (tasks, taskDetail, people, teams, departments, dashboard, auth, notifications, search)
+        ├── features/        one folder per feature area (tasks, taskDetail, people, teams, departments, incidents, dashboard, auth, notifications, search)
         ├── components/      shared UI (ui/) and layout (layout/) building blocks
         ├── api/             axios client + endpoint URL builders
         └── types/           TypeScript types mirroring the backend DTOs
@@ -452,9 +513,9 @@ the very first account has to be inserted directly, after the backend has booted
 once (so the `persons` table and its columns already exist):
 
 ```sql
-INSERT INTO persons (full_name, email, password, job_title, rank, role, email_verified, active, created_at)
+INSERT INTO persons (full_name, email, password, job_title, rank, role, active, created_at)
 SELECT 'Your Name', 'you@example.com', 'ChooseAPassword123',
-       'System Administrator', NULL, 'SUPER_ADMIN', true, true, NOW()
+       'System Administrator', NULL, 'SUPER_ADMIN', true, NOW()
 WHERE NOT EXISTS (
     SELECT 1 FROM persons WHERE email = 'you@example.com'
 );
@@ -463,6 +524,12 @@ WHERE NOT EXISTS (
 That password is stored exactly as typed; see
 [Security notes](#security-what-must-never-be-committed) for why, and don't reuse a
 real password of yours here.
+
+**Optional demo data.** `TaskTracker_BE/seed-data/seed_task_management.sql` (kept locally,
+not in git) fills the database with a demo org: departments matching the incident business
+units, their teams and people (no authenticator needed for the demo accounts, password
+`12345678`), and a full task hierarchy. Open it in pgAdmin's Query Tool and run it; it is
+safe to re-run and never deletes an existing person or touches incidents.
 
 ### 4. Run the backend
 
@@ -518,9 +585,9 @@ All in the one gitignored file from step 2 above.
 
 | Role | Can do |
 |---|---|
-| **Member** | See only: tasks assigned to them directly, tasks assigned to any team they belong to, their own teammates on the People page, and (for teams/departments they aren't on) just the name and who leads it. Log progress and comments on their own work, pick up to 3 daily focus goals |
-| **Team Leader** *(per team, not a global role)* | Everything a Member sees, plus: create/reassign subtasks and reassign the top-level task for their own team, same standing as a Director but scoped to just that one team |
-| **Director** | Full visibility over their own department; create teams and top-level tasks (team- or individually-assigned) within it; create implementation tasks under a Department task their department heads; decide/forward deadline extensions for their own tasks; their own "My Initiatives" and "Critical & CEO-assigned" dashboards |
+| **Member** | See only: tasks assigned to them directly, tasks assigned to any team they belong to, their own teammates on the People page, and (for teams/departments they aren't on) just the name and who leads it. Log progress on tasks assigned to them, comment, pick up to 3 daily focus goals |
+| **Team Leader** *(per team, not a global role)* | Everything a Member sees, plus: create/reassign subtasks and reassign the top-level task for their own team, log progress for members of that team, same standing as a Director but scoped to just that one team |
+| **Director** | Full visibility over their own department; create teams and top-level tasks (team- or individually-assigned) within it; create implementation tasks under a Department task their department heads; decide/forward deadline extensions for their own tasks; report, edit and change the status of incidents; add and edit incident guidance notes; log progress on any individually-assigned task; their own "My Initiatives" and "Critical & CEO-assigned" dashboards |
 | **Department Head** *(per department, not a global role)* | The Director accountable for turning a Department-level task the CEO assigned into a real team-or-individual implementation task |
 | **Executive** | Everything a Director can do, org-wide, plus: create tasks assigned straight to a whole Department, set task severity, approve deadline extensions on CEO-mandated chains, create new departments, the org-wide Executive dashboard (department health roll-up, KPI tiles) |
 | **Super Admin** | A governance/system-support role, not a business one: owns the org's technical administration rather than its day-to-day work. Everything an Executive can do, plus: create new people/accounts (the only route onto the platform — there is no public self-registration), promote/demote anyone to any role, deactivate/reactivate any account, rename departments and reassign their head, reset someone's TOTP enrollment for a lost/replaced phone, view every org-wide audit log |
@@ -563,7 +630,9 @@ commit hash.
 - **Backend** has a real integration test suite (`TaskTracker_BE/src/test/java/...`):
   `@SpringBootTest` classes that run against the actual seeded database (not mocks), which
   has repeatedly caught real bugs a mocked test can't (e.g. a Hibernate query silently
-  compiling a nullable-association path as an `INNER JOIN` and dropping rows). Run it with:
+  compiling a nullable-association path as an `INNER JOIN` and dropping rows). Several of
+  them look up seeded people, departments and teams by name, so load the demo data first
+  (see step 3). Run it with:
   ```bash
   cd TaskTracker_BE
   ./mvnw test          # macOS/Linux
@@ -583,9 +652,10 @@ commit hash.
 - **`ddl-auto=update` only ever adds schema; it never alters or drops anything
   existing.** Several times in this project's history, adding a new value to a Java enum
   (`Role`, `NotificationType`), or loosening a column from a fixed enum to open text
-  (`Task.source`), required manually dropping a stale Postgres `CHECK` constraint in
-  pgAdmin/psql, because Hibernate had generated that constraint against the column's *old*
-  shape and will never update it on its own. If a value that should be valid fails to
+  (`Task.source`, `Incident.businessUnit`), required dropping a stale Postgres `CHECK`
+  constraint, because Hibernate had generated that constraint against the column's *old*
+  shape and will never update it on its own. (For `incidents.business_unit` the app now
+  drops it itself at startup, in `IncidentSchemaMigration`.) If a value that should be valid fails to
   insert with a constraint violation, this finds the culprit:
   ```sql
   SELECT conname, pg_get_constraintdef(oid)
@@ -600,5 +670,5 @@ commit hash.
   before the task hierarchy/multi-team/Department/auth rework; treat it as historical
   background, not a current source of truth.
 - `TaskTracker_FE/README.md`: the frontend's folder structure and conventions.
-- `TaskTracker_BE/seed-data/README.md`: how the current demo/seed dataset was built, if
-  you want to reset the database to a known, fully-populated org chart.
+- `TaskTracker_BE/seed-data/README.md`: the Super Admin bootstrap and the demo dataset
+  script, if you want a known, fully-populated org chart.
