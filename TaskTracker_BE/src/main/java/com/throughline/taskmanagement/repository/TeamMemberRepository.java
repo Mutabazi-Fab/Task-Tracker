@@ -27,4 +27,11 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     @Query("SELECT COUNT(tm) > 0 FROM TeamMember tm WHERE tm.person.id = :personId AND tm.team.id IN "
             + "(SELECT tm2.team.id FROM TeamMember tm2 WHERE tm2.person.id = :otherPersonId)")
     boolean existsSharedTeam(@Param("personId") Long personId, @Param("otherPersonId") Long otherPersonId);
+
+    // Is leaderId the leader of at least one team that memberId belongs to? Backs "a team
+    // leader may log progress for a member of their own team" (TaskServiceImpl.addProgressComment)
+    // — and nothing beyond it: being a leader of some other team grants nothing here.
+    @Query("SELECT COUNT(l) > 0 FROM TeamMember l WHERE l.person.id = :leaderId AND l.isLeader = true AND l.team.id IN "
+            + "(SELECT m.team.id FROM TeamMember m WHERE m.person.id = :memberId)")
+    boolean isLeaderOfATeamContaining(@Param("leaderId") Long leaderId, @Param("memberId") Long memberId);
 }

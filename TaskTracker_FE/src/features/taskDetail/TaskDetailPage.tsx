@@ -17,6 +17,7 @@ import { TaskProgressPanel } from './components/TaskProgressPanel'
 import { TaskProgressSparkline } from './components/TaskProgressSparkline'
 import { AssignmentMetaPanel } from './components/AssignmentMetaPanel'
 import { AddCommentForm } from './components/AddCommentForm'
+import { useCanLogProgress } from './hooks/useCanLogProgress'
 import { CommentTimeline } from './components/CommentTimeline'
 import { DiscussionPanel } from './components/DiscussionPanel'
 import { ReassignmentHistoryPanel } from './components/ReassignmentHistoryPanel'
@@ -64,6 +65,7 @@ export function TaskDetailPage() {
 
 function TaskDetailBody({ task }: { task: TaskDetail }) {
   const { isDirector, isExecutive, currentUser } = useAuth()
+  const canLogProgress = useCanLogProgress(task)
   const navigate = useNavigate()
   const [reassignOpen, setReassignOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -181,8 +183,10 @@ function TaskDetailBody({ task }: { task: TaskDetail }) {
         </Card>
       )}
 
-      {/* Only an individually-tracked task sets its own percentage directly — a TEAM/DEPARTMENT task's is always a rollup, so it gets no "Log progress" form. */}
-      {task.assigneeType === 'INDIVIDUAL' && <AddCommentForm taskId={task.id} currentPercentage={task.progressPercentage} />}
+      {/* Only an individually-tracked task sets its own percentage directly — a TEAM/DEPARTMENT task's is always a rollup, so it gets no "Log progress" form.
+          Within that, only the assignee, the leader of a team the assignee is on, or a Director/Executive/Super Admin sees the form (see useCanLogProgress).
+          The backend enforces the same rule (TaskServiceImpl.addProgressComment), this just doesn't show a form that would be rejected. */}
+      {canLogProgress && <AddCommentForm taskId={task.id} currentPercentage={task.progressPercentage} />}
 
       {/* Documents rides alongside Discussion as a narrow sidebar — usually just a handful of files. */}
       <div className={styles.discussionRow}>

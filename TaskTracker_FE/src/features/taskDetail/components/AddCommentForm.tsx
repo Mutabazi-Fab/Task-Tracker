@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { ErrorMessage } from '../../../components/ui/ErrorMessage'
@@ -27,6 +27,12 @@ export function AddCommentForm({ taskId, currentPercentage }: AddCommentFormProp
   const { currentUser } = useAuth()
   const addComment = useAddComment(taskId)
 
+  // Follow the task's real progress: after a log succeeds the task refetches and this prop
+  // becomes the value just logged, so the slider stays there instead of jumping back.
+  useEffect(() => {
+    setPercentage(currentPercentage)
+  }, [currentPercentage])
+
   const isValid = body.trim() !== '' && currentUser !== null
 
   function submit() {
@@ -36,8 +42,10 @@ export function AddCommentForm({ taskId, currentPercentage }: AddCommentFormProp
       { authorId: currentUser.id, percentageAtComment: percentage, body: body.trim() },
       {
         onSuccess: () => {
+          // Deliberately NOT resetting percentage here: currentPercentage is still the
+          // pre-log value at this point (the task hasn't refetched yet), so resetting to it
+          // is what used to snap the slider back to 0 after every log.
           setBody('')
-          setPercentage(currentPercentage)
           setConfirmCompleteOpen(false)
         },
       },

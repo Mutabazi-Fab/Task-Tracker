@@ -393,6 +393,22 @@ public class TaskServiceImpl implements TaskService {
         Person author = personRepository.findById(request.authorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Author not found"));
 
+        // Progress on an individually-tracked task is the assignee's to report. Also allowed:
+        // the leader of a team the assignee belongs to (only their own team — leading some
+        // other team grants nothing), and a Director, Executive or Super Admin (same override
+        // tier used elsewhere in this service). A plain teammate can't log it for someone
+        // else. Rolled-up TEAM/DEPARTMENT tasks aren't affected.
+        boolean isIndividualTask = task.getAssigneeType() == AssigneeType.INDIVIDUAL;
+        boolean isAssignee = task.getAssignedPerson() != null && task.getAssignedPerson().getId().equals(author.getId());
+        if (isIndividualTask && !isAssignee && !Role.isAtLeastDirector(author.getRole())) {
+            boolean leadsAssigneesTeam = task.getAssignedPerson() != null
+                    && teamMemberRepository.isLeaderOfATeamContaining(author.getId(), task.getAssignedPerson().getId());
+            if (!leadsAssigneesTeam) {
+                throw new ForbiddenActionException(
+                        "Only the person this task is assigned to, their team leader, or a Director, Executive or Super Admin can log progress on it.");
+            }
+        }
+
         long commentCount = taskCommentRepository.countByTaskId(taskId);
         // TEAM and DEPARTMENT are always rolled up from children, never set directly.
         boolean isRolledUp = task.getAssigneeType() == AssigneeType.TEAM || task.getAssigneeType() == AssigneeType.DEPARTMENT;
